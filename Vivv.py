@@ -30,7 +30,22 @@ if "logado" not in st.session_state:
 if not st.session_state.logado:
     st.title("Vivv - Acesso")
     
-    aba_login, aba_cadastro = st.tabs(["Entrar", "Solicitar Acesso"])
+    with aba_cadastro:
+        novo_nome = st.text_input("Nome Completo", key="reg_nome")
+        novo_email = st.text_input("E-mail para cadastro", key="reg_email")
+        nova_senha = st.text_input("Escolha uma Senha", type="password", key="reg_senha") # NOVO CAMPO
+        
+        if st.button("Enviar Solicitação"):
+            if novo_nome and novo_email and nova_senha:
+                db.collection("usuarios").document(novo_email).set({
+                    "nome": novo_nome,
+                    "senha": nova_senha, # Salva a senha escolhida
+                    "pago": False,
+                    "teste": True,
+                    "validade": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=7),
+                    "data_solicitacao": firestore.SERVER_TIMESTAMP
+                })
+                st.success("Solicitação enviada! Use este e-mail e senha para logar.")
     
     with aba_login:
         email_input = st.text_input("E-mail para login", key="login_email")
@@ -408,6 +423,7 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
             
         st.write(resp_text)
         st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
+
 
 
 
