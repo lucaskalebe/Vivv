@@ -305,45 +305,38 @@ with col_ops:
                 st.success("Lançamento registrado!")
                 st.rerun()
 
-# ================= 6. FILA DE ATENDIMENTOS E WHATSAPP =================
+# ================= 6. FILA DE ATENDIMENTOS (FIRESTORE) =================
 with col_fila:
     st.subheader("📋 Próximos Atendimentos")
-    query_fila = """
-        SELECT a.id, c.nome, c.telefone, s.nome as serv, s.preco, a.data, a.hora 
-        FROM agenda a 
-        JOIN clientes c ON c.id=a.cliente_id 
-        JOIN servicos s ON s.id=a.servico_id 
-        WHERE a.status='Pendente' ORDER BY a.data, a.hora
-    """
-    fila_df = pd.read_sql(query_fila, conn)
+    # Busca a agenda pendente no Firebase
+    agenda_ref = user_ref.collection("minha_agenda").where("status", "==", "Pendente").stream()
     
-    if fila_df.empty:
-        st.info("Nenhum atendimento pendente para hoje.")
-    else:
-        for _, r in fila_df.iterrows():
-            dt_br = datetime.strptime(r.data, '%Y-%m-%d').strftime('%d/%m/%Y')
-            with st.expander(f"📍 {dt_br} às {r.hora[:5]} | {r.nome}"):
-                c1, c2, c3 = st.columns([2, 1, 1])
-                c1.write(f"**{r.serv}** - R$ {r.preco:.2f}")
-                
-                # Link WhatsApp com mensagem automática
-                msg = urllib.parse.quote(f"Olá {r.nome}, confirmamos seu horário para o dia {dt_br} às {r.hora[:5]}. Até logo 🤝")
-                c1.markdown(f'<a href="https://wa.me/{r.telefone}?text={msg}" class="wa-link">📱 Confirmar via WhatsApp</a>', unsafe_allow_html=True)
-                
-                # BOTÃO CONCLUIR (Atualiza o contador Agenda Hoje)
-                if c2.button("CONCLUIR ✅", key=f"concluir_{r.id}"):
-                    conn.execute("UPDATE agenda SET status='Concluído' WHERE id=?", (r.id,))
-                    conn.execute("INSERT INTO caixa (descricao, valor, tipo, data) VALUES (?,?,?,?)", 
-                                 (f"Atendimento: {r.nome}", r.preco, "Entrada", hoje_iso))
-                    conn.commit()
-                    st.rerun()
-                
-                # BOTÃO CANCELAR
-                if c3.button("CANCELAR ❌", key=f"cancelar_{r.id}"):
-                    conn.execute("DELETE FROM agenda WHERE id=?", (r.id,))
-                    conn.commit()
-                    st.rerun()
+    atendimentos = []
+    for doc in agenda_ref:
+        item = doc.to_dict()
+        item['id_fire'] = doc.id
+        atendimentos.append(item)
 
+    if not atendimentos:
+        st.info("Nenhum atendimento pendente na nuvem.")
+    else:
+        for a in atendimentos:
+            with st.expander(f"📍 {a.get('cliente')} | {a.get('servico')}"):
+                c1, c2 = st.columns([2, 1])
+                c1.write(f"**Valor:** R$ {a.get('preco', 0):.2f}")
+                
+                # Botão Concluir no Firebase
+                if c2.button("CONCLUIR ✅", key=f"fin_{a['id_fire']}"):
+                    # 1. Marca como concluído
+                    user_ref.collection("minha_agenda").document(a['id_fire']).update({"status": "Concluído"})
+                    # 2. Lança no caixa automaticamente
+                    user_ref.collection("meu_caixa").add({
+                        "descricao": f"Serviço: {a.get('servico')}",
+                        "valor": a.get('preco'),
+                        "tipo": "Entrada",
+                        "data": firestore.SERVER_TIMESTAMP
+                    })
+                    st.rerun()
 # ================= 7. CENTRAL DE AUDITORIA (CORREÇÃO NameError) =================
 st.write("---")
 st.markdown("### 🗄️ Central de Auditoria")
@@ -414,6 +407,7 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
             
         st.write(resp_text)
         st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
+
 
 
 
