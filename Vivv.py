@@ -247,7 +247,6 @@ with col_central:
 
 
 # ================= 8. IA STRATEGIST (GOOGLE GEMINI) =================
-# ================= 8. IA STRATEGIST (GOOGLE GEMINI) =================
 import google.generativeai as genai
 
 st.write("---")
@@ -267,32 +266,33 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
     
     with st.chat_message("assistant"):
         try:
-            # Configuração com a chave do Google Secrets
+            # 1. Configura a Key
             genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
             
-            # Tenta usar o flash, se não conseguir, tenta o pro
+            # 2. Força o uso do modelo estável (sem o prefixo models/ se necessário)
+            # O nome 'gemini-1.5-flash' é o padrão atual
             model = genai.GenerativeModel('gemini-1.5-flash')
             
-            # Dados reais do seu dashboard
+            # 3. Prepara os dados reais do seu dashboard para a IA
+            lucro_atual = faturamento - despesas
             contexto = (
-                f"Você é um consultor de negócios experiente. "
-                f"Analise estes dados da Vivv Lab Master: "
-                f"Total de Clientes: {total_clientes}, "
-                f"Faturamento Atual: R$ {faturamento:.2f}, "
-                f"Lucro Líquido: R$ {faturamento-despesas:.2f}. "
-                f"Responda de forma curta e prática à pergunta: {prompt}"
+                f"Aja como consultor. Dados: Clientes={total_clientes}, "
+                f"Faturamento=R${faturamento}, Lucro=R${lucro_atual}. "
+                f"Pergunta: {prompt}"
             )
             
+            # 4. Gera a resposta
             response = model.generate_content(contexto)
+            resp_text = response.text
             
-            if response.text:
-                resp_text = response.text
-            else:
-                resp_text = "IA processou, mas não gerou texto. Tente reformular a pergunta."
-                
         except Exception as e:
-            # Captura o erro real para diagnóstico
-            resp_text = f"❌ Erro na Vivv AI: {str(e)}"
+            # Se der erro 404 de novo, ele tentará o modelo 'gemini-pro' automaticamente
+            try:
+                model_alt = genai.GenerativeModel('gemini-pro')
+                response = model_alt.generate_content(contexto)
+                resp_text = response.text
+            except:
+                resp_text = f"❌ Erro persistente: {str(e)}. Verifique se sua GOOGLE_API_KEY está correta nos Secrets."
             
         st.write(resp_text)
         st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
