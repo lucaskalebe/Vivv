@@ -247,6 +247,7 @@ with col_central:
 
 
 # ================= 8. IA STRATEGIST (GOOGLE GEMINI) =================
+# ================= 8. IA STRATEGIST (GOOGLE GEMINI) =================
 import google.generativeai as genai
 
 st.write("---")
@@ -266,18 +267,32 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
     
     with st.chat_message("assistant"):
         try:
-            # Configuração da API
+            # Configuração com a chave do Google Secrets
             genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
             
-            # Usamos o nome simplificado que é o padrão mais aceito
+            # Tenta usar o flash, se não conseguir, tenta o pro
             model = genai.GenerativeModel('gemini-1.5-flash')
             
-            # Criamos o contexto com base nos dados reais do seu dashboard
-            contexto = f"Você é um consultor de negócios. Dados atuais: Clientes={total_clientes}, Faturamento={faturamento}, Lucro={faturamento-despesas}. Pergunta: {prompt}"
+            # Dados reais do seu dashboard
+            contexto = (
+                f"Você é um consultor de negócios experiente. "
+                f"Analise estes dados da Vivv Lab Master: "
+                f"Total de Clientes: {total_clientes}, "
+                f"Faturamento Atual: R$ {faturamento:.2f}, "
+                f"Lucro Líquido: R$ {faturamento-despesas:.2f}. "
+                f"Responda de forma curta e prática à pergunta: {prompt}"
+            )
             
-            # Geramos a resposta
             response = model.generate_content(contexto)
-            resp_text = response.text
+            
+            if response.text:
+                resp_text = response.text
+            else:
+                resp_text = "IA processou, mas não gerou texto. Tente reformular a pergunta."
+                
         except Exception as e:
-            # Se ainda houver erro, ele mostrará a mensagem detalhada aqui
-            resp_text = f"❌ Erro no Gemini: {str(e)}"
+            # Captura o erro real para diagnóstico
+            resp_text = f"❌ Erro na Vivv AI: {str(e)}"
+            
+        st.write(resp_text)
+        st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
