@@ -259,13 +259,38 @@ with col_ops:
                     st.rerun()
 
     with aba_cli:
-        with st.form("add_cli"):
+        with st.form("add_cli_firestore"):
             n_cli = st.text_input("Nome Completo")
             t_cli = st.text_input("WhatsApp (ex: 55119...)")
-            if st.form_submit_button("CADASTRAR CLIENTE"):
-                conn.execute("INSERT INTO clientes (nome, telefone) VALUES (?,?)", (n_cli, t_cli))
-                conn.commit()
-                st.rerun()
+            
+            if st.form_submit_button("CADASTRAR CLIENTE NA NUVEM"):
+                if n_cli and t_cli:
+                    # Cria um novo documento na sub-coleção 'meus_clientes' do usuário logado
+                    user_ref.collection("meus_clientes").add({
+                        "nome": n_cli,
+                        "telefone": t_cli,
+                        "data_cadastro": firestore.SERVER_TIMESTAMP
+                    })
+                    st.success(f"Cliente {n_cli} salvo com segurança na nuvem!")
+                    st.rerun()
+                else:
+                    st.error("Preencha nome e telefone.")
+
+    with ca1:
+        with st.expander("👥 MEUS CLIENTES NA NUVEM"):
+            # Busca todos os documentos da sub-coleção do usuário
+            clientes_ref = user_ref.collection("meus_clientes").stream()
+            lista_clientes = []
+            for c in clientes_ref:
+                d = c.to_dict()
+                d['id_firestore'] = c.id # Guardamos o ID para futuras edições
+                lista_clientes.append(d)
+            
+            if lista_clientes:
+                df_nuvem = pd.DataFrame(lista_clientes)
+                st.dataframe(df_nuvem[['nome', 'telefone']], use_container_width=True)
+            else:
+                st.info("Nenhum cliente cadastrado na nuvem ainda.")
 
     with aba_srv:
         with st.form("add_srv"):
@@ -401,6 +426,7 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
             
         st.write(resp_text)
         st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
+
 
 
 
