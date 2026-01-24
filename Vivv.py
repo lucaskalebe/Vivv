@@ -247,10 +247,11 @@ with col_central:
 
 
 # ================= 8. IA STRATEGIST (GOOGLE GEMINI) =================
+# ================= 8. IA STRATEGIST (GOOGLE GEMINI) =================
 import google.generativeai as genai
 
 st.write("---")
-st.subheader("💬 Vivv AI: Consultor de Negócios")
+st.subheader("💬 Vivv | Consultor de Negócios:")
 
 if "chat_history" not in st.session_state: 
     st.session_state.chat_history = []
@@ -266,33 +267,31 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
     
     with st.chat_message("assistant"):
         try:
-            # 1. Configura a Key
             genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
             
-            # 2. Força o uso do modelo estável (sem o prefixo models/ se necessário)
-            # O nome 'gemini-1.5-flash' é o padrão atual
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            # Tenta encontrar um modelo disponível que suporte geração de conteúdo
+            model_name = 'gemini-1.5-flash' # Padrão
             
-            # 3. Prepara os dados reais do seu dashboard para a IA
+            # Se der erro 404, tentamos simplificar o nome ao máximo
+            model = genai.GenerativeModel(model_name)
+            
             lucro_atual = faturamento - despesas
             contexto = (
-                f"Aja como consultor. Dados: Clientes={total_clientes}, "
-                f"Faturamento=R${faturamento}, Lucro=R${lucro_atual}. "
-                f"Pergunta: {prompt}"
+                f"Analise: Clientes={total_clientes}, Faturamento=R${faturamento}, "
+                f"Lucro=R${lucro_atual}. Pergunta: {prompt}"
             )
             
-            # 4. Gera a resposta
             response = model.generate_content(contexto)
             resp_text = response.text
             
         except Exception as e:
-            # Se der erro 404 de novo, ele tentará o modelo 'gemini-pro' automaticamente
+            # Se o erro 404 persistir, tentamos o modelo 'gemini-pro' que é o mais estável
             try:
-                model_alt = genai.GenerativeModel('gemini-pro')
-                response = model_alt.generate_content(contexto)
+                model = genai.GenerativeModel('gemini-pro')
+                response = model.generate_content(contexto)
                 resp_text = response.text
-            except:
-                resp_text = f"❌ Erro persistente: {str(e)}. Verifique se sua GOOGLE_API_KEY está correta nos Secrets."
+            except Exception as e2:
+                resp_text = f"❌ Erro de Configuração: O modelo {model_name} não foi encontrado na sua região ou a chave é inválida. Detalhe: {str(e2)}"
             
         st.write(resp_text)
         st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
