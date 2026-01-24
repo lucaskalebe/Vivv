@@ -126,7 +126,9 @@ ag_hoje_count = len(agnd)
 
 # ================= 4. DASHBOARD NEON =================
 col_title, col_logout = st.columns([5, 1])
-col_title.title(f"Bem-vindo, {st.session_state.user_email}")
+# Substitua col_title.title(f"Bem-vindo, {st.session_state.user_email}") por:
+
+col_title.markdown(f"#### 👋 Bem-vindo, **{st.session_state.user_email}**")
 if col_logout.button("SAIR"):
     st.session_state.logado = False
     st.rerun()
@@ -223,3 +225,4 @@ with ca2:
         model = genai.GenerativeModel('gemini-1.5-flash')
         ctx = f"Dados: Clientes={total_clis}, Fat=R${faturamento}. Pergunta: {prompt}"
         st.write(model.generate_content(ctx).text)
+
