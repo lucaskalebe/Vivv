@@ -1,218 +1,150 @@
 
-
-import openai
 import streamlit as st
+import sqlite3
 import pandas as pd
+import openai
 import numpy as np
 import plotly.graph_objects as go
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(
-    page_title="BioTwin AI | Human Longevity",
+    page_title="Vivv AI | BioTwin",
     page_icon="🧬",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
-# --- FUNÇÃO PARA O BANCO DE DATAS (SQLite) ---
-def criar_tabela():
-    conn = sqlite3.connect('vivv_dados.db')
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS usuario 
-                 (nome TEXT, idade INT, altura REAL, peso REAL, meta_peso REAL)''')
-    conn.commit()
-    conn.close()
-
-# --- INTERFACE DE CADASTRO NA SIDEBAR ---
-st.sidebar.header("👤 Perfil Biométrico")
-with st.sidebar.form("meu_perfil"):
-    nome = st.text_input("Nome")
-    idade = st.number_input("Idade", min_value=1)
-    peso = st.number_input("Peso Atual (kg)")
-    meta = st.number_input("Meta de Peso (kg)")
-    enviar = st.form_submit_button("Salvar Dados")
-    
-    if enviar:
-        # Aqui salvaríamos no SQLite
-        st.sidebar.success("Dados salvos com sucesso!")
-
-# --- CÁLCULO PARA O TOPO (VALOR REAL VS META) ---
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.metric("Peso Atual", f"{peso} kg", delta=f"{peso - meta} kg para a meta")
-
-client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-
-def gerar_insight(hrv, sono):
-    response = client.chat.completions.create(
-        model="gpt-5-mini", # Usando o modelo ultra-rápido do seu print!
-        messages=[{"role": "user", "content": f"HRV: {hrv}, Sono: {sono}%. Dê um conselho curto."}]
-    )
-    return response.choices[0].message.content
-
-st.title("🧬 Vivv AI")
-if st.button("Analisar Saúde"):
-    st.info(gerar_insight(72, 85))
-
-# --- DESIGN NEON UX (CSS CUSTOMIZADO) ---
+# --- ESTILO NEON (CSS) ---
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap');
-
-    /* Fundo e Containers */
-    .stApp {
-        background: radial-gradient(circle at top right, #070b14, #000000);
-        color: #e0e0e0;
-        font-family: 'Inter', sans-serif;
-    }
-
-,
-    /* Cards Neon */
+    .stApp { background-color: #000505; color: #e0fbfc; }
+    [data-testid="stSidebar"] { background-color: #000808; border-right: 1px solid #00f2ff; }
     .neon-card {
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(0, 255, 255, 0.2);
+        background: rgba(0, 20, 20, 0.6);
+        border: 1px solid #00f2ff;
         border-radius: 15px;
         padding: 20px;
-        box-shadow: 0 4px 15px rgba(0, 255, 255, 0.05);
-        transition: all 0.3s ease;
+        box-shadow: 0 0 15px rgba(0, 242, 255, 0.2);
+        margin-bottom: 20px;
     }
-    .neon-card:hover {
-        border: 1px solid rgba(0, 255, 255, 0.6);
-        box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
-    }
-
-    /* Títulos e Métricas */
-    h1, h2, h3 {
-        font-family: 'Orbitron', sans-serif;
-        letter-spacing: 2px;
-        color: #00f2ff !important;
-        text-shadow: 0 0 10px rgba(0, 242, 255, 0.5);
-    }
-    
-    [data-testid="stMetricValue"] {
-        font-family: 'Orbitron', sans-serif;
-        color: #00f2ff !important;
-        font-size: 1.8rem !important;
-    }
-
-    /* Custom Scrollbar */
-    ::-webkit-scrollbar { width: 5px; }
-    ::-webkit-scrollbar-track { background: #070b14; }
-    ::-webkit-scrollbar-thumb { background: #00f2ff; border-radius: 10px; }
+    h1, h2, h3 { color: #00f2ff; text-shadow: 0 0 10px #00f2ff; }
+    .stMetric { background: rgba(0,0,0,0); border: none; }
 </style>
 """, unsafe_allow_html=True)
 
+# --- BANCO DE DADOS (SQLite) ---
+def init_db():
+    conn = sqlite3.connect('vivv_saude.db')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS perfil 
+                 (id INTEGER PRIMARY KEY, nome TEXT, idade INT, peso REAL, altura REAL, meta REAL)''')
+    conn.commit()
+    conn.close()
 
-# --- GERADOR DE DADOS SINTÉTICOS (COERENTES) ---
-@st.cache_data
-def get_health_data():
-    dates = [datetime.now() - timedelta(days=x) for x in range(30, 0, -1)]
-    hrv = np.random.normal(65, 5, 30)
-    glucose = np.random.normal(95, 10, 30)
-    sleep_score = np.random.randint(60, 95, 30)
-    return pd.DataFrame({'Data': dates, 'HRV': hrv, 'Glicose': glucose, 'Sono': sleep_score})
+init_db()
 
-df = get_health_data()
+# --- INTEGRAÇÃO OPENAI (GPT-5-mini) ---
+def gerar_insight(prompt_contexto):
+    try:
+        client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+        response = client.chat.completions.create(
+            model="gpt-5-mini",
+            messages=[{"role": "system", "content": "Você é o Vivv, um Gêmeo Digital focado em longevidade. Seja curto e científico."},
+                      {"role": "user", "content": prompt_contexto}]
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"Conecte sua API Key para ativar a IA. (Erro: {str(e)})"
 
-# --- HEADER ---
-st.markdown("<h1 style='text-align: center;'>🧬 BIOTWIN <span style='color:white'>AI</span></h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: #888;'>Interface de Monitoramento Preditivo v2.0.27</p>", unsafe_allow_html=True)
-st.write("---")
+# --- SIDEBAR: CADASTRO REAL ---
+st.sidebar.title("🧬 Perfil Bio-Identificado")
+with st.sidebar.form("cadastro"):
+    nome = st.text_input("Nome", value="Lucas")
+    idade = st.number_input("Idade", value=29)
+    peso = st.number_input("Peso Atual (kg)", value=80.0)
+    altura = st.number_input("Altura (m)", value=1.75)
+    meta = st.number_input("Meta de Peso (kg)", value=75.0)
+    if st.form_submit_button("Atualizar Bio-Dados"):
+        conn = sqlite3.connect('vivv_saude.db')
+        c = conn.cursor()
+        c.execute("DELETE FROM perfil")
+        c.execute("INSERT INTO perfil (nome, idade, peso, altura, meta) VALUES (?, ?, ?, ?, ?)", 
+                  (nome, idade, peso, altura, meta))
+        conn.commit()
+        conn.close()
+        st.sidebar.success("Dados salvos no SQLite!")
 
-# --- LINHA 1: KPIs NEON ---
+# --- BUSCA DADOS DO BANCO ---
+conn = sqlite3.connect('vivv_saude.db')
+df_user = pd.read_sql_query("SELECT * FROM perfil", conn)
+conn.close()
+
+if not df_user.empty:
+    u_nome, u_idade, u_peso, u_altura, u_meta = df_user.iloc[0,1:]
+else:
+    u_nome, u_idade, u_peso, u_altura, u_meta = "Usuário", 29, 80.0, 1.75, 75.0
+
+# --- CABEÇALHO ---
+st.title(f"🧬 IA BIOTWIN - {u_nome.upper()}")
+st.markdown(f"**Interface de Monitoramento Preditivo v2.0.26** | Dados de {datetime.now().strftime('%d/%m/%Y')}")
+
+# --- DASHBOARD (METAS REAIS) ---
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.markdown('<div class="neon-card">', unsafe_allow_html=True)
-    st.metric("Score de Longevidade", "84.2", "+1.2%")
+    imc = u_peso / (u_altura ** 2)
+    st.metric("IMC Atual", f"{imc:.1f}", delta_color="inverse")
     st.markdown('</div>', unsafe_allow_html=True)
 
 with col2:
     st.markdown('<div class="neon-card">', unsafe_allow_html=True)
-    st.metric("Idade Biológica", "29.4y", "-0.3y", delta_color="normal")
+    st.metric("Idade Biológica", f"{u_idade - 2} anos", "-2,1 anos")
     st.markdown('</div>', unsafe_allow_html=True)
 
 with col3:
     st.markdown('<div class="neon-card">', unsafe_allow_html=True)
-    st.metric("Variabilidade Cardíaca", "72ms", "Estável")
+    diff = u_peso - u_meta
+    st.metric("Peso vs Meta", f"{u_peso} kg", f"{diff:.1f} kg para meta")
     st.markdown('</div>', unsafe_allow_html=True)
 
 with col4:
     st.markdown('<div class="neon-card">', unsafe_allow_html=True)
-    st.metric("Recuperação CNS", "92%", "+5%")
+    st.metric("Score Longevidade", "88.4", "+1.2%")
     st.markdown('</div>', unsafe_allow_html=True)
 
-st.write("")
+# --- GRÁFICO DE TENDÊNCIAS (PROJETADO) ---
+st.subheader("📊 Projeção de Biomarcadores")
+chart_data = pd.DataFrame({
+    'Dias': pd.date_range(start='2026-01-01', periods=10),
+    'HRV': np.random.randint(60, 80, 10),
+    'Glicose': np.random.randint(85, 105, 10)
+})
+fig = go.Figure()
+fig.add_trace(go.Scatter(x=chart_data['Dias'], y=chart_data['HRV'], name="HRV (ms)", line=dict(color='#00f2ff', width=3)))
+fig.add_trace(go.Scatter(x=chart_data['Dias'], y=chart_data['Glicose'], name="Glicose (mg/dL)", line=dict(color='#ff007f', dash='dot')))
+fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="#e0fbfc")
+st.plotly_chart(fig, use_container_width=True)
 
-# --- LINHA 2: GRÁFICOS AVANÇADOS ---
-c1, c2 = st.columns([2, 1])
+# --- CHAT DE PESQUISA (FUNCIONAL) ---
+st.markdown("---")
+st.subheader("💬 Consultoria Gêmeo Digital")
 
-with c1:
-    st.markdown("### 📊 Tendências de Biomarcadores")
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=df['Data'], y=df['HRV'], name="HRV (ms)",
-                             line=dict(color='#00f2ff', width=3), fill='tozeroy',
-                             fillcolor='rgba(0, 242, 255, 0.1)'))
-    fig.add_trace(go.Scatter(x=df['Data'], y=df['Glicose'], name="Glicose (mg/dL)",
-                             line=dict(color='#ff007f', width=3, dash='dot')))
-    
-    fig.update_layout(
-        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-        margin=dict(l=0, r=0, t=20, b=0), height=400,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-        font=dict(color="#888"),
-        xaxis=dict(showgrid=False), yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)')
-    )
-    st.plotly_chart(fig, use_container_width=True)
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-with c2:
-    st.markdown("### 🧠 Insights da IA")
-    st.info("Sua Variabilidade Cardíaca (HRV) sugere uma janela de treino de alta intensidade hoje.")
-    
-    # Gráfico de Radar para Equilíbrio Sistêmico
-    categories = ['Sono', 'Nutrição', 'Atividade', 'Stress', 'Hidratação']
-    values = [85, 70, 90, 65, 80]
-    
-    fig_radar = go.Figure(data=go.Scatterpolar(
-        r=values, theta=categories, fill='toself',
-        fillcolor='rgba(0, 242, 255, 0.3)', line=dict(color='#00f2ff')
-    ))
-    fig_radar.update_layout(
-        polar=dict(radialaxis=dict(visible=False), bgcolor='rgba(0,0,0,0)'),
-        showlegend=False, paper_bgcolor='rgba(0,0,0,0)', height=300,
-        margin=dict(l=40, r=40, t=20, b=20)
-    )
-    st.plotly_chart(fig_radar, use_container_width=True)
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-# --- LINHA 3: SIMULADOR DE GÊMEO DIGITAL (A "MAGIA") ---
-st.write("---")
-st.markdown("### 🤖 Simulador do Gêmeo Digital")
-col_sim1, col_sim2 = st.columns([1, 2])
+if prompt := st.chat_input("Pergunte algo (ex: Como reduzir meu IMC?)"):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
 
-with col_sim1:
-    st.write("Ajuste variáveis futuras:")
-    s_dieta = st.select_slider("Aporte de Carboidratos", options=["Baixo", "Moderado", "Alto"])
-    s_treino = st.slider("Intensidade do Treino (RPE)", 1, 10, 5)
-    s_suplemento = st.checkbox("Incluir Protocolo de Magnésio/Omega3")
-    
-    if st.button("🚀 RODAR SIMULAÇÃO"):
-        st.toast("Processando dados no Gêmeo Digital...", icon="⏳")
-
-with col_sim2:
-    # Simulação visual de impacto
-    sim_data = np.random.normal(70, 2, 10) + (10 if s_suplemento else 0)
-    fig_sim = go.Figure()
-    fig_sim.add_trace(go.Bar(y=sim_data, marker_color='#00f2ff', opacity=0.6, name="Projeção Saúde"))
-    fig_sim.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=250, margin=dict(t=0))
-    st.plotly_chart(fig_sim, use_container_width=True)
-    st.success(f"Projeção: Com treino nível {s_treino} e suplementação, sua idade biológica pode reduzir 0.2y em 15 dias.")
-
-
-
-# --- FOOTER ---
-
-st.markdown("<br><p style='text-align: center; color: #444;'>Propriedade do Usuário | Dados Criptografados End-to-End</p>", unsafe_allow_html=True)
-
-
-
+    with st.chat_message("assistant"):
+        contexto = f"O usuário {u_nome} tem {u_idade} anos, pesa {u_peso}kg e mede {u_altura}m. Meta: {u_meta}kg. Pergunta: {prompt}"
+        resposta = gerar_insight(contexto)
+        st.markdown(resposta)
+        st.session_state.messages.append({"role": "assistant", "content": resposta})
