@@ -226,3 +226,34 @@ with ca2:
         ctx = f"Dados: Clientes={total_clis}, Fat=R${faturamento}. Pergunta: {prompt}"
         st.write(model.generate_content(ctx).text)
 
+# ================= 8. IA STRATEGIST (GOOGLE GEMINI) =================
+st.write("---")
+st.subheader("💬 Vivv AI: Consultor de Negócios")
+
+if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
+    try:
+        genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+        
+        # Lista os modelos e escolhe o primeiro que suporta geração de conteúdo
+        # Isso evita o erro 'NotFound' caso o nome do modelo mude
+        modelos_disponiveis = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        
+        # Tenta usar o flash, se não existir, pega o primeiro da lista
+        nome_modelo = 'models/gemini-1.5-flash' if 'models/gemini-1.5-flash' in modelos_disponiveis else modelos_disponiveis[0]
+        
+        model = genai.GenerativeModel(nome_modelo)
+        
+        lucro_atual = faturamento - despesas
+        contexto = (
+            f"Você é um consultor de negócios experiente. "
+            f"Dados atuais: Clientes={total_clis}, Faturamento=R${faturamento}, Lucro=R${lucro_atual}. "
+            f"O usuário perguntou: {prompt}"
+        )
+        
+        with st.spinner("Analisando dados..."):
+            response = model.generate_content(contexto)
+            st.write(response.text)
+            
+    except Exception as e:
+        st.error(f"Ocorreu um erro na IA: {e}")
+        st.info("Verifique se sua GOOGLE_API_KEY está correta nos Secrets do Streamlit.")
