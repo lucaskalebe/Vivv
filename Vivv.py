@@ -248,7 +248,8 @@ with col_central:
 
 # ================= 8. IA STRATEGIST =================
 
-client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+# ================= 8. IA STRATEGIST (GOOGLE GEMINI) =================
+import google.generativeai as genai
 
 st.write("---")
 st.subheader("💬 Vivv AI: Consultor de Negócios")
@@ -267,27 +268,16 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
     
     with st.chat_message("assistant"):
         try:
-            # Puxa a chave que você acabou de salvar nos Secrets
-            client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+            # Configura o Gemini com a chave do Google
+            genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+            model = genai.GenerativeModel('gemini-1.5-flash')
             
-            contexto = f"Contexto: Clientes={total_clientes}, Faturamento=R${faturamento}, Lucro=R${faturamento-despesas}. Pergunta: {prompt}"
+            contexto = f"Você é um consultor de negócios. Dados atuais: Clientes={total_clientes}, Faturamento=R${faturamento}, Lucro=R${faturamento-despesas}. Pergunta do usuário: {prompt}"
             
-            response = client.chat.completions.create(
-                model="gpt-4o-mini", 
-                messages=[{"role": "user", "content": contexto}]
-            )
-            resp_text = response.choices[0].message.content
+            response = model.generate_content(contexto)
+            resp_text = response.text
         except Exception as e:
-            # Mostra o erro real se algo ainda der errado
-            resp_text = f"❌ Erro detectado: {str(e)}"
+            resp_text = f"❌ Erro no Gemini: {str(e)}"
             
         st.write(resp_text)
         st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
-
-
-
-
-
-
-
-
