@@ -211,20 +211,49 @@ with c_right:
                     st.rerun()
 
 # ================= 7. AUDITORIA E IA =================
+# ================= 7. CENTRAL DE AUDITORIA E IA BLINDADA =================
 st.write("---")
 ca1, ca2 = st.columns(2)
+
 with ca1:
     with st.expander("🗄️ Database Clientes/Serviços"):
-        if clis: st.dataframe(pd.DataFrame(clis), use_container_width=True)
-        if srvs: st.dataframe(pd.DataFrame(srvs), use_container_width=True)
+        if clis: 
+            st.markdown("### Clientes")
+            st.dataframe(pd.DataFrame(clis), use_container_width=True)
+        if srvs: 
+            st.markdown("### Serviços")
+            st.dataframe(pd.DataFrame(srvs), use_container_width=True)
+        if not clis and not srvs:
+            st.info("Nenhum dado cadastrado na nuvem.")
 
 with ca2:
-    st.subheader("💬 Vivv Strategist AI")
-    if prompt := st.chat_input("Dicas para meu negócio?"):
-        genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        ctx = f"Dados: Clientes={total_clis}, Fat=R${faturamento}. Pergunta: {prompt}"
-        st.write(model.generate_content(ctx).text)
+    st.subheader("💬 Vivv AI: Consultor de Negócios")
+    
+    # Único chat_input permitido para evitar duplicação
+    if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
+        try:
+            genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+            
+            # Detecção automática de modelo para evitar erro NotFound
+            modelos_disponiveis = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+            nome_modelo = 'models/gemini-1.5-flash' if 'models/gemini-1.5-flash' in modelos_disponiveis else modelos_disponiveis[0]
+            
+            model = genai.GenerativeModel(nome_modelo)
+            lucro_atual = faturamento - despesas
+            
+            contexto = (
+                f"Você é um consultor de negócios. Analise estes dados: "
+                f"Clientes={total_clis}, Receita=R${faturamento}, Lucro=R${lucro_atual}. "
+                f"Pergunta do usuário: {prompt}"
+            )
+            
+            with st.spinner("Analisando seus dados..."):
+                response = model.generate_content(contexto)
+                st.write(response.text)
+                
+        except Exception as e:
+            st.error(f"Erro na IA: {e}")
+            st.info("Certifique-se de que a GOOGLE_API_KEY está configurada corretamente.")
 
 # ================= 8. IA STRATEGIST (GOOGLE GEMINI) =================
 st.write("---")
@@ -257,3 +286,4 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
     except Exception as e:
         st.error(f"Ocorreu um erro na IA: {e}")
         st.info("Verifique se sua GOOGLE_API_KEY está correta nos Secrets do Streamlit.")
+
