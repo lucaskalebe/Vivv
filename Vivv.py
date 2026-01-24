@@ -13,59 +13,72 @@ from google.oauth2 import service_account
 import json
 
 
-# --- 1. CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="Vivv", layout="wide")
-
-# --- 2. CONEXÃO COM O BANCO (SÓ UMA VEZ) ---
+# --- 1. INICIALIZAÇÃO DO BANCO (COLE LOGO APÓS OS IMPORTS) ---
 @st.cache_resource
 def init_db():
+    # Lê as credenciais salvas nos Secrets do Streamlit
     key_dict = json.loads(st.secrets["FIREBASE_DETAILS"])
     creds = service_account.Credentials.from_service_account_info(key_dict)
     return firestore.Client(credentials=creds)
 
+# Define a variável 'db' globalmente para evitar o NameError
+db = init_db()
+
+# --- 2. CONTROLE DE ACESSO E SESSÃO ---
 if "logado" not in st.session_state:
     st.session_state.logado = False
 
+# --- 3. TELA DE LOGIN / CADASTRO ---
 if not st.session_state.logado:
     st.title("Vivv - Acesso")
     
     aba_login, aba_cadastro = st.tabs(["Entrar", "Solicitar Acesso"])
     
     with aba_login:
-        email_input = st.text_input("E-mail")
-        senha_input = st.text_input("Senha", type="password")
+        email_input = st.text_input("E-mail para login", key="login_email")
+        senha_input = st.text_input("Senha", type="password", key="login_senha")
         
         if st.button("Acessar"):
-            # Busca o usuário no Firebase
-            user_ref = db.collection("usuarios").document(email_input).get()
+            # Consulta o banco de dados pelo e-mail
+            user_doc = db.collection("usuarios").document(email_input).get()
             
-            if user_ref.exists:
-                dados = user_ref.to_dict()
-                # Verifica se o pagamento foi confirmado (campo 'pago')
+            if user_doc.exists:
+                dados = user_doc.to_dict()
+                # Verifica se o campo 'pago' está como True no Firebase
                 if dados.get("pago") == True:
                     st.session_state.logado = True
                     st.session_state.user_email = email_input
                     st.rerun()
                 else:
-                    st.warning("Seu acesso está pendente de confirmação de pagamento.")
+                    st.warning("Acesso pendente. Sua conta será liberada após a confirmação do pagamento.")
             else:
-                st.error("Usuário não encontrado ou senha incorreta.")
+                st.error("Usuário não encontrado. Solicite acesso na aba ao lado.")
                 
     with aba_cadastro:
-        novo_nome = st.text_input("Nome Completo")
-        novo_email = st.text_input("E-mail para login")
+        novo_nome = st.text_input("Nome Completo", key="reg_nome")
+        novo_email = st.text_input("E-mail para cadastro", key="reg_email")
+        
         if st.button("Enviar Solicitação"):
-            # Cria o usuário com 'pago' como Falso por padrão
-            db.collection("usuarios").document(novo_email).set({
-                "nome": novo_nome,
-                "pago": False,
-                "data_cadastro": firestore.SERVER_TIMESTAMP
-            })
-            st.success("Solicitação enviada! Você será liberado após o pagamento.")
+            if novo_nome and novo_email:
+                # Salva a solicitação no Firebase com 'pago' desligado
+                db.collection("usuarios").document(novo_email).set({
+                    "nome": novo_nome,
+                    "pago": False,
+                    "data_solicitacao": firestore.SERVER_TIMESTAMP
+                })
+                st.success("Solicitação enviada com sucesso! Aguarde a liberação após o pagamento.")
+            else:
+                st.error("Preencha todos os campos para solicitar acesso.")
     
-    st.stop() # Interrompe o código aqui para quem não está logado
+    # Trava a execução aqui para quem não estiver logado
+    st.stop()
 
+# --- 4. SEU PAINEL ORIGINAL COMEÇA ABAIXO ---
+# (Coloque aqui seus cards, tabelas e o botão de Logout na sidebar)
 
+if st.sidebar.button("SAIR / LOGOUT"):
+    st.session_state.logado = False
+    st.rerun()
 
 
 # Aqui nós criamos a variável 'db' que o erro disse que estava faltando
@@ -383,6 +396,7 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
             
         st.write(resp_text)
         st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
+
 
 
 
