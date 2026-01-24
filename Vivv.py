@@ -23,6 +23,51 @@ def init_db():
     creds = service_account.Credentials.from_service_account_info(key_dict)
     return firestore.Client(credentials=creds)
 
+if "logado" not in st.session_state:
+    st.session_state.logado = False
+
+if not st.session_state.logado:
+    st.title("Vivv - Acesso")
+    
+    aba_login, aba_cadastro = st.tabs(["Entrar", "Solicitar Acesso"])
+    
+    with aba_login:
+        email_input = st.text_input("E-mail")
+        senha_input = st.text_input("Senha", type="password")
+        
+        if st.button("Acessar"):
+            # Busca o usuário no Firebase
+            user_ref = db.collection("usuarios").document(email_input).get()
+            
+            if user_ref.exists:
+                dados = user_ref.to_dict()
+                # Verifica se o pagamento foi confirmado (campo 'pago')
+                if dados.get("pago") == True:
+                    st.session_state.logado = True
+                    st.session_state.user_email = email_input
+                    st.rerun()
+                else:
+                    st.warning("Seu acesso está pendente de confirmação de pagamento.")
+            else:
+                st.error("Usuário não encontrado ou senha incorreta.")
+                
+    with aba_cadastro:
+        novo_nome = st.text_input("Nome Completo")
+        novo_email = st.text_input("E-mail para login")
+        if st.button("Enviar Solicitação"):
+            # Cria o usuário com 'pago' como Falso por padrão
+            db.collection("usuarios").document(novo_email).set({
+                "nome": novo_nome,
+                "pago": False,
+                "data_cadastro": firestore.SERVER_TIMESTAMP
+            })
+            st.success("Solicitação enviada! Você será liberado após o pagamento.")
+    
+    st.stop() # Interrompe o código aqui para quem não está logado
+
+
+
+
 # Aqui nós criamos a variável 'db' que o erro disse que estava faltando
 db = init_db()
 
@@ -338,6 +383,7 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
             
         st.write(resp_text)
         st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
+
 
 
 
