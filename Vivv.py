@@ -93,6 +93,7 @@ if st.sidebar.button("SAIR / LOGOUT"):
 user_email = st.session_state.user_email 
 user_ref = db.collection("usuarios").document(user_email)
 
+
 doc = user_ref.get()
 if doc.exists:
     dados_painel = doc.to_dict()
@@ -426,6 +427,7 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
             
         st.write(resp_text)
         st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
+
 
 
 
