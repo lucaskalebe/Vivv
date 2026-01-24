@@ -64,7 +64,11 @@ if not st.session_state.logado:
             if user_doc.exists:
                 dados = user_doc.to_dict()
                 if dados.get("senha") == senha_input:
-                    agora = datetime.datetime.now(datetime.timezone.utc)
+                    # CORREÇÃO AQUI: Usamos apenas datetime.now() 
+                    # porque você já importou a classe no topo do arquivo
+                    from datetime import timezone
+                    agora = datetime.now(timezone.utc)
+                    
                     if dados.get("pago") == True or (dados.get("teste") == True and agora < dados.get("validade")):
                         st.session_state.logado = True
                         st.session_state.user_email = email_input
@@ -397,6 +401,7 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
             
         st.write(resp_text)
         st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
+
 
 
 
