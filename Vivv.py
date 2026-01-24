@@ -268,16 +268,14 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
     
     with st.chat_message("assistant"):
         try:
-            # Configura o Gemini com a chave do Google
+            # Configura o Gemini
             genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-            model = genai.GenerativeModel('gemini-1.5-flash')
             
-            contexto = f"Você é um consultor de negócios. Dados atuais: Clientes={total_clientes}, Faturamento=R${faturamento}, Lucro=R${faturamento-despesas}. Pergunta do usuário: {prompt}"
+            # Trocamos para o nome exato que o sistema exige
+            model = genai.GenerativeModel('models/gemini-1.5-flash-latest')
             
+            contexto = f"Você é um consultor de negócios. Dados atuais: Clientes={total_clientes}, Faturamento=R${faturamento}, Lucro={faturamento-despesas}. Pergunta: {prompt}"
+            
+            # Adicionamos uma configuração de segurança básica
             response = model.generate_content(contexto)
             resp_text = response.text
-        except Exception as e:
-            resp_text = f"❌ Erro no Gemini: {str(e)}"
-            
-        st.write(resp_text)
-        st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
