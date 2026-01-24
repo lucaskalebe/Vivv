@@ -210,20 +210,45 @@ with col_display:
                     conn.commit(); st.rerun()
 
 # ================= 6. CENTRAL DE AUDITORIA (DATABASE) =================
+# ================= 6. CENTRAL DE AUDITORIA (EDITÁVEL) =================
 st.write("---")
-st.subheader("🗄️ Auditoria e Gestão de Dados")
+st.subheader("🗄️ Auditoria e Gestão de Dados (Edição Direta)")
 c_db1, c_db2 = st.columns(2)
 
 with c_db1:
-    with st.expander("👥 Banco de Dados de Clientes"):
-        df_all_clis = pd.read_sql("SELECT nome as Nome, telefone as WhatsApp FROM clientes", conn)
-        st.dataframe(df_all_clis, use_container_width=True)
+    st.markdown("### 👥 Clientes")
+    # Carrega os dados atuais
+    df_edit_clis = pd.read_sql("SELECT id, nome, telefone FROM clientes", conn)
+    # Interface de edição
+    edited_clis = st.data_editor(df_edit_clis, hide_index=True, use_container_width=True, key="ed_cli")
+    
+    if st.button("Salvar Alterações de Clientes"):
+        try:
+            # Limpa a tabela e reinseri os dados editados
+            conn.execute("DELETE FROM clientes")
+            edited_clis.to_sql("clientes", conn, if_exists="append", index=False)
+            conn.commit()
+            st.success("Lista de clientes atualizada!")
+            st.rerun()
+        except Exception as e:
+            st.error(f"Erro ao salvar: {e}")
 
 with c_db2:
-    with st.expander("📊 Extrato Completo de Caixa"):
-        df_all_cx = pd.read_sql("SELECT data as Data, descricao as Descricao, tipo as Tipo, valor as Valor FROM caixa ORDER BY id DESC", conn)
-        st.dataframe(df_all_cx, use_container_width=True)
-
+    st.markdown("### 📊 Fluxo de Caixa")
+    # Carrega os dados atuais
+    df_edit_cx = pd.read_sql("SELECT id, data, descricao, tipo, valor FROM caixa", conn)
+    # Interface de edição
+    edited_cx = st.data_editor(df_edit_cx, hide_index=True, use_container_width=True, key="ed_cx")
+    
+    if st.button("Salvar Alterações de Caixa"):
+        try:
+            conn.execute("DELETE FROM caixa")
+            edited_cx.to_sql("caixa", conn, if_exists="append", index=False)
+            conn.commit()
+            st.success("Fluxo de caixa atualizado!")
+            st.rerun()
+        except Exception as e:
+            st.error(f"Erro ao salvar: {e}")
 # ================= 7. IA CONSULTORA DE NEGÓCIOS =================
 st.write("---")
 st.subheader("💬 Vivv AI: Estrategista de Negócios")
@@ -249,3 +274,4 @@ if prompt_ia := st.chat_input("Pergunte à IA sobre seu faturamento ou estratég
         st.session_state.chat_log.append({"role": "assistant", "content": texto_ia})
 
 # FIM DO CÓDIGO - ESTRUTURA COMPLETA
+
