@@ -11,6 +11,11 @@ st.set_page_config(page_title="Vivv Lab Master", layout="wide", page_icon="🧬"
 
 st.markdown("""
 <style>
+
+button.header-anchor {
+    display: none !important;
+}
+
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
     
     /* Fundo Deep Black */
@@ -302,6 +307,7 @@ if prompt_ia := st.chat_input("Pergunte à IA sobre seu faturamento ou estratég
         st.session_state.chat_log.append({"role": "assistant", "content": texto_ia})
 
 # FIM DO CÓDIGO - ESTRUTURA COMPLETA
+
 
 
 
