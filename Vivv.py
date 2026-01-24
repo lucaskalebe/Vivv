@@ -39,39 +39,39 @@ if not st.session_state.logado:
         senha_input = st.text_input("Senha", type="password", key="login_senha")
         
         if st.button("Acessar"):
-            # Consulta o banco de dados pelo e-mail
+            # Consulta o banco de dados pelo e-mail informado
             user_doc = db.collection("usuarios").document(email_input).get()
             
             if user_doc.exists:
                 dados = user_doc.to_dict()
-                # Verifica se o campo 'pago' está como True no Firebase
+                import datetime
+                # Pega o horário atual para comparar com a validade
+                agora = datetime.datetime.now(datetime.timezone.utc)
+                
+                # 1. Verificação de Usuário Pagante
                 if dados.get("pago") == True:
                     st.session_state.logado = True
                     st.session_state.user_email = email_input
                     st.rerun()
+                
+                # 2. Verificação de Usuário em Teste
+                elif dados.get("teste") == True:
+                    validade = dados.get("validade")
+                    # Verifica se a data de validade ainda não passou
+                    if validade and agora < validade:
+                        st.session_state.logado = True
+                        st.session_state.user_email = email_input
+                        st.info(f"Acesso de teste válido até {validade.strftime('%d/%m/%Y')}")
+                        st.rerun()
+                    else:
+                        st.error("Seu período de teste expirou! Efetue o pagamento para continuar.")
+                
+                # 3. Caso não seja pago nem teste
                 else:
                     st.warning("Acesso pendente. Sua conta será liberada após a confirmação do pagamento.")
+            
             else:
                 st.error("Usuário não encontrado. Solicite acesso na aba ao lado.")
-                
-    with aba_cadastro:
-        novo_nome = st.text_input("Nome Completo", key="reg_nome")
-        novo_email = st.text_input("E-mail para cadastro", key="reg_email")
-        
-        if st.button("Enviar Solicitação"):
-            if novo_nome and novo_email:
-                # Salva a solicitação no Firebase com 'pago' desligado
-                db.collection("usuarios").document(novo_email).set({
-                    "nome": novo_nome,
-                    "pago": False,
-                    "data_solicitacao": firestore.SERVER_TIMESTAMP
-                })
-                st.success("Solicitação enviada com sucesso! Aguarde a liberação após o pagamento.")
-            else:
-                st.error("Preencha todos os campos para solicitar acesso.")
-    
-    # Trava a execução aqui para quem não estiver logado
-    st.stop()
 
 # --- 4. SEU PAINEL ORIGINAL COMEÇA ABAIXO ---
 # (Coloque aqui seus cards, tabelas e o botão de Logout na sidebar)
@@ -396,6 +396,7 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
             
         st.write(resp_text)
         st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
+
 
 
 
