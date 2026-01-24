@@ -12,6 +12,10 @@ from google.cloud import firestore
 from google.oauth2 import service_account
 import json
 
+import streamlit as st
+import json
+from google.cloud import firestore
+from google.oauth2 import service_account
 
 # --- CONEXÃO SILENCIOSA ---
 @st.cache_resource
@@ -21,37 +25,43 @@ def init_db():
     return firestore.Client(credentials=creds)
 
 db = init_db()
-user_email = "lucaskalebe@gmail.com" # Seu identificador único
-
-# --- BUSCA AUTOMÁTICA DE DADOS ---
+user_email = "lucaskalebe@gmail.com"
 user_ref = db.collection("usuarios").document(user_email)
-dados_banco = user_ref.get()
 
-if dados_banco.exists:
-    info = dados_banco.to_dict()
-    faturamento = info.get("faturamento", 115.0)
-    lucro = info.get("lucro", 50.0)
-else:
-    # Se for a primeira vez, cria os dados padrão no banco
-    faturamento, lucro = 115.0, 50.0
-    user_ref.set({"faturamento": faturamento, "lucro": lucro})
+# --- RECUPERAÇÃO DE DADOS ---
+# Tentamos ler os dados existentes no painel do Firebase
+dados_atuais = user_ref.get().to_dict() if user_ref.get().exists else {}
 
-# --- SEU DASHBOARD (VISUAL ORIGINAL) ---
+# Se o dado não existir no banco, ele usa o valor padrão que você já tinha
+base_clientes = dados_atuais.get("base_clientes", 2)
+receita_bruta = dados_atuais.get("receita_bruta", 3000.00)
+lucro_liquido = dados_atuais.get("lucro_liquido", 2350.00)
+agenda_hoje = dados_atuais.get("agenda_hoje", 0)
+
+# --- VISUALIZAÇÃO (SEUS CARDS ORIGINAIS) ---
 st.title("Vivv Lab Master")
 
-col1, col2 = st.columns(2)
-col1.metric("Faturamento Total", f"R$ {faturamento:,.2f}")
-col2.metric("Lucro Líquido", f"R$ {lucro:,.2f}")
+# Exibindo os dados que vieram do Banco ou do Padrão
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("BASE DE CLIENTES", base_clientes)
+col2.metric("RECEITA BRUTA", f"R$ {receita_bruta:,.2f}")
+col3.metric("LUCRO LÍQUIDO", f"R$ {lucro_liquido:,.2f}")
+col4.metric("AGENDA HOJE", agenda_hoje)
 
-# Exemplo: Sempre que a Vivv AI responder, ela atualiza o banco com os dados atuais
-# para garantir que nada se perca.
-def atualizar_banco_silencioso(novo_fat, novo_lucro):
-    user_ref.update({
-        "faturamento": novo_fat,
-        "lucro": novo_lucro,
-        "ultima_sincronizacao": firestore.SERVER_TIMESTAMP
-    })
+# --- COMO ARMAZENAR AUTOMATICAMENTE ---
+# Sempre que você fizer uma alteração em uma tabela ou input no seu código,
+# basta chamar esta linha para salvar:
+def sincronizar_banco(clientes, receita, lucro, agenda):
+    user_ref.set({
+        "base_clientes": clientes,
+        "receita_bruta": receita,
+        "lucro_liquido": lucro,
+        "agenda_hoje": agenda,
+        "ultima_atualizacao": firestore.SERVER_TIMESTAMP
+    }, merge=True)
 
+# Exemplo: Se você tiver uma tabela de serviços, ao final dela você chama:
+# sincronizar_banco(base_clientes, receita_bruta, lucro_liquido, agenda_hoje)
 
 # ================= 1. CONFIGURAÇÃO E DESIGN ULTRA NEON =================
 st.set_page_config(page_title="Vivv", layout="centered", page_icon="🚀")
@@ -336,6 +346,7 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
             
         st.write(resp_text)
         st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
+
 
 
 
