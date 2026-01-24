@@ -90,9 +90,21 @@ if st.sidebar.button("SAIR / LOGOUT", key="btn_logout_final"):
     st.session_state.logado = False
     st.rerun()
 
-# --- 3. BUSCA DE DADOS ---
-user_email = "lucaskalebe@gmail.com"
+# --- 3. BUSCA DE DADOS (AGORA NO FIRESTORE) ---
+user_email = st.session_state.user_email 
 user_ref = db.collection("usuarios").document(user_email)
+
+# Busca métricas em tempo real das sub-coleções
+clientes_list = list(user_ref.collection("meus_clientes").stream())
+agenda_list = list(user_ref.collection("minha_agenda").where("status", "==", "Pendente").stream())
+caixa_list = list(user_ref.collection("meu_caixa").stream())
+
+base_clientes = len(clientes_list)
+agenda_hoje = len(agenda_list)
+
+receita_bruta = sum([float(d.to_dict().get('valor', 0)) for d in caixa_list if d.to_dict().get('tipo') == 'Entrada'])
+despesas = sum([float(d.to_dict().get('valor', 0)) for d in caixa_list if d.to_dict().get('tipo') == 'Saída'])
+lucro_liquido = receita_bruta - despesas
 
 # Tenta buscar os dados salvos. Se não existirem, usa os valores padrão
 doc = user_ref.get()
@@ -232,7 +244,7 @@ with m4:
         </div>
     ''', unsafe_allow_html=True)
 
-# ================= 5. PAINEL OPERACIONAL =================
+# ================= 5. PAINEL OPERACIONAL (100% CLOUD / FIRESTORE) =================
 st.write("---")
 col_ops, col_fila = st.columns([1.5, 2])
 
@@ -240,76 +252,57 @@ with col_ops:
     st.subheader("⚡ Painel de Controle")
     aba_ag, aba_cli, aba_srv, aba_cx = st.tabs(["📅 Agenda", "👤 Cliente", "💰 Serviço", "📉 Caixa"])
     
-    with aba_ag:
-        df_clis = pd.read_sql("SELECT id, nome FROM clientes", conn)
-        df_servs = pd.read_sql("SELECT id, nome, preco FROM servicos", conn)
-        
-        with st.form("add_agenda"):
-            cli_sel = st.selectbox("Cliente", df_clis['nome']) if not df_clis.empty else None
-            srv_sel = st.selectbox("Serviço", df_servs['nome']) if not df_servs.empty else None
-            dt_ag = st.date_input("Data do Atendimento", format="DD/MM/YYYY")
-            hr_ag = st.time_input("Hora")
-            if st.form_submit_button("CONFIRMAR AGENDAMENTO"):
-                if cli_sel and srv_sel:
-                    cid = df_clis[df_clis.nome == cli_sel].id.values[0]
-                    sid = df_servs[df_servs.nome == srv_sel].id.values[0]
-                    conn.execute("INSERT INTO agenda (cliente_id, servico_id, data, hora, status) VALUES (?,?,?,?, 'Pendente')",
-                                 (int(cid), int(sid), str(dt_ag), str(hr_ag)))
-                    conn.commit()
-                    st.rerun()
-
     with aba_cli:
-        with st.form("add_cli_firestore"):
-            n_cli = st.text_input("Nome Completo")
-            t_cli = st.text_input("WhatsApp (ex: 55119...)")
-            
+        with st.form("add_cli_fire"):
+            n_cli = st.text_input("Nome do Cliente")
+            t_cli = st.text_input("WhatsApp (ex: 5511...)")
             if st.form_submit_button("CADASTRAR CLIENTE NA NUVEM"):
                 if n_cli and t_cli:
-                    # Cria um novo documento na sub-coleção 'meus_clientes' do usuário logado
                     user_ref.collection("meus_clientes").add({
-                        "nome": n_cli,
+                        "nome": n_cli, 
                         "telefone": t_cli,
                         "data_cadastro": firestore.SERVER_TIMESTAMP
                     })
-                    st.success(f"Cliente {n_cli} salvo com segurança na nuvem!")
+                    st.success(f"Cliente {n_cli} salvo!")
                     st.rerun()
-                else:
-                    st.error("Preencha nome e telefone.")
 
-    with ca1:
-        with st.expander("👥 MEUS CLIENTES NA NUVEM"):
-            # Busca todos os documentos da sub-coleção do usuário
-            clientes_ref = user_ref.collection("meus_clientes").stream()
-            lista_clientes = []
-            for c in clientes_ref:
-                d = c.to_dict()
-                d['id_firestore'] = c.id # Guardamos o ID para futuras edições
-                lista_clientes.append(d)
-            
-            if lista_clientes:
-                df_nuvem = pd.DataFrame(lista_clientes)
-                st.dataframe(df_nuvem[['nome', 'telefone']], use_container_width=True)
-            else:
-                st.info("Nenhum cliente cadastrado na nuvem ainda.")
+    with aba_ag:
+        # Busca lista de clientes para o agendamento
+        clientes_cloud = list(user_ref.collection("meus_clientes").stream())
+        nomes_clientes = [c.to_dict()['nome'] for c in clientes_cloud]
+        
+        with st.form("add_ag_fire"):
+            cli_sel = st.selectbox("Selecione o Cliente", nomes_clientes) if nomes_clientes else st.warning("Cadastre um cliente primeiro!")
+            serv_nome = st.text_input("Nome do Serviço")
+            preco_serv = st.number_input("Preço (R$)", min_value=0.0)
+            if st.form_submit_button("CONFIRMAR AGENDAMENTO"):
+                if cli_sel and serv_nome:
+                    user_ref.collection("minha_agenda").add({
+                        "cliente": cli_sel, 
+                        "servico": serv_nome, 
+                        "preco": preco_serv, 
+                        "status": "Pendente",
+                        "data_criacao": firestore.SERVER_TIMESTAMP
+                    })
+                    st.success("Agendado com sucesso!")
+                    st.rerun()
 
     with aba_srv:
-        with st.form("add_srv"):
-            n_srv = st.text_input("Nome do Serviço")
-            p_srv = st.number_input("Preço (R$)", min_value=0.0)
-            if st.form_submit_button("CADASTRAR SERVIÇO"):
-                conn.execute("INSERT INTO servicos (nome, preco) VALUES (?,?)", (n_srv, p_srv))
-                conn.commit()
-                st.rerun()
+        st.info("Os serviços agora são integrados diretamente no agendamento para maior velocidade.")
 
     with aba_cx:
-        with st.form("add_caixa"):
-            desc_cx = st.text_input("Descrição do Lançamento")
-            val_cx = st.number_input("Valor", min_value=0.0)
-            tipo_cx = st.selectbox("Tipo", ["Saída", "Entrada"])
+        with st.form("add_cx_fire"):
+            desc_cx = st.text_input("Descrição")
+            val_cx = st.number_input("Valor (R$)", min_value=0.0)
+            tipo_cx = st.selectbox("Tipo", ["Entrada", "Saída"])
             if st.form_submit_button("REGISTRAR NO CAIXA"):
-                conn.execute("INSERT INTO caixa (descricao, valor, tipo, data) VALUES (?,?,?,?)",
-                             (desc_cx, val_cx, tipo_cx, hoje_iso))
-                conn.commit()
+                user_ref.collection("meu_caixa").add({
+                    "descricao": desc_cx,
+                    "valor": val_cx,
+                    "tipo": tipo_cx,
+                    "data": firestore.SERVER_TIMESTAMP
+                })
+                st.success("Lançamento registrado!")
                 st.rerun()
 
 # ================= 6. FILA DE ATENDIMENTOS E WHATSAPP =================
@@ -351,35 +344,30 @@ with col_fila:
                     conn.commit()
                     st.rerun()
 
-# ================= 7. CENTRAL DE AUDITORIA (EXPANSÍVEL) =================
+# ================= 7. CENTRAL DE AUDITORIA (CORREÇÃO NameError) =================
 st.write("---")
-st.markdown("### 🗄️ Central de Auditoria e Controle de Dados")
+st.markdown("### 🗄️ Central de Auditoria")
 
-_, col_central, _ = st.columns([0.05, 0.9, 0.05])
+# ESSA LINHA É A QUE FALTAVA: Criar as colunas antes de usá-las
+ca1, ca2 = st.columns(2)
 
-with col_central:
-    ca1, ca2 = st.columns(2, gap="large")
-    
-    with ca1:
-        with st.expander("👥 GESTÃO DE CLIENTES (Clique para editar)"):
-            df_aud_cli = pd.read_sql("SELECT id, nome, telefone FROM clientes", conn)
-            edit_cli = st.data_editor(df_aud_cli, hide_index=True, use_container_width=True, key="edit_cli_table")
-            if st.button("💾 SALVAR ALTERAÇÕES CLIENTES"):
-                conn.execute("DELETE FROM clientes")
-                edit_cli.to_sql("clientes", conn, if_exists="append", index=False)
-                conn.commit()
-                st.rerun()
+with ca1:
+    with st.expander("👥 CLIENTES NA NUVEM"):
+        clientes_stream = user_ref.collection("meus_clientes").stream()
+        lista = [c.to_dict() for c in clientes_stream]
+        if lista:
+            st.dataframe(pd.DataFrame(lista)[['nome', 'telefone']], use_container_width=True)
+        else:
+            st.info("Nenhum cliente na nuvem.")
 
-    with ca2:
-        with st.expander("📊 HISTÓRICO DE CAIXA (Clique para editar)"):
-            df_aud_cx = pd.read_sql("SELECT id, data, descricao, tipo, valor FROM caixa", conn)
-            edit_cx = st.data_editor(df_aud_cx, hide_index=True, use_container_width=True, key="edit_cx_table")
-            if st.button("💾 SALVAR ALTERAÇÕES CAIXA"):
-                conn.execute("DELETE FROM caixa")
-                edit_cx.to_sql("caixa", conn, if_exists="append", index=False)
-                conn.commit()
-                st.rerun()
-
+with ca2:
+    with st.expander("📊 AGENDA ATIVA"):
+        agenda_stream = user_ref.collection("minha_agenda").where("status", "==", "Pendente").stream()
+        lista_ag = [a.to_dict() for a in agenda_stream]
+        if lista_ag:
+            st.dataframe(pd.DataFrame(lista_ag), use_container_width=True)
+        else:
+            st.info("Agenda vazia.")
 
 # ================= 8. IA STRATEGIST (GOOGLE GEMINI) =================
 import google.generativeai as genai
@@ -426,6 +414,7 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
             
         st.write(resp_text)
         st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
+
 
 
 
