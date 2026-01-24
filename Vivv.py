@@ -106,7 +106,7 @@ else:
 st.title("Vivv")
 # Continue aqui com o desenho dos seus cards...
 
-if st.sidebar.button("SAIR / LOGOUT"):
+if st.sidebar.button("SAIR / LOGOUT", key="logout_principal"):
     st.session_state.logado = False
     st.rerun()
 
@@ -426,6 +426,7 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
             
         st.write(resp_text)
         st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
+
 
 
 
