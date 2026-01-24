@@ -137,13 +137,19 @@ with c_left:
                 st.rerun()
 
     with t4:
-    with st.form("f_cx"):
-        ds = st.text_input("Descrição")
-        vl = st.number_input("Valor", min_value=0.0)
-        tp = st.selectbox("Tipo", ["Entrada", "Saída"])
-        if st.form_submit_button("LANÇAR NO CAIXA"):
-            user_ref.collection("meu_caixa").add({"descricao": ds, "valor": vl, "tipo": tp, "data": firestore.SERVER_TIMESTAMP})
-            st.rerun()
+        # Este bloco precisa de 8 espaços (ou 2 TABs) de recuo da margem esquerda
+        with st.form("f_cx"):
+            ds = st.text_input("Descrição")
+            vl = st.number_input("Valor", min_value=0.0)
+            tp = st.selectbox("Tipo", ["Entrada", "Saída"])
+            if st.form_submit_button("LANÇAR NO CAIXA"):
+                user_ref.collection("meu_caixa").add({
+                    "descricao": ds, 
+                    "valor": vl, 
+                    "tipo": tp, 
+                    "data": firestore.SERVER_TIMESTAMP
+                })
+                st.rerun()
 
 
 
@@ -213,6 +219,7 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
             st.write(model.generate_content(ctx).text)
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
