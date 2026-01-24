@@ -7,6 +7,64 @@ import openai
 import urllib.parse
 from pathlib import Path
 from datetime import datetime
+import google.generativeai as genai
+from google.cloud import firestore
+from google.oauth2 import service_account
+import json
+
+
+@st.cache_resource
+def init_db():
+    # Lê os dados que você colou nos Secrets
+    key_dict = json.loads(st.secrets["FIREBASE_DETAILS"])
+    creds = service_account.Credentials.from_service_account_info(key_dict)
+    return firestore.Client(credentials=creds)
+
+db = init_db()
+
+# --- FUNÇÕES PARA GERENCIAR DADOS (LOGICA DO APP) ---
+
+def salvar_dados_usuario(email, nome, faturamento, lucro):
+    """Guarda ou atualiza os dados principais do dono da conta"""
+    user_ref = db.collection("usuarios").document(email)
+    user_ref.set({
+        "nome": nome,
+        "faturamento_total": faturamento,
+        "lucro_total": lucro,
+        "ultima_atualizacao": firestore.SERVER_TIMESTAMP
+    }, merge=True) # merge=True evita apagar dados antigos ao atualizar
+
+def registrar_agendamento(email_dono, cliente, servico, valor):
+    """Cria um agendamento na subcoleção específica daquele usuário"""
+    doc_ref = db.collection("usuarios").document(email_dono).collection("agendamentos").document()
+    doc_ref.set({
+        "cliente": cliente,
+        "servico": servico,
+        "valor": valor,
+        "data": firestore.SERVER_TIMESTAMP
+    })
+
+def buscar_dados_dashboard(email):
+    """Busca os dados do banco para mostrar no dashboard do Streamlit"""
+    doc = db.collection("usuarios").document(email).get()
+    if doc.exists:
+        return doc.to_dict()
+    return {"nome": "Novo Usuário", "faturamento_total": 0, "lucro_total": 0}
+
+# --- EXEMPLO DE INTERFACE NO SEU APP ---
+
+st.title("Configurações de Conta")
+email_logado = "lucaskalebe@gmail.com" # No futuro, isso virá da tela de Login
+
+with st.form("cadastro_dados"):
+    st.write("Atualize seus números globais")
+    novo_fat = st.number_input("Faturamento Total", value=115.0)
+    novo_lucro = st.number_input("Lucro Total", value=50.0)
+    
+    if st.form_submit_button("Salvar no Firebase"):
+        salvar_dados_usuario(email_logado, "Lucas Kalebe", novo_fat, novo_lucro)
+        st.success("Dados sincronizados com segurança!")
+
 
 # ================= 1. CONFIGURAÇÃO E DESIGN ULTRA NEON =================
 st.set_page_config(page_title="Vivv", layout="centered", page_icon="🚀")
@@ -291,4 +349,5 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
             
         st.write(resp_text)
         st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
+
 
