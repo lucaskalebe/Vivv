@@ -55,6 +55,8 @@ if not st.session_state.logado:
                 val = datetime.now(timezone.utc) + timedelta(days=7)
                 db.collection("usuarios").document(e).set({"nome": n, "senha": s, "pago": False, "teste": True, "validade": val})
                 st.success("Sucesso! Faça login.")
+
+    
     with aba_login:
         le, ls = st.text_input("E-mail"), st.text_input("Senha", type="password")
         if st.button("ACESSAR"):
@@ -160,7 +162,7 @@ with c_right:
         st.info("Nenhum agendamento para hoje.")
     else:
         for a in agnd:
-            with st.expander(f"📍 {a['data']} às {a['hora']} | {a['cliente']}"):
+            with st.expander(f"📍 {a.get('data', 'Sem data')} às {a.get('hora', '---')} | {a.get('cliente', 'Cliente s/ nome')}"):
                 st.write(f"**Serviço:** {a['servico']} — **Valor:** R$ {a['preco']:.2f}")
                 
                 col_btn1, col_btn2, col_btn3 = st.columns([1.5, 1, 1])
@@ -219,6 +221,7 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
             st.write(model.generate_content(ctx).text)
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
