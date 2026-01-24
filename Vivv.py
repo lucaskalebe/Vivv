@@ -17,51 +17,58 @@ import json
 from google.cloud import firestore
 from google.oauth2 import service_account
 
-# --- CONEXÃO SILENCIOSA ---
-@st.cache_resource
-def init_db():
-    key_dict = json.loads(st.secrets["FIREBASE_DETAILS"])
-    creds = service_account.Credentials.from_service_account_info(key_dict)
-    return firestore.Client(credentials=creds)
 
-db = init_db()
+
+# Usando os dados que recuperamos do banco no passo anterior
 user_email = "lucaskalebe@gmail.com"
 user_ref = db.collection("usuarios").document(user_email)
+dados = user_ref.get().to_dict() if user_ref.get().exists else {}
 
-# --- RECUPERAÇÃO DE DADOS ---
-# Tentamos ler os dados existentes no painel do Firebase
-dados_atuais = user_ref.get().to_dict() if user_ref.get().exists else {}
+# Valores padrão caso o banco esteja vazio
+base_clientes = dados.get("base_clientes", 2)
+receita_bruta = dados.get("receita_bruta", 3000.0)
+lucro_liquido = dados.get("lucro_liquido", 2350.0)
+agenda_hoje = dados.get("agenda_hoje", 0)
 
-# Se o dado não existir no banco, ele usa o valor padrão que você já tinha
-base_clientes = dados_atuais.get("base_clientes", 2)
-receita_bruta = dados_atuais.get("receita_bruta", 3000.00)
-lucro_liquido = dados_atuais.get("lucro_liquido", 2350.00)
-agenda_hoje = dados_atuais.get("agenda_hoje", 0)
-
-# --- VISUALIZAÇÃO (SEUS CARDS ORIGINAIS) ---
-st.title("Vivv Lab Master")
-
-# Exibindo os dados que vieram do Banco ou do Padrão
+# --- LAYOUT DOS CARDS (SEM DUPLICAÇÃO) ---
 col1, col2, col3, col4 = st.columns(4)
-col1.metric("BASE DE CLIENTES", base_clientes)
-col2.metric("RECEITA BRUTA", f"R$ {receita_bruta:,.2f}")
-col3.metric("LUCRO LÍQUIDO", f"R$ {lucro_liquido:,.2f}")
-col4.metric("AGENDA HOJE", agenda_hoje)
 
-# --- COMO ARMAZENAR AUTOMATICAMENTE ---
-# Sempre que você fizer uma alteração em uma tabela ou input no seu código,
-# basta chamar esta linha para salvar:
-def sincronizar_banco(clientes, receita, lucro, agenda):
-    user_ref.set({
-        "base_clientes": clientes,
-        "receita_bruta": receita,
-        "lucro_liquido": lucro,
-        "agenda_hoje": agenda,
-        "ultima_atualizacao": firestore.SERVER_TIMESTAMP
-    }, merge=True)
+with col1:
+    st.markdown(f"""
+        <div style="border: 1px solid #1E90FF; border-radius: 10px; padding: 20px; text-align: center;">
+            <p style="font-size: 12px; color: gray;">BASE DE CLIENTES</p>
+            <h2 style="color: white;">{base_clientes}</h2>
+        </div>
+    """, unsafe_allow_html=True)
 
-# Exemplo: Se você tiver uma tabela de serviços, ao final dela você chama:
-# sincronizar_banco(base_clientes, receita_bruta, lucro_liquido, agenda_hoje)
+with col2:
+    st.markdown(f"""
+        <div style="border: 1px solid #1E90FF; border-radius: 10px; padding: 20px; text-align: center;">
+            <p style="font-size: 12px; color: gray;">RECEITA BRUTA</p>
+            <h2 style="color: #00BFFF;">R$ {receita_bruta:,.0f}</h2>
+        </div>
+    """, unsafe_allow_html=True)
+
+with col3:
+    st.markdown(f"""
+        <div style="border: 1px solid #1E90FF; border-radius: 10px; padding: 20px; text-align: center;">
+            <p style="font-size: 12px; color: gray;">LUCRO LÍQUIDO</p>
+            <h2 style="color: #00FF7F;">R$ {lucro_liquido:,.0f}</h2>
+        </div>
+    """, unsafe_allow_html=True)
+
+with col4:
+    st.markdown(f"""
+        <div style="border: 1px solid #1E90FF; border-radius: 10px; padding: 20px; text-align: center;">
+            <p style="font-size: 12px; color: gray;">AGENDA HOJE</p>
+            <h2 style="color: orange;">{agenda_hoje}</h2>
+        </div>
+    """, unsafe_allow_html=True)
+
+# Botão de Sair posicionado à direita conforme sua imagem
+st.sidebar.button("SAIR / LOGOUT")
+
+
 
 # ================= 1. CONFIGURAÇÃO E DESIGN ULTRA NEON =================
 st.set_page_config(page_title="Vivv", layout="centered", page_icon="🚀")
@@ -346,6 +353,7 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
             
         st.write(resp_text)
         st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
+
 
 
 
