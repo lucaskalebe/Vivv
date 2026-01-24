@@ -13,15 +13,13 @@ from google.oauth2 import service_account
 import json
 
 
-# --- 1. INICIALIZAÇÃO DO BANCO (COLE LOGO APÓS OS IMPORTS) ---
+# --- 1. INICIALIZAÇÃO DO BANCO ---
 @st.cache_resource
 def init_db():
-    # Lê as credenciais salvas nos Secrets do Streamlit
     key_dict = json.loads(st.secrets["FIREBASE_DETAILS"])
     creds = service_account.Credentials.from_service_account_info(key_dict)
     return firestore.Client(credentials=creds)
 
-# Define a variável 'db' globalmente para evitar o NameError
 db = init_db()
 
 # --- 2. CONTROLE DE ACESSO E SESSÃO ---
@@ -39,42 +37,56 @@ if not st.session_state.logado:
         senha_input = st.text_input("Senha", type="password", key="login_senha")
         
         if st.button("Acessar"):
-            # Consulta o banco de dados pelo e-mail informado
             user_doc = db.collection("usuarios").document(email_input).get()
             
             if user_doc.exists:
                 dados = user_doc.to_dict()
-                import datetime
-                # Pega o horário atual para comparar com a validade
                 agora = datetime.datetime.now(datetime.timezone.utc)
                 
-                # 1. Verificação de Usuário Pagante
                 if dados.get("pago") == True:
                     st.session_state.logado = True
                     st.session_state.user_email = email_input
                     st.rerun()
                 
-                # 2. Verificação de Usuário em Teste
                 elif dados.get("teste") == True:
                     validade = dados.get("validade")
-                    # Verifica se a data de validade ainda não passou
                     if validade and agora < validade:
                         st.session_state.logado = True
                         st.session_state.user_email = email_input
-                        st.info(f"Acesso de teste válido até {validade.strftime('%d/%m/%Y')}")
                         st.rerun()
                     else:
-                        st.error("Seu período de teste expirou! Efetue o pagamento para continuar.")
-                
-                # 3. Caso não seja pago nem teste
+                        st.error("Seu período de teste expirou!")
                 else:
-                    st.warning("Acesso pendente. Sua conta será liberada após a confirmação do pagamento.")
-            
+                    st.warning("Acesso pendente de pagamento.")
             else:
-                st.error("Usuário não encontrado. Solicite acesso na aba ao lado.")
+                st.error("Usuário não encontrado.")
+    
+    # IMPORTANTE: Esse comando impede que o resto do código apareça sem login!
+    st.stop()
 
-# --- 4. SEU PAINEL ORIGINAL COMEÇA ABAIXO ---
-# (Coloque aqui seus cards, tabelas e o botão de Logout na sidebar)
+# --- 4. PAINEL VIVV (SÓ RODA SE LOGADO) ---
+
+# Botão de Logout ÚNICO
+if st.sidebar.button("SAIR / LOGOUT"):
+    st.session_state.logado = False
+    st.rerun()
+
+# Busca dinâmica: trocamos o e-mail fixo pelo e-mail de quem logou!
+user_email = st.session_state.user_email 
+user_ref = db.collection("usuarios").document(user_email)
+
+doc = user_ref.get()
+if doc.exists:
+    dados_painel = doc.to_dict()
+    base_clientes = dados_painel.get("base_clientes", 0)
+    receita_bruta = dados_painel.get("receita_bruta", 0)
+    lucro_liquido = dados_painel.get("lucro_liquido", 0)
+    agenda_hoje = dados_painel.get("agenda_hoje", 0)
+else:
+    base_clientes, receita_bruta, lucro_liquido, agenda_hoje = 0, 0, 0, 0
+
+st.title("Vivv")
+# Continue aqui com o desenho dos seus cards...
 
 if st.sidebar.button("SAIR / LOGOUT"):
     st.session_state.logado = False
