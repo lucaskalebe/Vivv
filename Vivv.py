@@ -247,7 +247,6 @@ with col_central:
 
 
 # ================= 8. IA STRATEGIST (GOOGLE GEMINI) =================
-# ================= 8. IA STRATEGIST (GOOGLE GEMINI) =================
 import google.generativeai as genai
 
 st.write("---")
@@ -267,27 +266,28 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
     
     with st.chat_message("assistant"):
         try:
-            # Força a configuração limpa
             genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
             
-            # Mudança crucial: usamos apenas o nome do modelo sem prefixos
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            # Detecta automaticamente um modelo disponível na sua conta
+            model_list = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
             
-            # Dados do seu dashboard
+            # Tenta o flash primeiro, se não, pega o primeiro disponível
+            chosen_model = 'models/gemini-1.5-flash' if 'models/gemini-1.5-flash' in model_list else model_list[0]
+            
+            model = genai.GenerativeModel(chosen_model)
+            
             lucro_atual = faturamento - despesas
             contexto = (
                 f"Analise como consultor: Clientes={total_clientes}, "
                 f"Faturamento=R${faturamento}, Lucro=R${lucro_atual}. "
-                f"Responda à pergunta: {prompt}"
+                f"Pergunta: {prompt}"
             )
             
-            # Chamada direta
             response = model.generate_content(contexto)
             resp_text = response.text
             
         except Exception as e:
-            # Se o erro 404 persistir, vamos depurar o que a sua chave permite
-            resp_text = f"❌ Erro de Versão: {str(e)}. Tente atualizar o requirements.txt para google-generativeai>=0.7.2"
+            resp_text = f"❌ Erro de Sistema: {str(e)}. Verifique se a biblioteca google-generativeai está no requirements.txt"
             
         st.write(resp_text)
         st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
