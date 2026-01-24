@@ -12,61 +12,64 @@ from google.cloud import firestore
 from google.oauth2 import service_account
 import json
 
-import streamlit as st
-import json
-from google.cloud import firestore
-from google.oauth2 import service_account
 
+# --- 1. CONFIGURAÇÃO DA PÁGINA ---
+st.set_page_config(page_title="Vivv", layout="wide")
 
+# --- 2. CONEXÃO COM O BANCO (SÓ UMA VEZ) ---
+@st.cache_resource
+def init_db():
+    # Puxa as credenciais que você colou nos Secrets
+    key_dict = json.loads(st.secrets["FIREBASE_DETAILS"])
+    creds = service_account.Credentials.from_service_account_info(key_dict)
+    return firestore.Client(credentials=creds)
 
-# Usando os dados que recuperamos do banco no passo anterior
+# Aqui nós criamos a variável 'db' que o erro disse que estava faltando
+db = init_db()
+
+# --- 3. BUSCA DE DADOS ---
 user_email = "lucaskalebe@gmail.com"
 user_ref = db.collection("usuarios").document(user_email)
-dados = user_ref.get().to_dict() if user_ref.get().exists else {}
 
-# Valores padrão caso o banco esteja vazio
-base_clientes = dados.get("base_clientes", 2)
-receita_bruta = dados.get("receita_bruta", 3000.0)
-lucro_liquido = dados.get("lucro_liquido", 2350.0)
-agenda_hoje = dados.get("agenda_hoje", 0)
+# Tenta buscar os dados salvos. Se não existirem, usa os valores padrão
+doc = user_ref.get()
+if doc.exists:
+    dados = doc.to_dict()
+    base_clientes = dados.get("base_clientes", 2)
+    receita_bruta = dados.get("receita_bruta", 3000.0)
+    lucro_liquido = dados.get("lucro_liquido", 2350.0)
+    agenda_hoje = dados.get("agenda_hoje", 0)
+else:
+    # Se for a primeira vez do usuário, salvamos os valores iniciais no banco
+    base_clientes, receita_bruta, lucro_liquido, agenda_hoje = 2, 3000.0, 2350.0, 0
+    user_ref.set({
+        "base_clientes": base_clientes,
+        "receita_bruta": receita_bruta,
+        "lucro_liquido": lucro_liquido,
+        "agenda_hoje": agenda_hoje
+    })
 
-# --- LAYOUT DOS CARDS (SEM DUPLICAÇÃO) ---
+# --- 4. VISUAL (INTERFACE VIVV) ---
+st.title("Vivv")
+
+# Criando as 4 colunas para os cards
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-    st.markdown(f"""
-        <div style="border: 1px solid #1E90FF; border-radius: 10px; padding: 20px; text-align: center;">
-            <p style="font-size: 12px; color: gray;">BASE DE CLIENTES</p>
-            <h2 style="color: white;">{base_clientes}</h2>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f'<div style="border: 1px solid #1E90FF; border-radius: 10px; padding: 20px; text-align: center;"><p style="color: gray; font-size: 12px;">BASE DE CLIENTES</p><h2 style="color: white;">{base_clientes}</h2></div>', unsafe_allow_html=True)
 
 with col2:
-    st.markdown(f"""
-        <div style="border: 1px solid #1E90FF; border-radius: 10px; padding: 20px; text-align: center;">
-            <p style="font-size: 12px; color: gray;">RECEITA BRUTA</p>
-            <h2 style="color: #00BFFF;">R$ {receita_bruta:,.0f}</h2>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f'<div style="border: 1px solid #1E90FF; border-radius: 10px; padding: 20px; text-align: center;"><p style="color: gray; font-size: 12px;">RECEITA BRUTA</p><h2 style="color: #00BFFF;">R$ {receita_bruta:,.0f}</h2></div>', unsafe_allow_html=True)
 
 with col3:
-    st.markdown(f"""
-        <div style="border: 1px solid #1E90FF; border-radius: 10px; padding: 20px; text-align: center;">
-            <p style="font-size: 12px; color: gray;">LUCRO LÍQUIDO</p>
-            <h2 style="color: #00FF7F;">R$ {lucro_liquido:,.0f}</h2>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f'<div style="border: 1px solid #1E90FF; border-radius: 10px; padding: 20px; text-align: center;"><p style="color: gray; font-size: 12px;">LUCRO LÍQUIDO</p><h2 style="color: #00FF7F;">R$ {lucro_liquido:,.0f}</h2></div>', unsafe_allow_html=True)
 
 with col4:
-    st.markdown(f"""
-        <div style="border: 1px solid #1E90FF; border-radius: 10px; padding: 20px; text-align: center;">
-            <p style="font-size: 12px; color: gray;">AGENDA HOJE</p>
-            <h2 style="color: orange;">{agenda_hoje}</h2>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f'<div style="border: 1px solid #1E90FF; border-radius: 10px; padding: 20px; text-align: center;"><p style="color: gray; font-size: 12px;">AGENDA HOJE</p><h2 style="color: orange;">{agenda_hoje}</h2></div>', unsafe_allow_html=True)
 
-# Botão de Sair posicionado à direita conforme sua imagem
-st.sidebar.button("SAIR / LOGOUT")
+# Botão de Sair no menu lateral
+if st.sidebar.button("SAIR / LOGOUT"):
+    st.info("Sessão encerrada.")
 
 
 
@@ -353,6 +356,7 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
             
         st.write(resp_text)
         st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
+
 
 
 
