@@ -268,16 +268,16 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
         try:
             # Configuração da API
             genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+            
+            # Usamos o nome simplificado que é o padrão mais aceito
             model = genai.GenerativeModel('gemini-1.5-flash')
             
-            # Contexto pegando os dados do seu dashboard
-            contexto = f"Você é um consultor de negócios. Dados atuais: Clientes={total_clientes}, Faturamento=R${faturamento}, Lucro=R${faturamento-despesas}. Pergunta: {prompt}"
+            # Criamos o contexto com base nos dados reais do seu dashboard
+            contexto = f"Você é um consultor de negócios. Dados atuais: Clientes={total_clientes}, Faturamento={faturamento}, Lucro={faturamento-despesas}. Pergunta: {prompt}"
             
+            # Geramos a resposta
             response = model.generate_content(contexto)
             resp_text = response.text
         except Exception as e:
-            # Se der erro, ele cai aqui obrigatoriamente
+            # Se ainda houver erro, ele mostrará a mensagem detalhada aqui
             resp_text = f"❌ Erro no Gemini: {str(e)}"
-            
-        st.write(resp_text)
-        st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
