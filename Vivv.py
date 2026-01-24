@@ -23,6 +23,7 @@ def init_db():
 db = init_db()
 
 # --- 2. CONTROLE DE ACESSO E SESSÃO ---
+# --- 2. CONTROLE DE ACESSO E SESSÃO ---
 if "logado" not in st.session_state:
     st.session_state.logado = False
 
@@ -30,23 +31,32 @@ if "logado" not in st.session_state:
 if not st.session_state.logado:
     st.title("Vivv - Acesso")
     
+    # É ESTA LINHA QUE ESTAVA FALTANDO: Ela cria as variáveis das abas
+    aba_login, aba_cadastro = st.tabs(["Entrar", "Solicitar Acesso"])
+    
     with aba_cadastro:
         novo_nome = st.text_input("Nome Completo", key="reg_nome")
         novo_email = st.text_input("E-mail para cadastro", key="reg_email")
-        nova_senha = st.text_input("Escolha uma Senha", type="password", key="reg_senha") # NOVO CAMPO
+        nova_senha = st.text_input("Escolha uma Senha", type="password", key="reg_senha")
         
         if st.button("Enviar Solicitação"):
             if novo_nome and novo_email and nova_senha:
+                import datetime
+                # Define 7 dias de teste automático
+                validade_teste = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=7)
+                
                 db.collection("usuarios").document(novo_email).set({
                     "nome": novo_nome,
-                    "senha": nova_senha, # Salva a senha escolhida
+                    "senha": nova_senha,
                     "pago": False,
                     "teste": True,
-                    "validade": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=7),
+                    "validade": validade_teste,
                     "data_solicitacao": firestore.SERVER_TIMESTAMP
                 })
                 st.success("Solicitação enviada! Use este e-mail e senha para logar.")
-    
+            else:
+                st.error("Preencha todos os campos!")
+
     with aba_login:
         email_input = st.text_input("E-mail para login", key="login_email")
         senha_input = st.text_input("Senha", type="password", key="login_senha")
@@ -56,30 +66,23 @@ if not st.session_state.logado:
             
             if user_doc.exists:
                 dados = user_doc.to_dict()
-                agora = datetime.datetime.now(datetime.timezone.utc)
-                
-                if dados.get("pago") == True:
-                    st.session_state.logado = True
-                    st.session_state.user_email = email_input
-                    st.rerun()
-                
-                elif dados.get("teste") == True:
-                    validade = dados.get("validade")
-                    if validade and agora < validade:
+                # Verifica a senha e o status de acesso
+                if dados.get("senha") == senha_input:
+                    import datetime
+                    agora = datetime.datetime.now(datetime.timezone.utc)
+                    
+                    if dados.get("pago") == True or (dados.get("teste") == True and agora < dados.get("validade")):
                         st.session_state.logado = True
                         st.session_state.user_email = email_input
                         st.rerun()
                     else:
-                        st.error("Seu período de teste expirou!")
+                        st.error("Seu acesso expirou ou aguarda pagamento.")
                 else:
-                    st.warning("Acesso pendente de pagamento.")
+                    st.error("Senha incorreta.")
             else:
                 st.error("Usuário não encontrado.")
     
-    # IMPORTANTE: Esse comando impede que o resto do código apareça sem login!
-    st.stop()
-
-# --- 4. PAINEL VIVV (SÓ RODA SE LOGADO) ---
+    st.stop() # Garante que o painel só apareça após o login# --- 4. PAINEL VIVV (SÓ RODA SE LOGADO) ---
 
 # Botão de Logout ÚNICO
 if st.sidebar.button("SAIR / LOGOUT"):
@@ -423,6 +426,7 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
             
         st.write(resp_text)
         st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
+
 
 
 
