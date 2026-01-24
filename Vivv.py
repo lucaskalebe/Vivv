@@ -9,7 +9,7 @@ from pathlib import Path
 from datetime import datetime
 
 # ================= 1. CONFIGURAÇÃO E DESIGN ULTRA NEON =================
-st.set_page_config(page_title="Vivv", layout="wide", page_icon="🧬")
+st.set_page_config(page_title="Vivv Lab Master", layout="wide", page_icon="🧬")
 
 st.markdown("""
 <style>
@@ -95,15 +95,7 @@ except:
 # ================= 4. HEADER E DASHBOARD =================
 col_title, col_logout = st.columns([5, 1])
 with col_title:
-    st.title("🧬 Vivv
-    
-             
-             
-             
-             
-             
-             
-             ")
+    st.title("🧬 Vivv Lab Master")
 
 if col_logout.button("SAIR / LOGOUT"):
     st.cache_data.clear()
@@ -277,4 +269,3 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
         st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
 
 # FIM DO SCRIPT
-
