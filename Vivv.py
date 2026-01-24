@@ -129,12 +129,12 @@ with c_left:
                 user_ref.collection("meus_clientes").add({"nome": nome, "telefone": tel})
                 st.rerun()
     with t3:
-    with st.form("f_srv"):
-        serv = st.text_input("Nome do Serviço")
-        prec = st.number_input("Preço", min_value=0.0)
-        if st.form_submit_button("SALVAR SERVIÇO"):
-            user_ref.collection("meus_servicos").add({"nome": serv, "preco": prec})
-            st.rerun()
+        with st.form("f_srv"):
+            serv = st.text_input("Nome do Serviço")
+            prec = st.number_input("Preço", min_value=0.0)
+            if st.form_submit_button("SALVAR SERVIÇO"):
+                user_ref.collection("meus_servicos").add({"nome": serv, "preco": prec})
+                st.rerun()
 
     with t4:
     with st.form("f_cx"):
@@ -213,5 +213,6 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
             st.write(model.generate_content(ctx).text)
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
