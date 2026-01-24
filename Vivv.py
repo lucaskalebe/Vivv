@@ -12,6 +12,13 @@ st.set_page_config(page_title="Vivv Lab Master", layout="wide", page_icon="🧬"
 st.markdown("""
 <style>
 
+.orange-neon {
+    color: #ff9100;
+    text-shadow: 0 0 10px rgba(255, 145, 0, 0.5);
+    font-size: 2rem;
+    font-weight: 800;
+}
+
 button.header-anchor {
     display: none !important;
 }
@@ -129,7 +136,13 @@ m1, m2, m3, m4 = st.columns(4)
 with m1: st.markdown(f'<div class="neon-card"><small>BASE DE CLIENTES</small><h2>{total_clientes}</h2></div>', unsafe_allow_html=True)
 with m2: st.markdown(f'<div class="neon-card"><small>RECEITA BRUTA</small><h2 style="color:#00d4ff">R$ {faturamento:,.2f}</h2></div>', unsafe_allow_html=True)
 with m3: st.markdown(f'<div class="neon-card"><small>LUCRO LÍQUIDO</small><h2 style="color:#00ff88">R$ {(faturamento - despesas):,.2f}</h2></div>', unsafe_allow_html=True)
-with m4: st.markdown(f'<div class="neon-card"><small>AGENDA HOJE</small><h2 style="color:#ff007f">{agendados_hoje}</h2></div>', unsafe_allow_html=True)
+with m4: 
+    st.markdown(f'''
+        <div class="neon-card">
+            <small>AGENDA HOJE</small>
+            <div class="orange-neon">{ag_hoje}</div>
+        </div>
+    ''', unsafe_allow_html=True)
 
 # ================= 4. PAINEL OPERACIONAL (CADASTROS) =================
 st.write("---")
@@ -307,6 +320,7 @@ if prompt_ia := st.chat_input("Pergunte à IA sobre seu faturamento ou estratég
         st.session_state.chat_log.append({"role": "assistant", "content": texto_ia})
 
 # FIM DO CÓDIGO - ESTRUTURA COMPLETA
+
 
 
 
