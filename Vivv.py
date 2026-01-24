@@ -251,7 +251,7 @@ with col_central:
 import google.generativeai as genai
 
 st.write("---")
-st.subheader("💬 Vivv | Consultor de Negócios:")
+st.subheader("💬 Vivv AI: Consultor de Negócios")
 
 if "chat_history" not in st.session_state: 
     st.session_state.chat_history = []
@@ -267,31 +267,27 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
     
     with st.chat_message("assistant"):
         try:
+            # Força a configuração limpa
             genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
             
-            # Tenta encontrar um modelo disponível que suporte geração de conteúdo
-            model_name = 'gemini-1.5-flash' # Padrão
+            # Mudança crucial: usamos apenas o nome do modelo sem prefixos
+            model = genai.GenerativeModel('gemini-1.5-flash')
             
-            # Se der erro 404, tentamos simplificar o nome ao máximo
-            model = genai.GenerativeModel(model_name)
-            
+            # Dados do seu dashboard
             lucro_atual = faturamento - despesas
             contexto = (
-                f"Analise: Clientes={total_clientes}, Faturamento=R${faturamento}, "
-                f"Lucro=R${lucro_atual}. Pergunta: {prompt}"
+                f"Analise como consultor: Clientes={total_clientes}, "
+                f"Faturamento=R${faturamento}, Lucro=R${lucro_atual}. "
+                f"Responda à pergunta: {prompt}"
             )
             
+            # Chamada direta
             response = model.generate_content(contexto)
             resp_text = response.text
             
         except Exception as e:
-            # Se o erro 404 persistir, tentamos o modelo 'gemini-pro' que é o mais estável
-            try:
-                model = genai.GenerativeModel('gemini-pro')
-                response = model.generate_content(contexto)
-                resp_text = response.text
-            except Exception as e2:
-                resp_text = f"❌ Erro de Configuração: O modelo {model_name} não foi encontrado na sua região ou a chave é inválida. Detalhe: {str(e2)}"
+            # Se o erro 404 persistir, vamos depurar o que a sua chave permite
+            resp_text = f"❌ Erro de Versão: {str(e)}. Tente atualizar o requirements.txt para google-generativeai>=0.7.2"
             
         st.write(resp_text)
         st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
