@@ -75,35 +75,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- ADICIONANDO O CHAT INTERATIVO ---
-st.write("---")
-st.subheader("💬 Converse com seu Gêmeo Digital")
-
-# Inicializa o histórico de chat se não existir
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-# Exibe as mensagens anteriores
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-
-# Campo de entrada do Chat
-if prompt := st.chat_input("Pergunte algo sobre sua saúde (ex: Por que meu HRV caiu?)"):
-    # Adiciona mensagem do usuário
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
-
-    # Resposta da IA (GPT-5-mini)
-    with st.chat_message("assistant"):
-        with st.spinner("Analisando biomarcadores..."):
-            # Aqui chamamos a função que você já tem, passando o prompt
-            full_prompt = f"O usuário perguntou: {prompt}. Baseie-se nos dados: HRV 72, Sono 85%."
-            response = gerar_insight(72, 85) # Sua função do print
-            st.markdown(response)
-            st.session_state.messages.append({"role": "assistant", "content": response})
-
 
 # --- GERADOR DE DADOS SINTÉTICOS (COERENTES) ---
 @st.cache_data
@@ -209,6 +180,36 @@ with col_sim2:
     st.plotly_chart(fig_sim, use_container_width=True)
     st.success(f"Projeção: Com treino nível {s_treino} e suplementação, sua idade biológica pode reduzir 0.2y em 15 dias.")
 
+# --- ADICIONANDO O CHAT INTERATIVO ---
+st.write("---")
+st.subheader("💬 Converse com seu Gêmeo Digital")
+
+# Inicializa o histórico de chat se não existir
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# Exibe as mensagens anteriores
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# Campo de entrada do Chat
+if prompt := st.chat_input("Pergunte algo sobre sua saúde (ex: Por que meu HRV caiu?)"):
+    # Adiciona mensagem do usuário
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    # Resposta da IA (GPT-5-mini)
+    with st.chat_message("assistant"):
+        with st.spinner("Analisando biomarcadores..."):
+            # Aqui chamamos a função que você já tem, passando o prompt
+            full_prompt = f"O usuário perguntou: {prompt}. Baseie-se nos dados: HRV 72, Sono 85%."
+            response = gerar_insight(72, 85) # Sua função do print
+            st.markdown(response)
+            st.session_state.messages.append({"role": "assistant", "content": response})
+
 # --- FOOTER ---
 
 st.markdown("<br><p style='text-align: center; color: #444;'>Propriedade do Usuário | Dados Criptografados End-to-End</p>", unsafe_allow_html=True)
+
