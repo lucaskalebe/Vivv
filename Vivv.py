@@ -91,20 +91,20 @@ if st.sidebar.button("SAIR / LOGOUT", key="btn_logout_final"):
     st.rerun()
 
 # --- 3. BUSCA DE DADOS (AGORA NO FIRESTORE) ---
-user_email = st.session_state.user_email 
-user_ref = db.collection("usuarios").document(user_email)
+# --- AJUSTE 1: BUSCA DE DADOS NA NUVEM ---
+user_ref = db.collection("usuarios").document(st.session_state.user_email)
 
-# Busca métricas em tempo real das sub-coleções
-clientes_list = list(user_ref.collection("meus_clientes").stream())
-agenda_list = list(user_ref.collection("minha_agenda").where("status", "==", "Pendente").stream())
-caixa_list = list(user_ref.collection("meu_caixa").stream())
+# Puxa as coleções da nuvem
+clientes_cloud = list(user_ref.collection("meus_clientes").stream())
+servicos_cloud = list(user_ref.collection("meus_servicos").stream())
+agenda_cloud = list(user_ref.collection("minha_agenda").where("status", "==", "Pendente").stream())
+caixa_cloud = list(user_ref.collection("meu_caixa").stream())
 
-base_clientes = len(clientes_list)
-agenda_hoje = len(agenda_list)
-
-receita_bruta = sum([float(d.to_dict().get('valor', 0)) for d in caixa_list if d.to_dict().get('tipo') == 'Entrada'])
-despesas = sum([float(d.to_dict().get('valor', 0)) for d in caixa_list if d.to_dict().get('tipo') == 'Saída'])
-lucro_liquido = receita_bruta - despesas
+# Transforma em números para os Cards Neon
+total_clientes = len(clientes_cloud)
+ag_hoje = len(agenda_cloud)
+faturamento = sum([float(doc.to_dict().get('valor', 0)) for doc in caixa_cloud if doc.to_dict().get('tipo') == 'Entrada'])
+despesas = sum([float(doc.to_dict().get('valor', 0)) for doc in caixa_cloud if doc.to_dict().get('tipo') == 'Saída'])
 
 # Tenta buscar os dados salvos. Se não existirem, usa os valores padrão
 doc = user_ref.get()
@@ -407,6 +407,7 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
             
         st.write(resp_text)
         st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
+
 
 
 
