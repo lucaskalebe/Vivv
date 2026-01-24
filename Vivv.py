@@ -86,14 +86,6 @@ if st.sidebar.button("SAIR / LOGOUT", key="btn_logout_final"):
     st.session_state.logado = False
     st.rerun()
 
-# Restante do seu código do painel (Cards, etc)
-st.title("Vivv")
-
-
-
-# Aqui nós criamos a variável 'db' que o erro disse que estava faltando
-db = init_db()
-
 # --- 3. BUSCA DE DADOS ---
 user_email = "lucaskalebe@gmail.com"
 user_ref = db.collection("usuarios").document(user_email)
@@ -116,7 +108,6 @@ else:
     })
 
 # --- 4. VISUAL (INTERFACE VIVV) ---
-st.title("Vivv")
 
 # Botão de Sair no menu lateral
 if st.sidebar.button("SAIR / LOGOUT"):
@@ -406,6 +397,7 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
             
         st.write(resp_text)
         st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
+
 
 
 
