@@ -1,3 +1,5 @@
+
+
 import streamlit as st
 import sqlite3
 import pandas as pd
@@ -6,29 +8,20 @@ import urllib.parse
 from pathlib import Path
 from datetime import datetime
 
-# ================= 1. DESIGN PREMIUM ULTRA NEON =================
+# ================= 1. CONFIGURAÇÃO E DESIGN ULTRA NEON =================
 st.set_page_config(page_title="Vivv Lab Master", layout="wide", page_icon="🧬")
 
 st.markdown("""
 <style>
-
-.orange-neon {
-    color: #ff9100;
-    text-shadow: 0 0 10px rgba(255, 145, 0, 0.5);
-    font-size: 2rem;
-    font-weight: 800;
-}
-
-button.header-anchor {
-    display: none !important;
-}
-
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
     
-    /* Fundo Deep Black */
+    /* REMOVE SÍMBOLOS DE ÂNCORA E LINKS DOS TÍTULOS */
+    button.header-anchor, a.header-anchor, .header-anchor { display: none !important; }
+
+    /* FUNDO DEEP BLACK */
     .stApp { background-color: #000205; color: #d1d1d1; font-family: 'Inter', sans-serif; }
     
-    /* Cards de Métricas com Glow Azul */
+    /* CARDS COM GLOW AZUL */
     .neon-card {
         background: linear-gradient(145deg, #000814, #001220);
         border: 1px solid #0056b3;
@@ -39,49 +32,40 @@ button.header-anchor {
         text-align: center;
         margin-bottom: 10px;
     }
-    .neon-card:hover { 
-        border-color: #00d4ff; 
-        box-shadow: 0 0 30px rgba(0, 212, 255, 0.4);
-        transform: scale(1.02);
+
+    /* NÚMERO LARANJA NEON PARA AGENDA */
+    .orange-neon {
+        color: #ff9100 !important;
+        text-shadow: 0 0 15px rgba(255, 145, 0, 0.7);
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-top: 5px;
     }
     
-    /* Botões do Sistema */
-    .stButton>button {
-        background: #001d3d; color: #00d4ff; border: 1px solid #0056b3;
-        border-radius: 8px; font-weight: bold; width: 100%; transition: 0.3s;
-    }
-    .stButton>button:hover { background: #003566; border-color: #00d4ff; color: white; box-shadow: 0 0 10px #00d4ff; }
-    
-    /* Botão WhatsApp Estilizado */
+    /* BOTÃO WHATSAPP */
     .wa-link {
         background: linear-gradient(45deg, #25D366, #128C7E);
         color: white !important; padding: 10px 15px; border-radius: 10px;
         text-align: center; font-weight: bold; text-decoration: none; display: block;
         box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3); transition: 0.3s;
-        margin-bottom: 5px;
     }
     .wa-link:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(37, 211, 102, 0.5); }
 
-    /* Tabelas e Abas */
-    [data-testid="stDataFrame"] { border: 1px solid #0056b3; border-radius: 10px; background: #000814; }
-    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
-    .stTabs [data-baseweb="tab"] { background: #000814; border: 1px solid #003566; color: #00d4ff; border-radius: 5px; }
-    
     h1, h2, h3 { color: #00d4ff; text-shadow: 0 0 8px rgba(0, 212, 255, 0.5); }
+    
+    /* ESTILO DAS TABELAS E INPUTS */
+    [data-testid="stDataFrame"] { border: 1px solid #0056b3; border-radius: 10px; }
+    .stTabs [data-baseweb="tab-list"] { gap: 10px; }
+    .stTabs [data-baseweb="tab"] { background: #000814; border: 1px solid #003566; color: #00d4ff; border-radius: 5px; padding: 10px; }
 </style>
 """, unsafe_allow_html=True)
 
 # ================= 2. CORE: GERENCIAMENTO DE DADOS =================
-CLIENTES_CONFIG = {
-    "lucas": {"db": "lucas.db", "nome": "Vivv Lab Master", "senha": "123"},
-    "barber_nunes": {"db": "nunes.db", "nome": "Barbearia do Nunes", "senha": "123"}
-}
-
 DBS_DIR = Path(__file__).parent / "dbs"
 DBS_DIR.mkdir(exist_ok=True)
+db_path = DBS_DIR / "vivv_master.db"
 
-def init_db(db_path):
-    """Inicializa as tabelas do banco de dados caso não existam."""
+def init_db():
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
     c.execute('CREATE TABLE IF NOT EXISTS clientes (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT, telefone TEXT)')
@@ -91,254 +75,197 @@ def init_db(db_path):
     conn.commit()
     conn.close()
 
-# Controle de Sessão / Login
-if "auth" not in st.session_state:
-    st.markdown("<br><br><h1 style='text-align:center;'>🧬 VIVV SYSTEM LOGIN</h1>", unsafe_allow_html=True)
-    _, col_login, _ = st.columns([1, 0.8, 1])
-    with col_login:
-        user_input = st.text_input("ID do Estabelecimento")
-        pass_input = st.text_input("Chave de Acesso", type="password")
-        if st.button("AUTENTICAR"):
-            if user_input in CLIENTES_CONFIG and CLIENTES_CONFIG[user_input]["senha"] == pass_input:
-                st.session_state.auth = True
-                st.session_state.u_id = user_input
-                st.session_state.db_p = DBS_DIR / CLIENTES_CONFIG[user_input]['db']
-                init_db(st.session_state.db_p)
-                st.rerun()
-            else:
-                st.error("Credenciais inválidas.")
-    st.stop()
+init_db()
+conn = sqlite3.connect(db_path, check_same_thread=False)
 
-# Conexão Global
-conn = sqlite3.connect(st.session_state.db_p, check_same_thread=False)
+# ================= 3. CÁLCULO DE MÉTRICAS (RESOLVENDO NAMEERROR) =================
+# Definimos as variáveis antes de qualquer exibição visual
+hoje_iso = datetime.now().strftime('%Y-%m-%d')
 
-# ================= 3. LÓGICA FINANCEIRA E DASHBOARD =================
-def get_metrics():
-    df_c = pd.read_sql("SELECT valor, tipo FROM caixa", conn)
-    ent = df_c[df_c.tipo=="Entrada"]["valor"].sum() if not df_c.empty else 0
-    sai = df_c[df_c.tipo=="Saída"]["valor"].sum() if not df_c.empty else 0
-    cli_count = pd.read_sql("SELECT COUNT(*) FROM clientes", conn).iloc[0,0]
-    hoje_iso = datetime.now().strftime('%Y-%m-%d')
-    ag_count = pd.read_sql(f"SELECT COUNT(*) FROM agenda WHERE data='{hoje_iso}'", conn).iloc[0,0]
-    return ent, sai, cli_count, ag_count
+try:
+    total_clientes = pd.read_sql("SELECT COUNT(*) FROM clientes", conn).iloc[0,0]
+    faturamento = pd.read_sql("SELECT SUM(valor) FROM caixa WHERE tipo='Entrada'", conn).iloc[0,0] or 0.0
+    despesas = pd.read_sql("SELECT SUM(valor) FROM caixa WHERE tipo='Saída'", conn).iloc[0,0] or 0.0
+    
+    # IMPORTANTE: Contamos apenas os PENDENTES para o número atualizar ao concluir
+    ag_hoje = pd.read_sql(f"SELECT COUNT(*) FROM agenda WHERE data='{hoje_iso}' AND status='Pendente'", conn).iloc[0,0]
+except:
+    total_clientes, faturamento, despesas, ag_hoje = 0, 0.0, 0.0, 0.0
 
-faturamento, despesas, total_clientes, agendados_hoje = get_metrics()
+# ================= 4. HEADER E DASHBOARD =================
+col_title, col_logout = st.columns([5, 1])
+with col_title:
+    st.title("🧬 Vivv Lab Master")
 
-# Header e Logout
-c_head, c_exit = st.columns([5, 1])
-c_head.title(f"🧬 {CLIENTES_CONFIG[st.session_state.u_id]['nome']}")
-if c_exit.button("SAIR / LOGOUT"):
-    st.session_state.clear()
+if col_logout.button("SAIR / LOGOUT"):
+    st.cache_data.clear()
     st.rerun()
 
-# Cálculo das métricas (Certifique-se que os nomes batem com os cards abaixo)
-total_clientes = pd.read_sql("SELECT COUNT(*) FROM clientes", conn).iloc[0,0]
-faturamento = pd.read_sql("SELECT SUM(valor) FROM caixa WHERE tipo='Entrada'", conn).iloc[0,0] or 0
-despesas = pd.read_sql("SELECT SUM(valor) FROM caixa WHERE tipo='Saída'", conn).iloc[0,0] or 0
-# Importante: Contar apenas os pendentes de hoje para o número atualizar ao concluir
-hoje_iso = datetime.now().strftime('%Y-%m-%d')
-ag_hoje = pd.read_sql(f"SELECT COUNT(*) FROM agenda WHERE data='{hoje_iso}' AND status='Pendente'", conn).iloc[0,0]
+# Layout dos Cards
+m1, m2, m3, m4 = st.columns(4)
 
-
-# Cards de Impacto
-with m1: 
+with m1:
     st.markdown(f'<div class="neon-card"><small>BASE DE CLIENTES</small><h2>{total_clientes}</h2></div>', unsafe_allow_html=True)
 
-with m2: 
+with m2:
     st.markdown(f'<div class="neon-card"><small>RECEITA BRUTA</small><h2 style="color:#00d4ff">R$ {faturamento:,.2f}</h2></div>', unsafe_allow_html=True)
 
-with m3: 
-    st.markdown(f'<div class="neon-card"><small>LUCRO LÍQUIDO</small><h2 style="color:#00ff88">R$ {(faturamento - despesas):,.2f}</h2></div>', unsafe_allow_html=True)
+with m3:
+    st.markdown(f'<div class="neon-card"><small>LUCRO LÍQUIDO</small><h2 style="color:#00ff88">R$ {faturamento - despesas:,.2f}</h2></div>', unsafe_allow_html=True)
 
-with m4: 
-    # Corrigido: Variável ag_hoje e fechamento da div neon-card
+with m4:
+    # Número Laranja Neon e Dinâmico
     st.markdown(f'''
         <div class="neon-card">
             <small>AGENDA HOJE</small>
             <div class="orange-neon">{ag_hoje}</div>
         </div>
     ''', unsafe_allow_html=True)
-    
-# ================= 4. PAINEL OPERACIONAL (CADASTROS) =================
-st.write("---")
-col_forms, col_display = st.columns([1.5, 2])
 
-with col_forms:
+# ================= 5. PAINEL OPERACIONAL =================
+st.write("---")
+col_ops, col_fila = st.columns([1.5, 2])
+
+with col_ops:
     st.subheader("⚡ Painel de Controle")
     aba_ag, aba_cli, aba_srv, aba_cx = st.tabs(["📅 Agenda", "👤 Cliente", "💰 Serviço", "📉 Caixa"])
     
     with aba_ag:
         df_clis = pd.read_sql("SELECT id, nome FROM clientes", conn)
         df_servs = pd.read_sql("SELECT id, nome, preco FROM servicos", conn)
-        with st.form("form_ag"):
-            sel_cli = st.selectbox("Cliente", df_clis['nome']) if not df_clis.empty else None
-            sel_srv = st.selectbox("Serviço", df_servs['nome']) if not df_servs.empty else None
-            data_val = st.date_input("Data", format="DD/MM/YYYY")
-            hora_val = st.time_input("Hora")
-            if st.form_submit_button("REGISTRAR NA AGENDA"):
-                if sel_cli and sel_srv:
-                    cid = df_clis[df_clis.nome == sel_cli].id.values[0]
-                    sid = df_servs[df_servs.nome == sel_srv].id.values[0]
-                    conn.execute("INSERT INTO agenda (cliente_id, servico_id, data, hora, status) VALUES (?,?,?,?, 'Pendente')", (int(cid), int(sid), str(data_val), str(hora_val)))
+        
+        with st.form("add_agenda"):
+            cli_sel = st.selectbox("Cliente", df_clis['nome']) if not df_clis.empty else None
+            srv_sel = st.selectbox("Serviço", df_servs['nome']) if not df_servs.empty else None
+            dt_ag = st.date_input("Data do Atendimento", format="DD/MM/YYYY")
+            hr_ag = st.time_input("Hora")
+            if st.form_submit_button("CONFIRMAR AGENDAMENTO"):
+                if cli_sel and srv_sel:
+                    cid = df_clis[df_clis.nome == cli_sel].id.values[0]
+                    sid = df_servs[df_servs.nome == srv_sel].id.values[0]
+                    conn.execute("INSERT INTO agenda (cliente_id, servico_id, data, hora, status) VALUES (?,?,?,?, 'Pendente')",
+                                 (int(cid), int(sid), str(dt_ag), str(hr_ag)))
                     conn.commit()
                     st.rerun()
 
     with aba_cli:
-        with st.form("form_cli"):
-            nome_c = st.text_input("Nome do Cliente")
-            zap_c = st.text_input("WhatsApp (ex: 55119...)")
+        with st.form("add_cli"):
+            n_cli = st.text_input("Nome Completo")
+            t_cli = st.text_input("WhatsApp (ex: 55119...)")
             if st.form_submit_button("CADASTRAR CLIENTE"):
-                conn.execute("INSERT INTO clientes (nome, telefone) VALUES (?,?)", (nome_c, zap_c))
-                conn.commit(); st.rerun()
+                conn.execute("INSERT INTO clientes (nome, telefone) VALUES (?,?)", (n_cli, t_cli))
+                conn.commit()
+                st.rerun()
 
     with aba_srv:
-        with st.form("form_srv"):
-            nome_s = st.text_input("Nome do Serviço")
-            preco_s = st.number_input("Preço R$", min_value=0.0, step=5.0)
+        with st.form("add_srv"):
+            n_srv = st.text_input("Nome do Serviço")
+            p_srv = st.number_input("Preço (R$)", min_value=0.0)
             if st.form_submit_button("CADASTRAR SERVIÇO"):
-                conn.execute("INSERT INTO servicos (nome, preco) VALUES (?,?)", (nome_s, preco_s))
-                conn.commit(); st.rerun()
+                conn.execute("INSERT INTO servicos (nome, preco) VALUES (?,?)", (n_srv, p_srv))
+                conn.commit()
+                st.rerun()
 
     with aba_cx:
-        with st.form("form_cx"):
-            d_cx = st.text_input("Descrição")
-            v_cx = st.number_input("Valor", min_value=0.0)
-            t_cx = st.selectbox("Tipo", ["Entrada", "Saída"])
-            if st.form_submit_button("LANÇAR NO FLUXO"):
-                conn.execute("INSERT INTO caixa (descricao, valor, tipo, data) VALUES (?,?,?,?)", (d_cx, v_cx, t_cx, datetime.now().strftime('%Y-%m-%d')))
-                conn.commit(); st.rerun()
+        with st.form("add_caixa"):
+            desc_cx = st.text_input("Descrição do Lançamento")
+            val_cx = st.number_input("Valor", min_value=0.0)
+            tipo_cx = st.selectbox("Tipo", ["Saída", "Entrada"])
+            if st.form_submit_button("REGISTRAR NO CAIXA"):
+                conn.execute("INSERT INTO caixa (descricao, valor, tipo, data) VALUES (?,?,?,?)",
+                             (desc_cx, val_cx, tipo_cx, hoje_iso))
+                conn.commit()
+                st.rerun()
 
-# ================= 5. FILA DE ATENDIMENTO E WHATSAPP =================
-with col_display:
+# ================= 6. FILA DE ATENDIMENTOS E WHATSAPP =================
+with col_fila:
     st.subheader("📋 Próximos Atendimentos")
-    query = """
+    query_fila = """
         SELECT a.id, c.nome, c.telefone, s.nome as serv, s.preco, a.data, a.hora 
         FROM agenda a 
         JOIN clientes c ON c.id=a.cliente_id 
         JOIN servicos s ON s.id=a.servico_id 
         WHERE a.status='Pendente' ORDER BY a.data, a.hora
     """
-    fila = pd.read_sql(query, conn)
+    fila_df = pd.read_sql(query_fila, conn)
     
-    if fila.empty:
-        st.info("Nenhum atendimento pendente.")
+    if fila_df.empty:
+        st.info("Nenhum atendimento pendente para hoje.")
     else:
-        for _, r in fila.iterrows():
+        for _, r in fila_df.iterrows():
             dt_br = datetime.strptime(r.data, '%Y-%m-%d').strftime('%d/%m/%Y')
-            with st.expander(f"📍 {dt_br} | {r.hora[:5]} - {r.nome}"):
-                c_txt, c_btn1, c_btn2 = st.columns([2, 1, 1])
-                c_txt.write(f"**Serviço:** {r.serv} | **Valor:** R$ {r.preco:.2f}")
+            with st.expander(f"📍 {dt_br} às {r.hora[:5]} | {r.nome}"):
+                c1, c2, c3 = st.columns([2, 1, 1])
+                c1.write(f"**{r.serv}** - R$ {r.preco:.2f}")
                 
-                # Botão WhatsApp Link
-                msg = urllib.parse.quote(f"Olá {r.nome}, confirmamos seu horário para o dia {dt_br} às {r.hora[:5]}!")
-                c_txt.markdown(f'<a href="https://wa.me/{r.telefone}?text={msg}" class="wa-link">📱 Confirmar via WhatsApp</a>', unsafe_allow_html=True)
+                # Link WhatsApp com mensagem automática
+                msg = urllib.parse.quote(f"Olá {r.nome}, confirmamos seu horário na Vivv Lab Master para o dia {dt_br} às {r.hora[:5]}.")
+                c1.markdown(f'<a href="https://wa.me/{r.telefone}?text={msg}" class="wa-link">📱 Confirmar via WhatsApp</a>', unsafe_allow_html=True)
                 
-                if c_btn1.button("CONCLUIR", key=f"ok_{r.id}"):
+                # BOTÃO CONCLUIR (Atualiza o contador Agenda Hoje)
+                if c2.button("CONCLUIR ✅", key=f"concluir_{r.id}"):
                     conn.execute("UPDATE agenda SET status='Concluído' WHERE id=?", (r.id,))
-                    conn.execute("INSERT INTO caixa (descricao, valor, tipo, data) VALUES (?,?,?,?)", (f"Atend: {r.nome}", r.preco, "Entrada", r.data))
-                    conn.commit(); st.rerun()
+                    conn.execute("INSERT INTO caixa (descricao, valor, tipo, data) VALUES (?,?,?,?)", 
+                                 (f"Atendimento: {r.nome}", r.preco, "Entrada", hoje_iso))
+                    conn.commit()
+                    st.rerun()
                 
-                if c_btn2.button("CANCELAR", key=f"del_{r.id}"):
+                # BOTÃO CANCELAR
+                if c3.button("CANCELAR ❌", key=f"cancelar_{r.id}"):
                     conn.execute("DELETE FROM agenda WHERE id=?", (r.id,))
-                    conn.commit(); st.rerun()
+                    conn.commit()
+                    st.rerun()
 
-# ================= 6. CENTRAL DE AUDITORIA (VIP DESIGN) =================
-# ================= 6. CENTRAL DE AUDITORIA (CARDS EXPANSÍVEIS) =================
+# ================= 7. CENTRAL DE AUDITORIA (EXPANSÍVEL) =================
 st.write("---")
 st.markdown("### 🗄️ Central de Auditoria e Controle de Dados")
 
-# Criando o respiro lateral
-_, col_audit, _ = st.columns([0.05, 0.9, 0.05])
+_, col_central, _ = st.columns([0.05, 0.9, 0.05])
 
-with col_audit:
-    # Gap amplo para separação visual
-    c_db1, c_db2 = st.columns(2, gap="large")
+with col_central:
+    ca1, ca2 = st.columns(2, gap="large")
+    
+    with ca1:
+        with st.expander("👥 GESTÃO DE CLIENTES (Clique para editar)"):
+            df_aud_cli = pd.read_sql("SELECT id, nome, telefone FROM clientes", conn)
+            edit_cli = st.data_editor(df_aud_cli, hide_index=True, use_container_width=True, key="edit_cli_table")
+            if st.button("💾 SALVAR ALTERAÇÕES CLIENTES"):
+                conn.execute("DELETE FROM clientes")
+                edit_cli.to_sql("clientes", conn, if_exists="append", index=False)
+                conn.commit()
+                st.rerun()
 
-    with c_db1:
-        # Expander que funciona como o 'clique' para abrir a gestão
-        with st.expander("👥 CLIQUE PARA: GESTÃO DE CLIENTES", expanded=False):
-            st.markdown("""
-                <div style='background: rgba(0, 86, 179, 0.1); padding: 10px; border-radius: 10px; border-left: 5px solid #00d4ff; margin-bottom: 15px;'>
-                    <small style='color: #00d4ff;'>Edite nomes ou telefones diretamente na tabela abaixo e salve.</small>
-                </div>
-            """, unsafe_allow_html=True)
-            
-            df_edit_clis = pd.read_sql("SELECT id, nome, telefone FROM clientes", conn)
-            edited_clis = st.data_editor(
-                df_edit_clis, 
-                hide_index=True, 
-                use_container_width=True, 
-                key="ed_cli_v3",
-                height=350 
-            )
-            
-            if st.button("💾 SALVAR ALTERAÇÕES DE CLIENTES", use_container_width=True):
-                try:
-                    conn.execute("DELETE FROM clientes")
-                    edited_clis.to_sql("clientes", conn, if_exists="append", index=False)
-                    conn.commit()
-                    st.success("Base de clientes atualizada!")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Erro: {e}")
+    with ca2:
+        with st.expander("📊 HISTÓRICO DE CAIXA (Clique para editar)"):
+            df_aud_cx = pd.read_sql("SELECT id, data, descricao, tipo, valor FROM caixa", conn)
+            edit_cx = st.data_editor(df_aud_cx, hide_index=True, use_container_width=True, key="edit_cx_table")
+            if st.button("💾 SALVAR ALTERAÇÕES CAIXA"):
+                conn.execute("DELETE FROM caixa")
+                edit_cx.to_sql("caixa", conn, if_exists="append", index=False)
+                conn.commit()
+                st.rerun()
 
-    with c_db2:
-        # Expander para o histórico financeiro
-        with st.expander("📊 CLIQUE PARA: HISTÓRICO DE CAIXA", expanded=False):
-            st.markdown("""
-                <div style='background: rgba(255, 0, 127, 0.1); padding: 10px; border-radius: 10px; border-left: 5px solid #ff007f; margin-bottom: 15px;'>
-                    <small style='color: #ff007f;'>Corrija valores, datas ou descrições de lançamentos passados.</small>
-                </div>
-            """, unsafe_allow_html=True)
-            
-            df_edit_cx = pd.read_sql("SELECT id, data, descricao, tipo, valor FROM caixa", conn)
-            edited_cx = st.data_editor(
-                df_edit_cx, 
-                hide_index=True, 
-                use_container_width=True, 
-                key="ed_cx_v3",
-                height=350
-            )
-            
-            if st.button("💾 SALVAR ALTERAÇÕES DE CAIXA", use_container_width=True):
-                try:
-                    conn.execute("DELETE FROM caixa")
-                    edited_cx.to_sql("caixa", conn, if_exists="append", index=False)
-                    conn.commit()
-                    st.success("Fluxo de caixa sincronizado!")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Erro: {e}")
-                
-# ================= 7. IA CONSULTORA DE NEGÓCIOS =================
+# ================= 8. IA STRATEGIST =================
 st.write("---")
-st.subheader("💬 Vivv AI: Estrategista de Negócios")
-if "chat_log" not in st.session_state: st.session_state.chat_log = []
+st.subheader("💬 Vivv AI: Consultor de Negócios")
+if "chat_history" not in st.session_state: st.session_state.chat_history = []
 
-for m in st.session_state.chat_log:
-    with st.chat_message(m["role"]): st.write(m["content"])
+for msg in st.session_state.chat_history:
+    with st.chat_message(msg["role"]): st.write(msg["content"])
 
-if prompt_ia := st.chat_input("Pergunte à IA sobre seu faturamento ou estratégias..."):
-    st.session_state.chat_log.append({"role": "user", "content": prompt_ia})
-    with st.chat_message("user"): st.write(prompt_ia)
+if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
+    st.session_state.chat_history.append({"role": "user", "content": prompt})
+    with st.chat_message("user"): st.write(prompt)
     
     with st.chat_message("assistant"):
-        contexto_ia = f"Estabelecimento: {CLIENTES_CONFIG[st.session_state.u_id]['nome']}. Receita: R${faturamento}. Lucro: R${faturamento-despesas}. Clientes: {total_clientes}. Pergunta: {prompt_ia}"
         try:
-            client_ai = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-            res_ia = client_ai.chat.completions.create(model="gpt-4o-mini", messages=[{"role":"user", "content": contexto_ia}])
-            texto_ia = res_ia.choices[0].message.content
+            client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+            contexto = f"Contexto: Clientes={total_clientes}, Faturamento=R${faturamento}, Lucro=R${faturamento-despesas}. Pergunta: {prompt}"
+            response = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "user", "content": contexto}])
+            resp_text = response.choices[0].message.content
         except:
-            texto_ia = "🤖 IA Offline. Verifique sua OpenAI API Key nos Secrets."
-        
-        st.write(texto_ia)
-        st.session_state.chat_log.append({"role": "assistant", "content": texto_ia})
+            resp_text = "🤖 IA Offline. Configure sua API Key nos Secrets do Streamlit."
+        st.write(resp_text)
+        st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
 
-# FIM DO CÓDIGO - ESTRUTURA COMPLETA
-
-
-
-
-
-
-
+# FIM DO SCRIPT
