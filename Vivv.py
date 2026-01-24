@@ -162,27 +162,35 @@ with c_right:
         st.info("Nenhum agendamento para hoje.")
     else:
         for a in agnd:
-            with st.expander(f"📍 {a.get('data', 'Sem data')} às {a.get('hora', '---')} | {a.get('cliente', 'Cliente s/ nome')}"):
-                st.write(f"**Serviço:** {a['servico']} — **Valor:** R$ {a['preco']:.2f}")
-                
-                col_btn1, col_btn2, col_btn3 = st.columns([1.5, 1, 1])
-                
-                # Botão WhatsApp
-                tel_c = next((c['telefone'] for c in clis if c['nome'] == a['cliente']), "")
-                msg = urllib.parse.quote(f"Olá {a['cliente']}, seu horário para {a['servico']} está confirmado para {a['data']} às {a['hora']}!")
-                col_btn1.markdown(f'<a href="https://wa.me/{tel_c}?text={msg}" class="wa-link">📱 Confirmar</a>', unsafe_allow_html=True)
-                
-                # Botão Concluir
-                if col_btn2.button("✅ Fechar", key=f"concluir_{a['id']}"):
-                    user_ref.collection("minha_agenda").document(a['id']).update({"status": "Concluído"})
-                    user_ref.collection("meu_caixa").add({"descricao": f"Atend: {a['cliente']}", "valor": a['preco'], "tipo": "Entrada", "data": firestore.SERVER_TIMESTAMP})
-                    st.rerun()
-                
-                # Botão Cancelar (Novo)
-                if col_btn3.button("❌ Sair", key=f"cancelar_{a['id']}"):
-                    user_ref.collection("minha_agenda").document(a['id']).delete()
-                    st.warning("Agendamento removido.")
-                    st.rerun()
+           with st.expander(f"📍 {a.get('data', 'Sem data')} às {a.get('hora', '---')} | {a.get('cliente', 'Cliente s/ nome')}"):
+    # Usando .get também aqui para evitar erros em registros antigos
+    st.write(f"**Serviço:** {a.get('servico', 'Não informado')} — **Valor:** R$ {a.get('preco', 0.0):.2f}")
+    
+    col_btn1, col_btn2, col_btn3 = st.columns([1.5, 1, 1])
+    
+    # 1. Busca Telefone e monta Link WhatsApp
+    tel_c = next((c.get('telefone', '') for c in clis if c.get('nome') == a.get('cliente')), "")
+    msg = urllib.parse.quote(f"Olá {a.get('cliente', 'Cliente')}, seu horário para {a.get('servico', 'serviço')} está confirmado para {a.get('data', '--/--')} às {a.get('hora', '--:--')}!")
+    
+    # 2. Botão Confirmar (Removido o expander extra que estava aqui)
+    col_btn1.markdown(f'<a href="https://wa.me/{tel_c}?text={msg}" class="wa-link">📱 Confirmar</a>', unsafe_allow_html=True)
+    
+    # 3. Botão Concluir
+    if col_btn2.button("✅ Fechar", key=f"concluir_{a['id']}"):
+        user_ref.collection("minha_agenda").document(a['id']).update({"status": "Concluído"})
+        user_ref.collection("meu_caixa").add({
+            "descricao": f"Atend: {a.get('cliente', 'Cliente')}", 
+            "valor": a.get('preco', 0), 
+            "tipo": "Entrada", 
+            "data": firestore.SERVER_TIMESTAMP
+        })
+        st.rerun()
+    
+    # 4. Botão Cancelar
+    if col_btn3.button("❌ Sair", key=f"cancelar_{a['id']}"):
+        user_ref.collection("minha_agenda").document(a['id']).delete()
+        st.warning("Agendamento removido.")
+        st.rerun()
 
 # ================= 6. BANCO DE DADOS EDITÁVEL (VOLTOU!) =================
 st.write("---")
@@ -221,6 +229,7 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
             st.write(model.generate_content(ctx).text)
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
