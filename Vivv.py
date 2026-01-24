@@ -210,70 +210,72 @@ with col_display:
                     conn.commit(); st.rerun()
 
 # ================= 6. CENTRAL DE AUDITORIA (VIP DESIGN) =================
+# ================= 6. CENTRAL DE AUDITORIA (CARDS EXPANSÍVEIS) =================
 st.write("---")
 st.markdown("### 🗄️ Central de Auditoria e Controle de Dados")
 
-# Criando um container com espaçamento extra usando colunas de respiro
+# Criando o respiro lateral
 _, col_audit, _ = st.columns([0.05, 0.9, 0.05])
 
 with col_audit:
-    # Divisão em duas colunas com mais espaço entre elas (gap="large")
+    # Gap amplo para separação visual
     c_db1, c_db2 = st.columns(2, gap="large")
 
     with c_db1:
-        st.markdown("""
-            <div style='background: rgba(0, 86, 179, 0.05); padding: 15px; border-radius: 15px; border-left: 5px solid #00d4ff; margin-bottom: 10px;'>
-                <strong style='color: #00d4ff;'>👥 Gestão de Clientes</strong><br>
-                <small>Edite nomes ou telefones diretamente na tabela abaixo.</small>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        df_edit_clis = pd.read_sql("SELECT id, nome, telefone FROM clientes", conn)
-        # Aumentando a altura (height) para dar mais "ar" à tabela
-        edited_clis = st.data_editor(
-            df_edit_clis, 
-            hide_index=True, 
-            use_container_width=True, 
-            key="ed_cli_v2",
-            height=300 
-        )
-        
-        if st.button("💾 SALVAR ALTERAÇÕES EM CLIENTES"):
-            try:
-                conn.execute("DELETE FROM clientes")
-                edited_clis.to_sql("clientes", conn, if_exists="append", index=False)
-                conn.commit()
-                st.success("Base de clientes atualizada com sucesso!")
-                st.rerun()
-            except Exception as e:
-                st.error(f"Erro: {e}")
+        # Expander que funciona como o 'clique' para abrir a gestão
+        with st.expander("👥 CLIQUE PARA: GESTÃO DE CLIENTES", expanded=False):
+            st.markdown("""
+                <div style='background: rgba(0, 86, 179, 0.1); padding: 10px; border-radius: 10px; border-left: 5px solid #00d4ff; margin-bottom: 15px;'>
+                    <small style='color: #00d4ff;'>Edite nomes ou telefones diretamente na tabela abaixo e salve.</small>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            df_edit_clis = pd.read_sql("SELECT id, nome, telefone FROM clientes", conn)
+            edited_clis = st.data_editor(
+                df_edit_clis, 
+                hide_index=True, 
+                use_container_width=True, 
+                key="ed_cli_v3",
+                height=350 
+            )
+            
+            if st.button("💾 SALVAR ALTERAÇÕES DE CLIENTES", use_container_width=True):
+                try:
+                    conn.execute("DELETE FROM clientes")
+                    edited_clis.to_sql("clientes", conn, if_exists="append", index=False)
+                    conn.commit()
+                    st.success("Base de clientes atualizada!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Erro: {e}")
 
     with c_db2:
-        st.markdown("""
-            <div style='background: rgba(0, 86, 179, 0.05); padding: 15px; border-radius: 15px; border-left: 5px solid #ff007f; margin-bottom: 10px;'>
-                <strong style='color: #ff007f;'>📊 Histórico de Caixa</strong><br>
-                <small>Corrija valores ou descrições de lançamentos passados.</small>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        df_edit_cx = pd.read_sql("SELECT id, data, descricao, tipo, valor FROM caixa", conn)
-        edited_cx = st.data_editor(
-            df_edit_cx, 
-            hide_index=True, 
-            use_container_width=True, 
-            key="ed_cx_v2",
-            height=300
-        )
-        
-        if st.button("💾 SALVAR ALTERAÇÕES NO CAIXA"):
-            try:
-                conn.execute("DELETE FROM caixa")
-                edited_cx.to_sql("caixa", conn, if_exists="append", index=False)
-                conn.commit()
-                st.success("Fluxo de caixa sincronizado!")
-                st.rerun()
-            except Exception as e:
-                st.error(f"Erro: {e}")
+        # Expander para o histórico financeiro
+        with st.expander("📊 CLIQUE PARA: HISTÓRICO DE CAIXA", expanded=False):
+            st.markdown("""
+                <div style='background: rgba(255, 0, 127, 0.1); padding: 10px; border-radius: 10px; border-left: 5px solid #ff007f; margin-bottom: 15px;'>
+                    <small style='color: #ff007f;'>Corrija valores, datas ou descrições de lançamentos passados.</small>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            df_edit_cx = pd.read_sql("SELECT id, data, descricao, tipo, valor FROM caixa", conn)
+            edited_cx = st.data_editor(
+                df_edit_cx, 
+                hide_index=True, 
+                use_container_width=True, 
+                key="ed_cx_v3",
+                height=350
+            )
+            
+            if st.button("💾 SALVAR ALTERAÇÕES DE CAIXA", use_container_width=True):
+                try:
+                    conn.execute("DELETE FROM caixa")
+                    edited_cx.to_sql("caixa", conn, if_exists="append", index=False)
+                    conn.commit()
+                    st.success("Fluxo de caixa sincronizado!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Erro: {e}")
                 
 # ================= 7. IA CONSULTORA DE NEGÓCIOS =================
 st.write("---")
@@ -300,5 +302,6 @@ if prompt_ia := st.chat_input("Pergunte à IA sobre seu faturamento ou estratég
         st.session_state.chat_log.append({"role": "assistant", "content": texto_ia})
 
 # FIM DO CÓDIGO - ESTRUTURA COMPLETA
+
 
 
