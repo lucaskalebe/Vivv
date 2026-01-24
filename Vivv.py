@@ -22,7 +22,8 @@ def init_db():
 
 db = init_db()
 
-# --- 2. CONTROLE DE ACESSO E SESSÃO ---
+#________________________________________________________________________________________
+
 # --- 2. CONTROLE DE ACESSO E SESSÃO ---
 if "logado" not in st.session_state:
     st.session_state.logado = False
@@ -31,7 +32,7 @@ if "logado" not in st.session_state:
 if not st.session_state.logado:
     st.title("Vivv - Acesso")
     
-    # É ESTA LINHA QUE ESTAVA FALTANDO: Ela cria as variáveis das abas
+    # CRIAÇÃO DAS ABAS (Isso resolve o NameError da linha 33)
     aba_login, aba_cadastro = st.tabs(["Entrar", "Solicitar Acesso"])
     
     with aba_cadastro:
@@ -41,10 +42,7 @@ if not st.session_state.logado:
         
         if st.button("Enviar Solicitação"):
             if novo_nome and novo_email and nova_senha:
-                import datetime
-                # Define 7 dias de teste automático
                 validade_teste = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=7)
-                
                 db.collection("usuarios").document(novo_email).set({
                     "nome": novo_nome,
                     "senha": nova_senha,
@@ -53,63 +51,44 @@ if not st.session_state.logado:
                     "validade": validade_teste,
                     "data_solicitacao": firestore.SERVER_TIMESTAMP
                 })
-                st.success("Solicitação enviada! Use este e-mail e senha para logar.")
+                st.success("Solicitação enviada! Tente logar agora.")
             else:
-                st.error("Preencha todos os campos!")
+                st.error("Preencha todos os campos.")
 
     with aba_login:
-        email_input = st.text_input("E-mail para login", key="login_email")
+        email_input = st.text_input("E-mail", key="login_email")
         senha_input = st.text_input("Senha", type="password", key="login_senha")
         
         if st.button("Acessar"):
             user_doc = db.collection("usuarios").document(email_input).get()
-            
             if user_doc.exists:
                 dados = user_doc.to_dict()
-                # Verifica a senha e o status de acesso
                 if dados.get("senha") == senha_input:
-                    import datetime
                     agora = datetime.datetime.now(datetime.timezone.utc)
-                    
                     if dados.get("pago") == True or (dados.get("teste") == True and agora < dados.get("validade")):
                         st.session_state.logado = True
                         st.session_state.user_email = email_input
                         st.rerun()
                     else:
-                        st.error("Seu acesso expirou ou aguarda pagamento.")
+                        st.error("Acesso expirado ou pendente de pagamento.")
                 else:
                     st.error("Senha incorreta.")
             else:
                 st.error("Usuário não encontrado.")
     
-    st.stop() # Garante que o painel só apareça após o login# --- 4. PAINEL VIVV (SÓ RODA SE LOGADO) ---
+    # ISSO É O QUE LIMPA O FUNDO: Impede que o painel apareça sem login
+    st.stop()
 
-# Botão de Logout ÚNICO
-if st.sidebar.button("SAIR / LOGOUT"):
+# --- 4. PAINEL VIVV (SÓ APARECE SE LOGADO) ---
+
+# Botão de sair com KEY ÚNICA para evitar o DuplicateElementId
+if st.sidebar.button("SAIR / LOGOUT", key="btn_logout_final"):
     st.session_state.logado = False
     st.rerun()
 
-# Busca dinâmica: trocamos o e-mail fixo pelo e-mail de quem logou!
-user_email = st.session_state.user_email 
-user_ref = db.collection("usuarios").document(user_email)
-
-
-doc = user_ref.get()
-if doc.exists:
-    dados_painel = doc.to_dict()
-    base_clientes = dados_painel.get("base_clientes", 0)
-    receita_bruta = dados_painel.get("receita_bruta", 0)
-    lucro_liquido = dados_painel.get("lucro_liquido", 0)
-    agenda_hoje = dados_painel.get("agenda_hoje", 0)
-else:
-    base_clientes, receita_bruta, lucro_liquido, agenda_hoje = 0, 0, 0, 0
-
+# Restante do seu código do painel (Cards, etc)
 st.title("Vivv")
-# Continue aqui com o desenho dos seus cards...
 
-if st.sidebar.button("SAIR / LOGOUT", key="logout_principal"):
-    st.session_state.logado = False
-    st.rerun()
 
 
 # Aqui nós criamos a variável 'db' que o erro disse que estava faltando
@@ -427,6 +406,7 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
             
         st.write(resp_text)
         st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
+
 
 
 
