@@ -131,13 +131,34 @@ if c_exit.button("SAIR / LOGOUT"):
     st.session_state.clear()
     st.rerun()
 
-# Cards de Impacto
-m1, m2, m3, m4 = st.columns(4)
-with m1: st.markdown(f'<div class="neon-card"><small>BASE DE CLIENTES</small><h2>{total_clientes}</h2></div>', unsafe_allow_html=True)
-with m2: st.markdown(f'<div class="neon-card"><small>RECEITA BRUTA</small><h2 style="color:#00d4ff">R$ {faturamento:,.2f}</h2></div>', unsafe_allow_html=True)
-with m3: st.markdown(f'<div class="neon-card"><small>LUCRO LÍQUIDO</small><h2 style="color:#00ff88">R$ {(faturamento - despesas):,.2f}</h2></div>', unsafe_allow_html=True)
-with m4: st.markdown(f'<div class="neon-card"><small>AGENDA HOJE</small><div class="orange-neon">{ag_hoje}</div>', unsafe_allow_html=True)
+# Cálculo das métricas (Certifique-se que os nomes batem com os cards abaixo)
+total_clientes = pd.read_sql("SELECT COUNT(*) FROM clientes", conn).iloc[0,0]
+faturamento = pd.read_sql("SELECT SUM(valor) FROM caixa WHERE tipo='Entrada'", conn).iloc[0,0] or 0
+despesas = pd.read_sql("SELECT SUM(valor) FROM caixa WHERE tipo='Saída'", conn).iloc[0,0] or 0
+# Importante: Contar apenas os pendentes de hoje para o número atualizar ao concluir
+hoje_iso = datetime.now().strftime('%Y-%m-%d')
+ag_hoje = pd.read_sql(f"SELECT COUNT(*) FROM agenda WHERE data='{hoje_iso}' AND status='Pendente'", conn).iloc[0,0]
 
+
+# Cards de Impacto
+with m1: 
+    st.markdown(f'<div class="neon-card"><small>BASE DE CLIENTES</small><h2>{total_clientes}</h2></div>', unsafe_allow_html=True)
+
+with m2: 
+    st.markdown(f'<div class="neon-card"><small>RECEITA BRUTA</small><h2 style="color:#00d4ff">R$ {faturamento:,.2f}</h2></div>', unsafe_allow_html=True)
+
+with m3: 
+    st.markdown(f'<div class="neon-card"><small>LUCRO LÍQUIDO</small><h2 style="color:#00ff88">R$ {(faturamento - despesas):,.2f}</h2></div>', unsafe_allow_html=True)
+
+with m4: 
+    # Corrigido: Variável ag_hoje e fechamento da div neon-card
+    st.markdown(f'''
+        <div class="neon-card">
+            <small>AGENDA HOJE</small>
+            <div class="orange-neon">{ag_hoje}</div>
+        </div>
+    ''', unsafe_allow_html=True)
+    
 # ================= 4. PAINEL OPERACIONAL (CADASTROS) =================
 st.write("---")
 col_forms, col_display = st.columns([1.5, 2])
@@ -314,6 +335,7 @@ if prompt_ia := st.chat_input("Pergunte à IA sobre seu faturamento ou estratég
         st.session_state.chat_log.append({"role": "assistant", "content": texto_ia})
 
 # FIM DO CÓDIGO - ESTRUTURA COMPLETA
+
 
 
 
