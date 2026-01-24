@@ -90,53 +90,117 @@ m2.markdown(f'<div class="neon-card"><small>RECEITA</small><h2 style="color:#00d
 m3.markdown(f'<div class="neon-card"><small>LUCRO</small><h2 style="color:#00ff88">R$ {faturamento-despesas:,.2f}</h2></div>', unsafe_allow_html=True)
 m4.markdown(f'<div class="neon-card"><small>AGENDA</small><div class="orange-neon">{len(agnd)}</div></div>', unsafe_allow_html=True)
 
-# ================= 5. GESTÃO OPERACIONAL =================
+# ================= 5. GESTÃO OPERACIONAL (REFINADA) =================
 st.write("---")
 c_left, c_right = st.columns([1.5, 2])
 
 with c_left:
-    st.subheader("⚡ Painel")
+    st.subheader("⚡ Painel de Controle")
     t1, t2, t3, t4 = st.tabs(["📅 Agenda", "👤 Cliente", "💰 Serviço", "📉 Caixa"])
+    
     with t1:
-        with st.form("f1"):
-            c_s = st.selectbox("Cliente", [c['nome'] for c in clis]) if clis else st.warning("Cadastre um cliente")
-            s_s = st.selectbox("Serviço", [s['nome'] for s in srvs]) if srvs else st.warning("Cadastre um serviço")
-            if st.form_submit_button("AGENDAR"):
+        with st.form("f_agenda"):
+            # Seleção de Cliente e Serviço
+            c_s = st.selectbox("Selecione o Cliente", [c['nome'] for c in clis]) if clis else st.warning("Cadastre um cliente primeiro")
+            s_s = st.selectbox("Selecione o Serviço", [s['nome'] for s in srvs]) if srvs else st.warning("Cadastre um serviço primeiro")
+            
+            # Novos campos: Data e Hora
+            col_d, col_h = st.columns(2)
+            d_ag = col_d.date_input("Data do Agendamento")
+            h_ag = col_h.time_input("Horário")
+            
+            if st.form_submit_button("CONFIRMAR AGENDAMENTO"):
                 p_v = next((s['preco'] for s in srvs if s['nome'] == s_s), 0)
-                user_ref.collection("minha_agenda").add({"cliente": c_s, "servico": s_s, "preco": p_v, "status": "Pendente", "data": str(datetime.now().date())})
+                user_ref.collection("minha_agenda").add({
+                    "cliente": c_s, 
+                    "servico": s_s, 
+                    "preco": p_v, 
+                    "status": "Pendente", 
+                    "data": str(d_ag),
+                    "hora": str(h_ag)
+                })
+                st.success("Agendado com sucesso!")
                 st.rerun()
+
     with t2:
-        with st.form("f2"):
-            nome, tel = st.text_input("Nome"), st.text_input("WhatsApp")
-            if st.form_submit_button("SALVAR CLIENTE"):
+        with st.form("f_cli"):
+            nome, tel = st.text_input("Nome"), st.text_input("WhatsApp (com DDD)")
+            if st.form_submit_button("CADASTRAR CLIENTE"):
                 user_ref.collection("meus_clientes").add({"nome": nome, "telefone": tel})
                 st.rerun()
     with t3:
-        with st.form("f3"):
-            serv, prec = st.text_input("Serviço"), st.number_input("Preço")
-            if st.form_submit_button("SALVAR SERVIÇO"):
-                user_ref.collection("meus_servicos").add({"nome": serv, "preco": prec})
-                st.rerun()
+    with st.form("f_srv"):
+        serv = st.text_input("Nome do Serviço")
+        prec = st.number_input("Preço", min_value=0.0)
+        if st.form_submit_button("SALVAR SERVIÇO"):
+            user_ref.collection("meus_servicos").add({"nome": serv, "preco": prec})
+            st.rerun()
+
     with t4:
-        with st.form("f4"):
-            ds, vl, tp = st.text_input("Desc"), st.number_input("Valor"), st.selectbox("Tipo", ["Entrada", "Saída"])
-            if st.form_submit_button("LANÇAR"):
-                user_ref.collection("meu_caixa").add({"descricao": ds, "valor": vl, "tipo": tp, "data": firestore.SERVER_TIMESTAMP})
-                st.rerun()
+    with st.form("f_cx"):
+        ds = st.text_input("Descrição")
+        vl = st.number_input("Valor", min_value=0.0)
+        tp = st.selectbox("Tipo", ["Entrada", "Saída"])
+        if st.form_submit_button("LANÇAR NO CAIXA"):
+            user_ref.collection("meu_caixa").add({"descricao": ds, "valor": vl, "tipo": tp, "data": firestore.SERVER_TIMESTAMP})
+            st.rerun()
+
+
+
 
 with c_right:
-    st.subheader("📋 Fila")
-    for a in agnd:
-        with st.expander(f"📍 {a['cliente']} | {a['servico']}"):
-            col_a, col_b = st.columns([2, 1])
-            tel_c = next((c['telefone'] for c in clis if c['nome'] == a['cliente']), "")
-            col_a.markdown(f'<a href="https://wa.me/{tel_c}" class="wa-link">📱 WhatsApp</a>', unsafe_allow_html=True)
-            if col_b.button("CONCLUIR", key=a['id']):
-                user_ref.collection("minha_agenda").document(a['id']).update({"status": "Concluído"})
-                user_ref.collection("meu_caixa").add({"descricao": f"Serv: {a['servico']}", "valor": a['preco'], "tipo": "Entrada", "data": firestore.SERVER_TIMESTAMP})
-                st.rerun()
+    st.subheader("📋 Fila de Atendimentos")
+    if not agnd:
+        st.info("Nenhum agendamento para hoje.")
+    else:
+        for a in agnd:
+            with st.expander(f"📍 {a['data']} às {a['hora']} | {a['cliente']}"):
+                st.write(f"**Serviço:** {a['servico']} — **Valor:** R$ {a['preco']:.2f}")
+                
+                col_btn1, col_btn2, col_btn3 = st.columns([1.5, 1, 1])
+                
+                # Botão WhatsApp
+                tel_c = next((c['telefone'] for c in clis if c['nome'] == a['cliente']), "")
+                msg = urllib.parse.quote(f"Olá {a['cliente']}, seu horário para {a['servico']} está confirmado para {a['data']} às {a['hora']}!")
+                col_btn1.markdown(f'<a href="https://wa.me/{tel_c}?text={msg}" class="wa-link">📱 Confirmar</a>', unsafe_allow_html=True)
+                
+                # Botão Concluir
+                if col_btn2.button("✅ Fechar", key=f"concluir_{a['id']}"):
+                    user_ref.collection("minha_agenda").document(a['id']).update({"status": "Concluído"})
+                    user_ref.collection("meu_caixa").add({"descricao": f"Atend: {a['cliente']}", "valor": a['preco'], "tipo": "Entrada", "data": firestore.SERVER_TIMESTAMP})
+                    st.rerun()
+                
+                # Botão Cancelar (Novo)
+                if col_btn3.button("❌ Sair", key=f"cancelar_{a['id']}"):
+                    user_ref.collection("minha_agenda").document(a['id']).delete()
+                    st.warning("Agendamento removido.")
+                    st.rerun()
 
-# ================= 6. IA CONSULTOR DE NEGÓCIOS =================
+# ================= 6. BANCO DE DADOS EDITÁVEL (VOLTOU!) =================
+st.write("---")
+st.subheader("🗄️ Gestão de Dados (Editável)")
+exp_db = st.expander("Clique para abrir a edição de Clientes e Serviços")
+
+with exp_db:
+    col_db1, col_db2 = st.columns(2)
+    
+    with col_db1:
+        st.write("👤 **Clientes Cadastrados**")
+        if clis:
+            df_clis = pd.DataFrame(clis)
+            # st.data_editor permite que você altere os dados visualmente
+            st.data_editor(df_clis, use_container_width=True, key="edit_clis")
+        else:
+            st.info("Sem clientes.")
+
+    with col_db2:
+        st.write("💰 **Serviços Disponíveis**")
+        if srvs:
+            df_srvs = pd.DataFrame(srvs)
+            st.data_editor(df_srvs, use_container_width=True, key="edit_srvs")
+        else:
+            st.info("Sem serviços.")
+# ================= 7. IA CONSULTOR DE NEGÓCIOS (RESTAURADA) =================
 st.write("---")
 st.subheader("💬 Vivv AI: Consultor de Negócios")
 if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
@@ -144,8 +208,10 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
         genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
         modelos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
         model = genai.GenerativeModel('models/gemini-1.5-flash' if 'models/gemini-1.5-flash' in modelos else modelos[0])
-        ctx = f"Dados: Clientes={len(clis)}, Receita=R${faturamento}. Pergunta: {prompt}"
+        ctx = f"Dados: Clientes={len(clis)}, Lucro=R${faturamento-despesas}. Pergunta: {prompt}"
         with st.spinner("Analisando..."):
             st.write(model.generate_content(ctx).text)
     except Exception as e:
-        st.error(f"Erro: {e}")
+        st.error(f"Erro na IA: {e}")
+
+
