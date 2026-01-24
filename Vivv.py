@@ -7,6 +7,41 @@ import numpy as np
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
+# --- CONFIGURAÇÃO DA PÁGINA ---
+st.set_page_config(
+    page_title="BioTwin AI | Human Longevity",
+    page_icon="🧬",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
+# --- FUNÇÃO PARA O BANCO DE DATAS (SQLite) ---
+def criar_tabela():
+    conn = sqlite3.connect('vivv_dados.db')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS usuario 
+                 (nome TEXT, idade INT, altura REAL, peso REAL, meta_peso REAL)''')
+    conn.commit()
+    conn.close()
+
+# --- INTERFACE DE CADASTRO NA SIDEBAR ---
+st.sidebar.header("👤 Perfil Biométrico")
+with st.sidebar.form("meu_perfil"):
+    nome = st.text_input("Nome")
+    idade = st.number_input("Idade", min_value=1)
+    peso = st.number_input("Peso Atual (kg)")
+    meta = st.number_input("Meta de Peso (kg)")
+    enviar = st.form_submit_button("Salvar Dados")
+    
+    if enviar:
+        # Aqui salvaríamos no SQLite
+        st.sidebar.success("Dados salvos com sucesso!")
+
+# --- CÁLCULO PARA O TOPO (VALOR REAL VS META) ---
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.metric("Peso Atual", f"{peso} kg", delta=f"{peso - meta} kg para a meta")
+
 client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 def gerar_insight(hrv, sono):
@@ -20,14 +55,6 @@ st.title("🧬 Vivv AI")
 if st.button("Analisar Saúde"):
     st.info(gerar_insight(72, 85))
 
-# --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(
-    page_title="BioTwin AI | Human Longevity",
-    page_icon="🧬",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
-
 # --- DESIGN NEON UX (CSS CUSTOMIZADO) ---
 st.markdown("""
 <style>
@@ -40,6 +67,7 @@ st.markdown("""
         font-family: 'Inter', sans-serif;
     }
 
+,
     /* Cards Neon */
     .neon-card {
         background: rgba(255, 255, 255, 0.03);
@@ -185,5 +213,6 @@ with col_sim2:
 # --- FOOTER ---
 
 st.markdown("<br><p style='text-align: center; color: #444;'>Propriedade do Usuário | Dados Criptografados End-to-End</p>", unsafe_allow_html=True)
+
 
 
