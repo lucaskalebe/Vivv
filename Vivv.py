@@ -11,6 +11,8 @@ from datetime import datetime
 # ================= 1. CONFIGURAÇÃO E DESIGN ULTRA NEON =================
 st.set_page_config(page_title="Vivv", layout="wide", page_icon="🧬")
 
+client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
@@ -245,28 +247,45 @@ with col_central:
                 conn.commit()
                 st.rerun()
 
+
 # ================= 8. IA STRATEGIST =================
 st.write("---")
 st.subheader("💬 Vivv AI: Consultor de Negócios")
-if "chat_history" not in st.session_state: st.session_state.chat_history = []
+
+if "chat_history" not in st.session_state: 
+    st.session_state.chat_history = []
 
 for msg in st.session_state.chat_history:
-    with st.chat_message(msg["role"]): st.write(msg["content"])
+    with st.chat_message(msg["role"]): 
+        st.write(msg["content"])
 
 if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
     st.session_state.chat_history.append({"role": "user", "content": prompt})
-    with st.chat_message("user"): st.write(prompt)
+    with st.chat_message("user"): 
+        st.write(prompt)
     
     with st.chat_message("assistant"):
         try:
+            # Puxa a chave que você acabou de salvar nos Secrets
             client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+            
             contexto = f"Contexto: Clientes={total_clientes}, Faturamento=R${faturamento}, Lucro=R${faturamento-despesas}. Pergunta: {prompt}"
-            response = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "user", "content": contexto}])
+            
+            response = client.chat.completions.create(
+                model="gpt-4o-mini", 
+                messages=[{"role": "user", "content": contexto}]
+            )
             resp_text = response.choices[0].message.content
-        except:
-            resp_text = "🤖 IA Offline. Configure sua API Key nos Secrets do Streamlit."
+        except Exception as e:
+            # Mostra o erro real se algo ainda der errado
+            resp_text = f"❌ Erro detectado: {str(e)}"
+            
         st.write(resp_text)
         st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
 
-# FIM DO SCRIPT
+
+
+
+
+
 
