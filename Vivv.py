@@ -11,8 +11,6 @@ from datetime import datetime
 # ================= 1. CONFIGURAÇÃO E DESIGN ULTRA NEON =================
 st.set_page_config(page_title="Vivv", layout="wide", page_icon="🧬")
 
-client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
@@ -249,6 +247,9 @@ with col_central:
 
 
 # ================= 8. IA STRATEGIST =================
+
+client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+
 st.write("---")
 st.subheader("💬 Vivv AI: Consultor de Negócios")
 
@@ -282,6 +283,7 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
             
         st.write(resp_text)
         st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
+
 
 
 
