@@ -9,7 +9,7 @@ from pathlib import Path
 from datetime import datetime
 
 # ================= 1. CONFIGURAÇÃO E DESIGN ULTRA NEON =================
-st.set_page_config(page_title="Vivv Lab Master", layout="wide", page_icon="🧬")
+st.set_page_config(page_title="Vivv", layout="wide", page_icon="🧬")
 
 st.markdown("""
 <style>
@@ -63,7 +63,7 @@ st.markdown("""
 # ================= 2. CORE: GERENCIAMENTO DE DADOS =================
 DBS_DIR = Path(__file__).parent / "dbs"
 DBS_DIR.mkdir(exist_ok=True)
-db_path = DBS_DIR / "vivv_master.db"
+db_path = DBS_DIR / "vivv.db"
 
 def init_db():
     conn = sqlite3.connect(db_path)
@@ -95,7 +95,7 @@ except:
 # ================= 4. HEADER E DASHBOARD =================
 col_title, col_logout = st.columns([5, 1])
 with col_title:
-    st.title("🧬 Vivv Lab Master")
+    st.title("Vivv")
 
 if col_logout.button("SAIR / LOGOUT"):
     st.cache_data.clear()
@@ -199,7 +199,7 @@ with col_fila:
                 c1.write(f"**{r.serv}** - R$ {r.preco:.2f}")
                 
                 # Link WhatsApp com mensagem automática
-                msg = urllib.parse.quote(f"Olá {r.nome}, confirmamos seu horário na Vivv Lab Master para o dia {dt_br} às {r.hora[:5]}.")
+                msg = urllib.parse.quote(f"Olá {r.nome}, confirmamos seu horário para o dia {dt_br} às {r.hora[:5]}. Até logo 🤝")
                 c1.markdown(f'<a href="https://wa.me/{r.telefone}?text={msg}" class="wa-link">📱 Confirmar via WhatsApp</a>', unsafe_allow_html=True)
                 
                 # BOTÃO CONCLUIR (Atualiza o contador Agenda Hoje)
@@ -269,3 +269,4 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
         st.session_state.chat_history.append({"role": "assistant", "content": resp_text})
 
 # FIM DO SCRIPT
+
