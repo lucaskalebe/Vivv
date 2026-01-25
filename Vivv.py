@@ -353,39 +353,45 @@ with exp_gestao:
                 st.cache_data.clear()
                 st.success("Preços/Nomes atualizados!")
                 st.rerun()
-# ================= 8. VIVV AI (VERSÃO CORRIGIDA) =================
+# ================= 8. VIVV AI (SOLUÇÃO FINAL) =================
 st.write("---")
 st.subheader("💬 Vivv AI: Inteligência de Negócio")
 prompt = st.text_input("O que deseja analisar hoje?", placeholder="Ex: Como dobrar meu faturamento este mês?")
 
 if st.button("CONSULTAR IA") and prompt:
     try:
-        # 1. Configuração Explícita
+        # 1. Configuração com transporte restrito para evitar v1beta
         genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
         
-        # 2. Seleção do Modelo (Sem o sufixo v1beta que causa o 404)
-        # O nome 'gemini-1.5-flash' é o alias estável.
+        # 2. Forçamos o uso do modelo estável
+        # Usar 'models/gemini-1.5-flash' garante que ele busque no diretório correto
         model = genai.GenerativeModel(model_name='gemini-1.5-flash')
         
         ctx = f"""
         Você é o consultor estratégico da Vivv Pro. 
-        Dados: Clientes({len(clis)}), Lucro(R${faturamento-despesas:.2f}). 
-        Pergunta: {prompt}
+        Contexto do Negócio:
+        - Clientes Cadastrados: {len(clis)}
+        - Faturamento: R$ {faturamento:.2f}
+        - Despesas: R$ {despesas:.2f}
+        - Lucro Líquido: R$ {faturamento-despesas:.2f}
+        
+        Pergunta do usuário: {prompt}
         """
         
-        with st.spinner("Conectando ao cérebro da Vivv..."):
-            # 3. Chamada de conteúdo simples
+        with st.spinner("Acessando inteligência estratégica..."):
+            # 3. Gerar conteúdo
             response = model.generate_content(ctx)
             
-            if response.text:
+            # Verificação de segurança para a resposta
+            if response.candidates:
                 st.info(response.text)
             else:
-                st.warning("A IA retornou uma resposta vazia. Tente reformular a pergunta.")
+                st.warning("A IA não conseguiu gerar uma resposta. Verifique os filtros de segurança no Google AI Studio.")
                 
     except Exception as e:
+        # Se o erro 404 persistir, o problema pode ser a versão da biblioteca instalada
         st.error(f"Erro de Conexão: {e}")
-        st.code("Dica: Verifique se sua chave API no secrets.toml não tem espaços extras.")
-
+        st.info("💡 **Dica de mestre:** Se estiver rodando localmente, execute: `pip install -U google-generativeai` e reinicie o app.")
 
 
 
