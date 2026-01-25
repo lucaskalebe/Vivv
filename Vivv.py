@@ -366,40 +366,36 @@ with exp_gestao:
                 st.rerun()
 
 
-# ================= 8. VIVV AI (VERSÃO PATH ABSOLUTO) =================
+# ================= 8. VIVV AI (CONEXÃO DIRETA REST) =================
+import requests
+
 st.write("---")
 st.subheader("💬 Vivv AI: Inteligência de Negócio")
 prompt = st.text_input("O que deseja analisar hoje?", placeholder="Ex: Como dobrar meu faturamento?")
 
 if st.button("CONSULTAR IA") and prompt:
     try:
-        # 1. Configuração de API
-        genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+        api_key = st.secrets["GOOGLE_API_KEY"]
+        # Endpoint FORÇADO na versão v1 (estável)
+        url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={api_key}"
         
-        # 2. Uso do Path Absoluto para evitar erro de v1beta/v1
-        # Usar 'models/gemini-1.5-flash' força o roteamento correto
-        model = genai.GenerativeModel('models/gemini-1.5-flash')
+        payload = {
+            "contents": [{
+                "parts": [{
+                    "text": f"Você é o consultor estratégico Vivv Pro. Dados: Clientes {len(clis)}, Lucro R$ {faturamento-despesas:.2f}. Pergunta: {prompt}"
+                }]
+            }]
+        }
         
-        ctx = f"""
-        Você é o consultor estratégico Vivv Pro.
-        Analise os dados reais do negócio e responda ao usuário de forma prática.
-        
-        DADOS DO NEGÓCIO:
-        - Total de Clientes: {len(clis)}
-        - Lucro Atual: R$ {faturamento-despesas:.2f}
-        
-        PERGUNTA DO USUÁRIO: {prompt}
-        """
-        
-        with st.spinner("Vivv AI analisando..."):
-            # Chamada padrão
-            response = model.generate_content(ctx)
+        with st.spinner("Vivv AI analisando via rota expressa..."):
+            response = requests.post(url, json=payload)
+            res_json = response.json()
             
-            if response.text:
-                st.info(response.text)
+            if response.status_code == 200:
+                texto_ia = res_json['candidates'][0]['content']['parts'][0]['text']
+                st.info(texto_ia)
             else:
-                st.warning("O modelo respondeu, mas o texto veio vazio.")
+                st.error(f"Erro na API ({response.status_code}): {res_json.get('error', {}).get('message', 'Erro desconhecido')}")
 
     except Exception as e:
-        st.error(f"Erro na IA: {e}")
-        st.info("💡 Se o erro 404 persistir, a biblioteca no servidor está desatualizada.")
+        st.error(f"Erro crítico na IA: {e}")
