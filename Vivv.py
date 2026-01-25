@@ -11,114 +11,75 @@ import hashlib
 # CSS Refinado para remover GitHub, Menu e Header de forma estável
 # ================= 1. CONFIGURAÇÃO E DESIGN VIVV =================
 st.set_page_config(page_title="Vivv Pro", layout="wide", page_icon="🚀")
-
 def hash_senha(senha):
     return hashlib.sha256(str.encode(senha)).hexdigest()
-
+    
 # CSS Único e Corrigido
 st.markdown("""
 <style>
-    /* 1. RESET E NOME NO TOPO */
-    header, [data-testid="stHeader"], .stAppDeployButton {
-        display: none !important;
-    }
-
+    header, [data-testid="stHeader"], .stAppDeployButton { display: none !important; }
     .vivv-top-left {
-        position: fixed;
-        top: 30px;       /* Espaço do teto */
-        left: 25px;      /* Espaço da esquerda */
-        color: #ffffff !important;
-        font-size: 28px;
-        font-weight: 900;
-        font-family: 'Inter', sans-serif;
-        z-index: 999999;
-        letter-spacing: -1px;
+        position: fixed; top: 30px; left: 25px;
+        color: #ffffff !important; font-size: 28px;
+        font-weight: 900; z-index: 999999;
     }
-
-    /* 2. AJUSTE DE TELA (CORRIGE SOBREPOSIÇÃO) */
-    .stApp {
-        background-color: #000205 !important;
-    }
-
-    .block-container {
-        padding-top: 100px !important; /* EMPURRA O CONTEÚDO PARA BAIXO DO NOME */
-        max-width: 95% !important;
-    }
-
-    /* 3. ESTILOS NEON */
-    .orange-neon { 
-        color: #ff9100 !important; 
-        text-shadow: 0 0 15px rgba(255, 145, 0, 0.5); 
-        font-size: 2.5rem; 
-        font-weight: 900; 
-        text-align: center;
-    }
-
+    .stApp { background-color: #000205 !important; }
+    .block-container { padding-top: 80px !important; max-width: 95% !important; }
+    .orange-neon { color: #ff9100 !important; text-shadow: 0 0 15px rgba(255,145,0,0.5); text-align: center; }
     .neon-card {
         background: linear-gradient(145deg, #000814, #001220);
-        border: 1px solid #0056b3;
-        border-radius: 15px;
-        padding: 20px;
-        box-shadow: 0 0 15px rgba(0, 86, 179, 0.15);
-    }
-
-    div.stButton > button {
-        background: linear-gradient(45deg, #003566, #000814) !important;
-        color: #00d4ff !important; 
-        border: 1px solid #00d4ff !important; 
-        border-radius: 12px; 
-        font-weight: bold;
-        width: 100%;
+        border: 1px solid #0056b3; border-radius: 15px; padding: 20px;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# Renderiza o nome Vivv fixo no topo
 st.markdown('<div class="vivv-top-left">Vivv</div>', unsafe_allow_html=True)
+
 
 # ================= 2. CONEXÃO FIREBASE (Mantém igual) =================
 @st.cache_resource
 def init_db():
-    key_dict = json.loads(st.secrets["FIREBASE_DETAILS"])
-    creds = service_account.Credentials.from_service_account_info(key_dict)
-    return firestore.Client(credentials=creds)
+    try:
+        key_dict = json.loads(st.secrets["FIREBASE_DETAILS"])
+        creds = service_account.Credentials.from_service_account_info(key_dict)
+        return firestore.Client(credentials=creds)
+    except Exception as e:
+        st.error(f"Erro ao conectar ao Banco: {e}")
+        return None
 
 db = init_db()
 
-# ================= 3. SISTEMA DE LOGIN =================
+# ================= 3. LÓGICA DE NEGÓCIO (SESSÃO) =================
 if "logado" not in st.session_state:
     st.session_state.logado = False
 
 if not st.session_state.logado:
-    # Removemos o título redundante "Acesso ao Sistema" para não bater no Vivv
     aba_login, aba_cadastro = st.tabs(["🔑 Acesso", "📝 Novo Cadastro"])
     
     with aba_login:
-        le = st.text_input("E-mail para Acesso", placeholder="seu@email.com").lower().strip()
-        ls = st.text_input("Senha", type="password", placeholder="******")
+        le = st.text_input("E-mail", key="l_email").lower().strip()
+        ls = st.text_input("Senha", type="password", key="l_pass")
         if st.button("ENTRAR NO VIVV"):
-            if le and ls:
-                u = db.collection("usuarios").document(le).get()
-                if u.exists and u.to_dict().get("senha") == hash_senha(ls):
-                    st.session_state.logado = True
-                    st.session_state.user_email = le
-                    st.rerun()
-                else:
-                    st.error("Dados incorretos.")
-    # ... cadastro e stop mantêm igual
-
+            u = db.collection("usuarios").document(le).get()
+            if u.exists and u.to_dict().get("senha") == hash_senha(ls):
+                st.session_state.logado = True
+                st.session_state.user_email = le
+                st.rerun()
+            else:
+                st.error("Dados incorretos.")
+    
     with aba_cadastro:
         with st.form("reg_form"):
             n = st.text_input("Nome Completo")
-            e = st.text_input("E-mail").lower().strip()
-            s = st.text_input("Crie uma Senha", type="password")
-            if st.form_submit_button("CRIAR MINHA CONTA"):
+            e = st.text_input("E-mail (Login)").lower().strip()
+            s = st.text_input("Senha", type="password")
+            if st.form_submit_button("CRIAR CONTA"):
                 val = datetime.now(timezone.utc) + timedelta(days=7)
                 db.collection("usuarios").document(e).set({
                     "nome": n, "senha": hash_senha(s), 
-                    "pago": False, "teste": True, "validade": val
+                    "pago": False, "validade": val
                 })
-                st.success("Conta criada! Use a aba de Acesso.")
+                st.success("Criado! Vá para Acesso.")
     st.stop()
 
 # ================= 4. VERIFICAÇÃO DE ASSINATURA =================
@@ -261,6 +222,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.info(res.text)
     except Exception as e:
         st.error(f"IA Indisponível: {e}")
+
 
 
 
