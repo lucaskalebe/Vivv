@@ -84,14 +84,16 @@ st.markdown('<div class="vivv-top-left">Vivv</div>', unsafe_allow_html=True)
 @st.cache_resource
 def init_db():
     try:
-        key_dict = json.loads(st.secrets["FIREBASE_DETAILS"])
+        raw = st.secrets["FIREBASE_DETAILS"]
+        raw = raw.replace("\\n", "\n")
+        key_dict = json.loads(raw)
+
         creds = service_account.Credentials.from_service_account_info(key_dict)
         return firestore.Client(credentials=creds)
+
     except Exception as e:
         st.error(f"Erro ao conectar ao Banco: {e}")
         return None
-
-db = init_db()
 
 # ================= 3. LOGIN / CADASTRO =================
 if "logado" not in st.session_state:
@@ -393,4 +395,5 @@ if st.button("CONSULTAR IA") and prompt:
     except Exception as e:
         st.error(f"Erro na IA: {e}")
         st.info("💡 Se o erro 404 voltar, o problema é 100% no cache do Streamlit Cloud.")
+
 
