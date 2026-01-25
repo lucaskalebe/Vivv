@@ -114,6 +114,7 @@ if "logado" not in st.session_state:
 
 if not st.session_state.logado:
     # ADICIONE ESSA LINHA AQUI:
+    st.write("")
     st.markdown('<h1 class="orange-neon">🚀 VIVV PRO</h1>', unsafe_allow_html=True)
     
     st.title("Acesso ao Sistema") # Título padrão opcional
@@ -384,6 +385,7 @@ if btn_ia and prompt:
             st.info(resposta.text) # Exibe em um quadro azul para destaque
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
