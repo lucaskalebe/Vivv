@@ -211,17 +211,27 @@ with exp_db:
             st.data_editor(df_srvs, use_container_width=True, key="edit_srvs")
         else:
             st.info("Sem serviços.")
-# ================= 7. IA CONSULTOR DE NEGÓCIOS (RESTAURADA) =================
+# ================= 7. IA CONSULTOR DE NEGÓCIOS (AJUSTADA PARA TOPO) =================
 st.write("---")
 st.subheader("💬 Vivv AI: Consultor de Negócios")
-if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
+
+# Usamos colunas para o botão ficar ao lado do campo e economizar espaço
+c_ia1, c_ia2 = st.columns([4, 1])
+prompt = c_ia1.text_input("Como posso melhorar meu lucro hoje?", placeholder="Ex: Como atrair mais clientes?", label_visibility="collapsed")
+btn_ia = c_ia2.button("PERGUNTAR")
+
+if btn_ia and prompt:
     try:
         genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
         modelos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        model = genai.GenerativeModel('models/gemini-1.5-flash' if 'models/gemini-1.5-flash' in modelos else modelos[0])
+        nome_modelo = 'models/gemini-1.5-flash' if 'models/gemini-1.5-flash' in modelos else modelos[0]
+        model = genai.GenerativeModel(nome_modelo)
+        
         ctx = f"Dados: Clientes={len(clis)}, Lucro=R${faturamento-despesas}. Pergunta: {prompt}"
+        
         with st.spinner("Analisando..."):
-            st.write(model.generate_content(ctx).text)
+            resposta = model.generate_content(ctx)
+            st.info(resposta.text) # Exibe em um quadro azul para destaque
     except Exception as e:
         st.error(f"Erro na IA: {e}")
 
