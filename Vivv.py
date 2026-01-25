@@ -12,75 +12,111 @@ import streamlit.components.v1 as components
 def hash_senha(senha):
     return hashlib.sha256(str.encode(senha)).hexdigest()
 
-import streamlit as st
-import pandas as pd
-import urllib.parse
-from datetime import datetime, timezone, timedelta
-import google.generativeai as genai
-from google.cloud import firestore
-from google.oauth2 import service_account
-import json
-import hashlib
-import streamlit.components.v1 as components
-
-def hash_senha(senha):
-    return hashlib.sha256(str.encode(senha)).hexdigest()
-
 # ================= 1. CONFIGURAÇÃO E DESIGN ULTRA NEON =================
 st.set_page_config(page_title="Vivv Pro", layout="wide", page_icon="🚀")
 
-# JAVASCRIPT: Remove GitHub, Menu e Header (Loop de 0.5s para garantir no mobile)
 components.html("""
 <script>
-    const clean = () => {
-        const frame = window.parent.document;
+    const removeStreamlitElements = () => {
+        // Alvos: Header, Toolbar, Decoration (linha colorida) e o Botão Deploy
         const selectors = [
-            'header', '[data-testid="stHeader"]', '[data-testid="stToolbar"]', 
-            '.stAppDeployButton', 'footer', '#MainMenu', '[data-testid="stDecoration"]'
+            'header', 
+            '[data-testid="stHeader"]', 
+            '[data-testid="stToolbar"]', 
+            '[data-testid="stDecoration"]',
+            '.stAppDeployButton',
+            'footer'
         ];
-        selectors.forEach(s => frame.querySelectorAll(s).forEach(n => n.remove()));
         
-        frame.querySelectorAll('a').forEach(link => {
-            if (link.href.includes('github.com') || link.className.includes('viewerBadge')) {
-                link.remove();
+        const parentDoc = window.parent.document;
+        
+        selectors.forEach(selector => {
+            parentDoc.querySelectorAll(selector).forEach(el => {
+                el.style.display = 'none';
+                el.style.visibility = 'hidden';
+            });
+        });
+
+        // Remove especificamente o ícone do GitHub e qualquer badge do Cloud
+        parentDoc.querySelectorAll('a').forEach(a => {
+            if (a.href.includes('github.com') || a.className.includes('viewerBadge')) {
+                a.style.display = 'none';
             }
         });
-        frame.querySelectorAll('div[class*="viewerBadge"]').forEach(b => b.remove());
-    }
-    clean();
-    setInterval(clean, 500);
+    };
+
+    // Executa várias vezes porque o Streamlit demora a carregar os elementos
+    removeStreamlitElements();
+    setInterval(removeStreamlitElements, 500); 
 </script>
 """, height=0)
 
 st.markdown("""
 <style>
-    /* REMOÇÃO VIA CSS */
-    [data-testid="stHeader"], header, .stAppDeployButton, footer, #MainMenu, 
-    [data-testid="stDecoration"], [data-testid="stToolbar"] {
+    /* 1. REMOÇÃO AGRESSIVA DE COMPONENTES DO STREAMLIT */
+    /* Remove Header, GitHub, Botão Deploy e o Rodapé Vermelho */
+    [data-testid="stHeader"], 
+    header, 
+    .stAppDeployButton, 
+    footer, 
+    #MainMenu,
+    [data-testid="stDecoration"],
+    [data-testid="stToolbar"],
+    .viewerBadge_container__1QS1n,
+    div[class^="viewerBadge"] {
         display: none !important;
         visibility: hidden !important;
+        height: 0 !important;
     }
 
-    /* DESIGN NEON E SUBIDA DO APP */
+    /* Remove especificamente o rodapé "Hosted with Streamlit" */
+    div[data-testid="stStatusWidget"] {
+        visibility: hidden;
+        height: 0%;
+        position: fixed;
+    }
+
+    /* Ajusta o espaçamento para o conteúdo subir */
     .stApp {
+        margin-top: -60px !important; /* Puxa tudo para cima */
         background-color: #000205 !important;
-        color: #d1d1d1;
-        font-family: 'Inter', sans-serif;
-        margin-top: -115px !important;
     }
 
+    /* Ajusta o espaçamento interno para compensar a subida */
     .block-container {
-        padding-top: 0rem !important;
+        padding-top: 60px !important; 
         max-width: 95% !important;
+    }
+
+    /* Esconde a linha de decoração colorida que fica no topo */
+    [data-testid="stDecoration"] {
+        display: none !important;
+    }
+
+    /* 2. DESIGN LARANJA NEON E ALINHAMENTO */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+    
+    .stApp { 
+        background-color: #000205; 
+        color: #d1d1d1; 
+        font-family: 'Inter', sans-serif; 
     }
 
     .orange-neon { 
         color: #ff9100 !important; 
         text-shadow: 0 0 15px rgba(255, 145, 0, 0.7); 
-        font-size: 2.8rem; 
-        font-weight: 800;
+        font-size: 2.5rem; 
+        font-weight: 800; 
         text-align: center;
-        margin-bottom: 20px;
+    }
+
+    /* Ajuste para alinhar os cards (Métricas) */
+    [data-testid="stMetric"] {
+        background: linear-gradient(145deg, #000814, #001220);
+        border: 1px solid #0056b3;
+        border-radius: 15px;
+        padding: 15px !important;
+        box-shadow: 0 0 10px rgba(0, 86, 179, 0.1);
     }
 
     .neon-card {
@@ -89,18 +125,56 @@ st.markdown("""
         border-radius: 15px;
         padding: 20px;
         box-shadow: 0 0 15px rgba(0, 86, 179, 0.1);
+        transition: all 0.3s ease-in-out;
+        min-height: 150px; /* Garante alinhamento vertical */
     }
 
+    .neon-card:hover { 
+        transform: translateY(-5px); 
+        box-shadow: 0 0 30px rgba(0, 212, 255, 0.4); 
+        border-color: #00d4ff; 
+    }
+
+    /* Botões */
     div.stButton > button {
         background: linear-gradient(45deg, #003566, #000814) !important;
         color: #00d4ff !important; 
         border: 1px solid #00d4ff !important; 
         border-radius: 10px; 
+        font-weight: bold;
+    }
+
+    /* 1. REMOÇÃO TOTAL DO TOPO, GITHUB E RODAPÉ */
+    [data-testid="stHeader"], 
+    header, 
+    footer, 
+    .stAppDeployButton, 
+    [data-testid="stDecoration"],
+    #MainMenu {
+        display: none !important;
+        visibility: hidden !important;
+    }
+
+    /* 2. SOBE O APP PARA MATAR O ESPAÇO BRANCO */
+    .stApp {
+        margin-top: -60px !important;
+        background-color: #000205 !important;
+    }
+
+    /* 1. ZERE O PADDING PARA O CONTEÚDO SUBIR TOTALMENTE */
+    .block-container {
+        padding-top: 0rem !important; /* Mude de 60px para 0 */
+        max-width: 95% !important;
+    }
+
+    /* 2. AUMENTE A "SUBIDA" DO APP */
+    .stApp {
+        margin-top: -80px !important;
+        background-color: #000205 !important;
     }
 </style>
-""", unsafe_allow_html=True)
-
-# ================= 2. BANCO DE DADOS E LOGIN (AJUSTADO CELULAR) =================
+""", unsafe_allow_html=True) # <--- ESSA LINHA É OBRIGATÓRIA AQUI!
+# ================= 2. BANCO DE DADOS =================
 @st.cache_resource
 def init_db():
     key_dict = json.loads(st.secrets["FIREBASE_DETAILS"])
@@ -113,53 +187,41 @@ if "logado" not in st.session_state:
     st.session_state.logado = False
 
 if not st.session_state.logado:
-    # ADICIONE ESSA LINHA AQUI:
-    st.write("")
-    st.markdown('<h1 class="orange-neon">🚀 VIVV PRO</h1>', unsafe_allow_html=True)
-    
-    st.title("Acesso ao Sistema") # Título padrão opcional
+    st.title("🚀 Vivv - Acesso")
     aba_login, aba_cadastro = st.tabs(["Entrar", "Cadastrar"])
-    # ... resto do código de login
-    
     with aba_cadastro:
         with st.form("reg"):
-            n = st.text_input("Nome")
-            e = st.text_input("E-mail").lower().strip() # Resolve erro de letra maiúscula
-            s = st.text_input("Senha", type="password")
+            n, e, s = st.text_input("Nome"), st.text_input("E-mail"), st.text_input("Senha", type="password")
             if st.form_submit_button("CADASTRAR"):
                 val = datetime.now(timezone.utc) + timedelta(days=7)
                 db.collection("usuarios").document(e).set({"nome": n, "senha": hash_senha(s), "pago": False, "teste": True, "validade": val})
-                st.success("Sucesso! Mude para a aba 'Entrar'.")
+                st.success("Sucesso! Faça login.")
 
+    
     with aba_login:
-        le = st.text_input("E-mail para Acesso").lower().strip() # Resolve erro de letra maiúscula
-        ls = st.text_input("Senha de Acesso", type="password")
-        if st.button("ACESSAR SISTEMA"):
-            if le and ls:
-                u = db.collection("usuarios").document(le).get()
-                if u.exists and u.to_dict().get("senha") == hash_senha(ls):
-                    st.session_state.logado = True
-                    st.session_state.user_email = le
-                    st.success("Login confirmado!")
-                    st.rerun()
-                else:
-                    st.error("E-mail ou senha incorretos.")
-            else:
-                st.warning("Preencha todos os campos.")
-    st.stop()
+        le, ls = st.text_input("E-mail"), st.text_input("Senha", type="password")
+        if st.button("ACESSAR"):
+            u = db.collection("usuarios").document(le).get()
+            if u.exists and u.to_dict().get("senha") == hash_senha(ls):
+                st.session_state.logado, st.session_state.user_email = True, le
+                st.rerun()
+    st.stop() # O app para aqui se não estiver logado
 
+# ESTA FUNÇÃO PRECISA ESTAR EXATAMENTE ASSIM:
 def verificar_acesso():
+    # As linhas abaixo têm 4 espaços de recuo (1 TAB)
     u_ref = db.collection("usuarios").document(st.session_state.user_email).get()
     if u_ref.exists:
         d = u_ref.to_dict()
         if not d.get("pago", False):
             st.warning("### 🔒 Acesso Restrito")
-            st.write("Sua assinatura ainda não foi ativada.")
+            st.write("Sua assinatura ainda não foi ativada. Conclua a ativação para liberar o sistema.")
             st.link_button("💳 ATIVAR MINHA CONTA", "https://buy.stripe.com/test_6oU4gB7Q4glM1JZ2Z06J200")
             if st.button("🔄 Já paguei, atualizar"): 
                 st.rerun()
-            st.stop()
+            st.stop() # Trava aqui se não houver pagamento confirmado
 
+# Chamada da função encostada na esquerda
 verificar_acesso()
 
 # ================= 3. BUSCA DE DADOS =================
@@ -188,9 +250,6 @@ faturamento = sum([float(x['valor']) for x in caixa if x['tipo'] == 'Entrada'])
 despesas = sum([float(x['valor']) for x in caixa if x['tipo'] == 'Saída'])
 
 # ================= 4. DASHBOARD =================
-
-st.markdown('<h1 class="orange-neon">🚀 VIVV PRO</h1>', unsafe_allow_html=True)
-
 col_title, col_logout = st.columns([5, 1])
 # Saudação menor conforme pedido
 col_title.markdown(f"##### 👋 Bem-vindo, <span style='color: #00d4ff;'>{st.session_state.user_email}</span>", unsafe_allow_html=True)
@@ -385,11 +444,6 @@ if btn_ia and prompt:
             st.info(resposta.text) # Exibe em um quadro azul para destaque
     except Exception as e:
         st.error(f"Erro na IA: {e}")
-
-
-
-
-
 
 
 
