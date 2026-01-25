@@ -191,7 +191,7 @@ with col_ops_l:
                 st.rerun()
 
 with col_ops_r:
-    st.subheader("📋 Fila Vivv")
+    st.subheader("📋 Agendamentos:")
     if not agnd:
         st.info("Agenda livre para hoje.")
     else:
@@ -231,6 +231,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.info(res.text)
     except Exception as e:
         st.error(f"IA Indisponível: {e}")
+
 
 
 
