@@ -58,7 +58,7 @@ if not st.session_state.logado:
             n, e, s = st.text_input("Nome"), st.text_input("E-mail"), st.text_input("Senha", type="password")
             if st.form_submit_button("CADASTRAR"):
                 val = datetime.now(timezone.utc) + timedelta(days=7)
-                db.collection("usuarios").document(e).set({"nome": n, "senha": s, "pago": False, "teste": True, "validade": val})
+                db.collection("usuarios").document(e).set({"nome": n, "senha": hash_senha(s), "pago": False, "teste": True, "validade": val})
                 st.success("Sucesso! Faça login.")
 
     
@@ -66,7 +66,7 @@ if not st.session_state.logado:
         le, ls = st.text_input("E-mail"), st.text_input("Senha", type="password")
         if st.button("ACESSAR"):
             u = db.collection("usuarios").document(le).get()
-            if u.exists and u.to_dict().get("senha") == ls:
+            if u.exists and u.to_dict().get("senha") == hash_senha(ls):
                 st.session_state.logado, st.session_state.user_email = True, le
                 st.rerun()
     st.stop()
@@ -268,6 +268,7 @@ if btn_ia and prompt:
             st.info(resposta.text) # Exibe em um quadro azul para destaque
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
