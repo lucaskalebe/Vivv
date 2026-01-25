@@ -366,32 +366,38 @@ with exp_gestao:
                 st.rerun()
 
 
-# ================= 8. VIVV AI (DEPURAÇÃO DE MODELOS) =================
+# ================= 8. VIVV AI (VERSÃO GEMINI 2.5 FLASH) =================
 import requests
 
 st.write("---")
-st.subheader("💬 Vivv AI: Diagnóstico de Conexão")
+st.subheader("💬 Vivv AI: Inteligência de Negócio")
+prompt = st.text_input("O que deseja analisar hoje?", placeholder="Ex: Como dobrar meu faturamento?")
 
-if st.button("VERIFICAR MODELOS DISPONÍVEIS"):
+if st.button("CONSULTAR IA") and prompt:
     try:
         api_key = st.secrets["GOOGLE_API_KEY"]
-        # Endpoint para listar modelos permitidos para sua chave
-        url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
         
-        response = requests.get(url)
-        res_json = response.json()
+        # Usando o modelo topo da sua lista: Gemini 2.5 Flash
+        # A rota 'v1' é a correta para modelos estáveis em 2026
+        url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={api_key}"
         
-        if response.status_code == 200:
-            modelos = [m['name'] for m in res_json.get('models', []) if 'generateContent' in m.get('supportedGenerationMethods', [])]
-            st.success("Sua chave funciona! Modelos que você pode usar:")
-            st.write(modelos)
+        payload = {
+            "contents": [{
+                "parts": [{
+                    "text": f"Atue como consultor estratégico Vivv Pro. Dados atuais: {len(clis)} clientes, faturamento R$ {faturamento:.2f}, despesas R$ {despesas:.2f}. Pergunta: {prompt}"
+                }]
+            }]
+        }
+        
+        with st.spinner("Vivv AI (v2.5) analisando dados..."):
+            response = requests.post(url, json=payload, timeout=15)
+            res_json = response.json()
             
-            # Tenta usar o primeiro da lista automaticamente
-            if modelos:
-                st.info(f"Dica: Substitua 'gemini-1.5-flash' por '{modelos[0].split('/')[-1]}' no seu código.")
-        else:
-            st.error(f"Erro ao listar modelos: {res_json.get('error', {}).get('message', 'Erro desconhecido')}")
-            st.json(res_json)
-            
+            if response.status_code == 200:
+                texto_ia = res_json['candidates'][0]['content']['parts'][0]['text']
+                st.info(f"🚀 **Vivv AI 2.5 Flash:**\n\n{texto_ia}")
+            else:
+                st.error(f"Erro na API: {res_json.get('error', {}).get('message', 'Erro desconhecido')}")
+                
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
