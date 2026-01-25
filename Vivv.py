@@ -358,6 +358,7 @@ with exp_gestao:
 # ================= 8. VIVV AI (SOLUÇÃO DE INFRAESTRUTURA) =================
 # ================= 8. VIVV AI (SOLUÇÃO DE BAIXO NÍVEL) =================
 # ================= 8. VIVV AI (VERSÃO COMPATÍVEL) =================
+model = genai.GenerativeModel('gemini-1.5-flash')
 st.write("---")
 st.subheader("💬 Vivv AI: Inteligência de Negócio")
 prompt = st.text_input("O que deseja analisar hoje?", placeholder="Ex: Como dobrar meu faturamento este mês?")
@@ -392,3 +393,4 @@ if st.button("CONSULTAR IA") and prompt:
     except Exception as e:
         st.error(f"Erro na IA: {e}")
         st.info("💡 Se o erro 404 voltar, o problema é 100% no cache do Streamlit Cloud.")
+
