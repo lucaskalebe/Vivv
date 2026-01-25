@@ -198,6 +198,16 @@ with c_right:
                     user_ref.collection("minha_agenda").document(a['id']).delete()
                     st.rerun()
 
+                # AQUI ESTAVA O SEU ERRO: Linhas repetidas abaixo causavam o crash
+                if col_btn3.button("❌ Sair", key=f"cancelar_{a['id']}"):
+                    user_ref.collection("minha_agenda").document(a['id']).delete()
+                    st.rerun()
+
+                # --- BOTÃO EXCLUIR (SAIR) ---
+                if col_btn3.button("❌ Sair", key=f"cancelar_{a['id']}"):
+                    user_ref.collection("minha_agenda").document(a['id']).delete()
+                    st.rerun()
+
                 if col_btn3.button("❌ Sair", key=f"cancelar_{a['id']}"):
                     user_ref.collection("minha_agenda").document(a['id']).delete()
                     st.rerun()
@@ -249,6 +259,7 @@ if btn_ia and prompt:
             st.info(resposta.text) # Exibe em um quadro azul para destaque
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
