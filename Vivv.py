@@ -366,39 +366,38 @@ with exp_gestao:
                 st.rerun()
 
 
-# ================= 8. VIVV AI (VERSÃO FINAL SEM ERROS) =================
+# ================= 8. VIVV AI (VERSÃO SIMPLIFICADA) =================
 st.write("---")
 st.subheader("💬 Vivv AI: Inteligência de Negócio")
 prompt = st.text_input("O que deseja analisar hoje?", placeholder="Ex: Como dobrar meu faturamento?")
 
 if st.button("CONSULTAR IA") and prompt:
     try:
-        import os
-        # Força a API estável e evita o erro 404
-        os.environ["GOOGLE_API_VERSION"] = "v1" 
+        # 1. Configuração Direta
         genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
         
-        # Inicializa o modelo na rota correta
+        # 2. Inicialização sem parâmetros extras para evitar 'unexpected argument'
         model = genai.GenerativeModel('gemini-1.5-flash')
         
         ctx = f"""
         Você é o consultor estratégico Vivv Pro.
-        Dados reais:
+        Analise estes dados:
         - Clientes: {len(clis)}
         - Lucro: R$ {faturamento-despesas:.2f}
         
-        Pergunta do usuário: {prompt}
+        Pergunta: {prompt}
         """
         
         with st.spinner("Vivv AI analisando..."):
-            # transport='rest' evita erros de conexão no Streamlit Cloud
-            response = model.generate_content(ctx, transport='rest')
+            # 3. Chamada limpa
+            response = model.generate_content(ctx)
             
-            if response.text:
+            if response and response.text:
                 st.info(response.text)
             else:
-                st.warning("IA não retornou resposta.")
+                st.warning("IA não conseguiu gerar uma resposta agora.")
 
     except Exception as e:
         st.error(f"Erro na IA: {e}")
-        st.info("💡 Se o erro 404 persistir, delete o app no painel do Streamlit e crie um 'New App'.")
+        st.info("💡 Se aparecer '404', a única saída é deletar o app no Streamlit Cloud e criar um 'New App'.")
+
