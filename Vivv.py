@@ -234,7 +234,8 @@ with col_ops_r:
                 raw_tel = next((c.get('telefone', '') for c in clis if c.get('nome') == a.get('cliente')), "")
                 clean_tel = "".join(filter(str.isdigit, raw_tel))
                 msg = urllib.parse.quote(f"VIVV PRO: Confirmado {a.get('servico')} às {a.get('hora')}!")
-                c1.markdown(f'[📱 Whats](https://wa.me/55{clean_tel}?text={msg})')
+                c1.markdown(f'<a href="https://wa.me/55{clean_tel}?text={msg}" target="_blank" class="whatsapp-button">📱 Whats</a>', unsafe_allow_html=True)
+
                 
                 if c2.button("✅", key=f"f_{a['id']}"):
                     user_ref.collection("minha_agenda").document(a['id']).update({"status": "Concluído"})
@@ -261,6 +262,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.info(res.text)
     except Exception as e:
         st.error(f"IA Indisponível: {e}")
+
 
 
 
