@@ -82,22 +82,22 @@ st.markdown("""
 st.markdown('<div class="vivv-top-left">Vivv</div>', unsafe_allow_html=True)
 
 # ================= 2. CONEXÃO FIREBASE =================
-
-from google.oauth2 import service_account
-from google.cloud import firestore
+# ================= 2. CONEXÃO FIREBASE =================
 
 @st.cache_resource
 def init_db():
     try:
-        creds = service_account.Credentials.from_service_account_file(
-            "firebase_key.json"
-        )
+        # Pega a string do segredo que você colou no painel
+        secrets_dict = json.loads(st.secrets["FIREBASE_DETAILS"])
+        
+        # Converte a string em objeto de credencial (SEM procurar arquivo no disco)
+        creds = service_account.Credentials.from_service_account_info(secrets_dict)
+        
         return firestore.Client(credentials=creds)
 
     except Exception as e:
         st.error(f"Erro ao conectar ao Banco: {e}")
         return None
-
 
 db = init_db()
 if db is None:
@@ -404,6 +404,7 @@ if st.button("CONSULTAR IA") and prompt:
     except Exception as e:
         st.error(f"Erro na IA: {e}")
         st.info("💡 Se o erro 404 voltar, o problema é 100% no cache do Streamlit Cloud.")
+
 
 
 
