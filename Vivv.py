@@ -15,59 +15,49 @@ def hash_senha(senha):
     return hashlib.sha256(str.encode(senha)).hexdigest()
 
 # CSS Refinado para remover GitHub, Menu e Header de forma estável
+# ================= 1. CONFIGURAÇÃO E DESIGN VIVV =================
+st.set_page_config(page_title="Vivv Pro", layout="wide", page_icon="🚀")
+
+def hash_senha(senha):
+    return hashlib.sha256(str.encode(senha)).hexdigest()
+
+# CSS Único e Corrigido
 st.markdown("""
 <style>
-
-    .vivv-header {
-        color: #ffffff !important;
-        font-family: 'Inter', sans-serif;
-        font-size: 26px;
-        font-weight: 800;
-        padding-top: 45px; /* Espaço do teto */
-        padding-left: 25px; /* Espaço da esquerda */
-        position: relative;
-        z-index: 999;
-
-        }
-
-        .vivv-top-left {
-        position: absolute;
-        top: 25px; /* Espaço do teto */
-        left: 20px; /* Espaço da esquerda */
-        color: #ffffff !important;
-        font-size: 22px;
-        font-weight: 800;
-        font-family: 'Inter', sans-serif;
-        z-index: 9999;
-    
+    /* 1. RESET E NOME NO TOPO */
+    header, [data-testid="stHeader"], .stAppDeployButton {
+        display: none !important;
     }
 
-    /* 2. AJUSTE DE TELA PARA CELULAR */
+    .vivv-top-left {
+        position: fixed;
+        top: 30px;       /* Espaço do teto */
+        left: 25px;      /* Espaço da esquerda */
+        color: #ffffff !important;
+        font-size: 28px;
+        font-weight: 900;
+        font-family: 'Inter', sans-serif;
+        z-index: 999999;
+        letter-spacing: -1px;
+    }
+
+    /* 2. AJUSTE DE TELA (CORRIGE SOBREPOSIÇÃO) */
     .stApp {
         background-color: #000205 !important;
-        margin-top: -75px !important; /* Esconde a barra original */
     }
 
     .block-container {
-        padding-top: 2rem !important; 
+        padding-top: 100px !important; /* EMPURRA O CONTEÚDO PARA BAIXO DO NOME */
         max-width: 95% !important;
     }
 
-    /* 3. TIPOGRAFIA E CORES NEON */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-    
-    html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif;
-        color: #d1d1d1;
-    }
-
+    /* 3. ESTILOS NEON */
     .orange-neon { 
         color: #ff9100 !important; 
-        text-shadow: 0 0 15px rgba(255, 145, 0, 0.7), 0 0 30px rgba(255, 145, 0, 0.3); 
-        font-size: 3rem; 
+        text-shadow: 0 0 15px rgba(255, 145, 0, 0.5); 
+        font-size: 2.5rem; 
         font-weight: 900; 
         text-align: center;
-        margin-bottom: 5px;
     }
 
     .neon-card {
@@ -76,10 +66,8 @@ st.markdown("""
         border-radius: 15px;
         padding: 20px;
         box-shadow: 0 0 15px rgba(0, 86, 179, 0.15);
-        margin-bottom: 10px;
     }
 
-    /* Botões Personalizados */
     div.stButton > button {
         background: linear-gradient(45deg, #003566, #000814) !important;
         color: #00d4ff !important; 
@@ -87,17 +75,14 @@ st.markdown("""
         border-radius: 12px; 
         font-weight: bold;
         width: 100%;
-        transition: 0.3s;
-    }
-    
-    div.stButton > button:hover {
-        box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
-        transform: scale(1.02);
     }
 </style>
 """, unsafe_allow_html=True)
 
-# ================= 2. CONEXÃO FIREBASE =================
+# Renderiza o nome Vivv fixo no topo
+st.markdown('<div class="vivv-top-left">Vivv</div>', unsafe_allow_html=True)
+
+# ================= 2. CONEXÃO FIREBASE (Mantém igual) =================
 @st.cache_resource
 def init_db():
     key_dict = json.loads(st.secrets["FIREBASE_DETAILS"])
@@ -106,30 +91,27 @@ def init_db():
 
 db = init_db()
 
-# ================= 3. SISTEMA DE LOGIN (VIVV ACCESS) =================
+# ================= 3. SISTEMA DE LOGIN =================
 if "logado" not in st.session_state:
     st.session_state.logado = False
 
 if not st.session_state.logado:
-    st.markdown('<div class="vivv-top-left">Vivv</div>', unsafe_allow_html=True) # <--- 4 ESPAÇOS AQUI
-    
+    # Removemos o título redundante "Acesso ao Sistema" para não bater no Vivv
     aba_login, aba_cadastro = st.tabs(["🔑 Acesso", "📝 Novo Cadastro"])
     
     with aba_login:
-        with st.container():
-            le = st.text_input("E-mail para Acesso", placeholder="seu@email.com").lower().strip()
-            ls = st.text_input("Senha", type="password", placeholder="******")
-            if st.button("ENTRAR NO VIVV"):
-                if le and ls:
-                    u = db.collection("usuarios").document(le).get()
-                    if u.exists and u.to_dict().get("senha") == hash_senha(ls):
-                        st.session_state.logado = True
-                        st.session_state.user_email = le
-                        st.rerun()
-                    else:
-                        st.error("Dados incorretos.")
+        le = st.text_input("E-mail para Acesso", placeholder="seu@email.com").lower().strip()
+        ls = st.text_input("Senha", type="password", placeholder="******")
+        if st.button("ENTRAR NO VIVV"):
+            if le and ls:
+                u = db.collection("usuarios").document(le).get()
+                if u.exists and u.to_dict().get("senha") == hash_senha(ls):
+                    st.session_state.logado = True
+                    st.session_state.user_email = le
+                    st.rerun()
                 else:
-                    st.warning("Preencha os campos.")
+                    st.error("Dados incorretos.")
+    # ... cadastro e stop mantêm igual
 
     with aba_cadastro:
         with st.form("reg_form"):
@@ -285,6 +267,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.info(res.text)
     except Exception as e:
         st.error(f"IA Indisponível: {e}")
+
 
 
 
