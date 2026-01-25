@@ -12,16 +12,28 @@ def hash_senha(senha):
     return hashlib.sha256(str.encode(senha)).hexdigest()
 
 # ================= 1. CONFIGURAÇÃO E DESIGN ULTRA NEON =================
+# ================= 1. CONFIGURAÇÃO E DESIGN ULTRA NEON =================
 st.set_page_config(page_title="Vivv Pro", layout="wide", page_icon="🚀")
-st.markdown("<div id='top'></div>", unsafe_allow_html=True)
 
+# Todo o CSS deve ficar dentro de UM único bloco st.markdown
 st.markdown("""
 <style>
-#MainMenu {visibility: hidden;}
-footer {visibility: hidden;}
-header {visibility: hidden;}
+    /* 1. Limpeza de interface (GitHub, Menu e Rodapé) */
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    footer {visibility: hidden;}
+    .block-container { padding-top: 2rem; padding-bottom: 0rem; }
+
+    /* 2. Estilização Geral e Fontes */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
-    .stApp { background-color: #000205; color: #d1d1d1; font-family: 'Inter', sans-serif; }
+    
+    .stApp { 
+        background-color: #000205; 
+        color: #d1d1d1; 
+        font-family: 'Inter', sans-serif; 
+    }
+    
+    /* 3. Cards e Efeitos Neon */
     .neon-card {
         background: linear-gradient(145deg, #000814, #001220);
         border: 1px solid #0056b3;
@@ -31,17 +43,38 @@ header {visibility: hidden;}
         transition: all 0.3s ease-in-out;
         text-align: center;
     }
-    .neon-card:hover { transform: translateY(-5px); box-shadow: 0 0 30px rgba(0, 212, 255, 0.4); border-color: #00d4ff; }
+    .neon-card:hover { 
+        transform: translateY(-5px); 
+        box-shadow: 0 0 30px rgba(0, 212, 255, 0.4); 
+        border-color: #00d4ff; 
+    }
+
+    /* 4. Botões e Links customizados */
     div.stButton > button {
         background: linear-gradient(45deg, #003566, #000814);
-        color: #00d4ff; border: 1px solid #00d4ff; border-radius: 10px; width: 100%;
+        color: #00d4ff; 
+        border: 1px solid #00d4ff; 
+        border-radius: 10px; 
+        width: 100%;
     }
-    .orange-neon { color: #ff9100 !important; text-shadow: 0 0 15px rgba(255, 145, 0, 0.7); font-size: 2.5rem; font-weight: 800; }
-    .wa-link { background: #25D366; color: black !important; padding: 10px; border-radius: 8px; font-weight: bold; text-decoration: none; display: block; text-align: center; }
+    .orange-neon { 
+        color: #ff9100 !important; 
+        text-shadow: 0 0 15px rgba(255, 145, 0, 0.7); 
+        font-size: 2.5rem; 
+        font-weight: 800; 
+    }
+    .wa-link { 
+        background: #25D366; 
+        color: black !important; 
+        padding: 10px; 
+        border-radius: 8px; 
+        font-weight: bold; 
+        text-decoration: none; 
+        display: block; 
+        text-align: center; 
+    }
 </style>
 """, unsafe_allow_html=True)
-
-
 
 # ================= 2. BANCO DE DADOS =================
 @st.cache_resource
@@ -313,6 +346,7 @@ if btn_ia and prompt:
             st.info(resposta.text) # Exibe em um quadro azul para destaque
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
