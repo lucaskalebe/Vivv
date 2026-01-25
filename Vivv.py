@@ -168,15 +168,21 @@ with c_right:
     else:
         for a in agnd:
             with st.expander(f"📍 {a.get('data', 'Sem data')} às {a.get('hora', '---')} | {a.get('cliente', 'Cliente s/ nome')}"):
-                # Todas as linhas abaixo devem estar alinhadas aqui (recuadas)
                 st.write(f"**Serviço:** {a.get('servico', 'Não informado')} — **Valor:** R$ {a.get('preco', 0.0):.2f}")                
                 col_btn1, col_btn2, col_btn3 = st.columns([1.5, 1, 1])
                 
-                tel_c = next((c.get('telefone', '') for c in clis if c.get('nome') == a.get('cliente')), "")
+                # --- LÓGICA DO WHATSAPP ---
+                raw_tel = next((c.get('telefone', '') for c in clis if c.get('nome') == a.get('cliente')), "")
+                clean_tel = "".join(filter(str.isdigit, raw_tel))
+
+                if clean_tel and not clean_tel.startswith("55"):
+                    clean_tel = "55" + clean_tel
+                
+                # Estas linhas ficam FORA do IF acima para o botão sempre aparecer
                 msg = urllib.parse.quote(f"Olá {a.get('cliente', 'Cliente')}, seu horário para {a.get('servico', 'serviço')} está confirmado para {a.get('data', '--/--')} às {a.get('hora', '--:--')}!")
+                col_btn1.markdown(f'<a href="https://wa.me/{clean_tel}?text={msg}" target="_blank" class="wa-link">📱 Confirmar</a>', unsafe_allow_html=True)
                 
-                col_btn1.markdown(f'<a href="https://wa.me/{tel_c}?text={msg}" class="wa-link">📱 Confirmar</a>', unsafe_allow_html=True)
-                
+                # --- BOTÃO CONCLUIR (FECHAR) ---
                 if col_btn2.button("✅ Fechar", key=f"concluir_{a['id']}"):
                     user_ref.collection("minha_agenda").document(a['id']).update({"status": "Concluído"})
                     user_ref.collection("meu_caixa").add({
@@ -185,6 +191,11 @@ with c_right:
                         "tipo": "Entrada", 
                         "data": firestore.SERVER_TIMESTAMP
                     })
+                    st.rerun()
+
+                # --- BOTÃO EXCLUIR (SAIR) ---
+                if col_btn3.button("❌ Sair", key=f"cancelar_{a['id']}"):
+                    user_ref.collection("minha_agenda").document(a['id']).delete()
                     st.rerun()
 
                 if col_btn3.button("❌ Sair", key=f"cancelar_{a['id']}"):
@@ -238,6 +249,7 @@ if btn_ia and prompt:
             st.info(resposta.text) # Exibe em um quadro azul para destaque
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
