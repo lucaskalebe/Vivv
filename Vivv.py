@@ -166,24 +166,23 @@ with c_right:
     if not agnd:
         st.info("Nenhum agendamento para hoje.")
     else:
-        for a in agnd:
-            with st.expander(f"📍 {a.get('data', 'Sem data')} às {a.get('hora', '---')} | {a.get('cliente', 'Cliente s/ nome')}"):
-                st.write(f"**Serviço:** {a.get('servico', 'Não informado')} — **Valor:** R$ {a.get('preco', 0.0):.2f}")                
-                col_btn1, col_btn2, col_btn3 = st.columns([1.5, 1, 1])
+        # Usamos enumerate para criar o índice 'i', garantindo chaves únicas
+        for i, a in enumerate(agnd):
+            with st.expander(f"📍 {a.get('data', '---')} às {a.get('hora', '---')} | {a.get('cliente', 'Cliente')}"):
+                st.write(f"**Serviço:** {a.get('servico', '---')} — **Valor:** R$ {a.get('preco', 0.0):.2f}")                
+                c1, c2, c3 = st.columns([1.5, 1, 1])
                 
                 # --- LÓGICA DO WHATSAPP ---
                 raw_tel = next((c.get('telefone', '') for c in clis if c.get('nome') == a.get('cliente')), "")
                 clean_tel = "".join(filter(str.isdigit, raw_tel))
-
-                if clean_tel and not clean_tel.startswith("55"):
+                if clean_tel and not clean_tel.startswith("55"): 
                     clean_tel = "55" + clean_tel
                 
-                # Estas linhas ficam FORA do IF acima para o botão sempre aparecer
                 msg = urllib.parse.quote(f"Olá {a.get('cliente', 'Cliente')}, seu horário para {a.get('servico', 'serviço')} está confirmado para {a.get('data', '--/--')} às {a.get('hora', '--:--')}!")
-                col_btn1.markdown(f'<a href="https://wa.me/{clean_tel}?text={msg}" target="_blank" class="wa-link">📱 Confirmar</a>', unsafe_allow_html=True)
+                c1.markdown(f'<a href="https://wa.me/{clean_tel}?text={msg}" target="_blank" class="wa-link">📱 Confirmar</a>', unsafe_allow_html=True)
                 
-                # --- BOTÃO CONCLUIR (FECHAR) ---
-                if col_btn2.button("✅ Fechar", key=f"concluir_{a['id']}"):
+                # --- BOTÃO CONCLUIR (CHAVE ÚNICA) ---
+                if c2.button("✅ Fechar", key=f"fechar_{a['id']}_{i}"):
                     user_ref.collection("minha_agenda").document(a['id']).update({"status": "Concluído"})
                     user_ref.collection("meu_caixa").add({
                         "descricao": f"Atend: {a.get('cliente', 'Cliente')}", 
@@ -193,24 +192,11 @@ with c_right:
                     })
                     st.rerun()
 
-                # --- BOTÃO EXCLUIR (SAIR) ---
-                if col_btn3.button("❌ Sair", key=f"cancelar_{a['id']}"):
+                # --- BOTÃO SAIR/CANCELAR (CHAVE ÚNICA) ---
+                if c3.button("❌ Sair", key=f"cancelar_{a['id']}_{i}"):
                     user_ref.collection("minha_agenda").document(a['id']).delete()
                     st.rerun()
 
-                # AQUI ESTAVA O SEU ERRO: Linhas repetidas abaixo causavam o crash
-                if col_btn3.button("❌ Sair", key=f"cancelar_{a['id']}"):
-                    user_ref.collection("minha_agenda").document(a['id']).delete()
-                    st.rerun()
-
-                # --- BOTÃO EXCLUIR (SAIR) ---
-                if col_btn3.button("❌ Sair", key=f"cancelar_{a['id']}"):
-                    user_ref.collection("minha_agenda").document(a['id']).delete()
-                    st.rerun()
-
-                if col_btn3.button("❌ Sair", key=f"cancelar_{a['id']}"):
-                    user_ref.collection("minha_agenda").document(a['id']).delete()
-                    st.rerun()
 
 # ================= 6. BANCO DE DADOS EDITÁVEL (VOLTOU!) =================
 st.write("---")
@@ -259,6 +245,7 @@ if btn_ia and prompt:
             st.info(resposta.text) # Exibe em um quadro azul para destaque
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
