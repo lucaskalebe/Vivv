@@ -109,8 +109,7 @@ with c_left:
             
             # Novos campos: Data e Hora
             col_d, col_h = st.columns(2)
-            d_ag = col_d.date_input("Data do Agendamento")
-            h_ag = col_h.time_input("Horário")
+            d_ag = col_d.date_input("Data do Agendamento", format="DD/MM/YYYY")
             
             if st.form_submit_button("CONFIRMAR AGENDAMENTO"):
                 p_v = next((s['preco'] for s in srvs if s['nome'] == s_s), 0)
@@ -234,6 +233,7 @@ if btn_ia and prompt:
             st.info(resposta.text) # Exibe em um quadro azul para destaque
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
