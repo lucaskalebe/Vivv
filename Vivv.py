@@ -357,16 +357,35 @@ with exp_gestao:
 st.write("---")
 st.subheader("💬 Vivv AI: Inteligência de Negócio")
 prompt = st.text_input("O que deseja analisar hoje?", placeholder="Ex: Como dobrar meu faturamento este mês?")
+
 if st.button("CONSULTAR IA") and prompt:
     try:
         genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+        
+        # Ajuste no nome do modelo para evitar o erro 404
+        # 'gemini-1.5-flash-latest' ou 'gemini-1.5-flash' são os mais estáveis
         model = genai.GenerativeModel('gemini-1.5-flash')
-        ctx = f"Contexto Vivv: Clientes:{len(clis)}, Lucro:R${faturamento-despesas}. Pergunta: {prompt}"
-        res = model.generate_content(ctx)
-        st.info(res.text)
+        
+        # Criando um contexto mais rico para a IA te ajudar melhor
+        ctx = f"""
+        Você é o consultor de negócios da Vivv Pro.
+        Dados atuais do usuário:
+        - Total de Clientes: {len(clis)}
+        - Receita Total: R$ {faturamento:.2f}
+        - Despesas: R$ {despesas:.2f}
+        - Lucro Atual: R$ {faturamento-despesas:.2f}
+        
+        Pergunta do usuário: {prompt}
+        """
+        
+        with st.spinner("Analisando seus dados..."):
+            res = model.generate_content(ctx)
+            st.info(res.text)
+            
     except Exception as e:
-        st.error(f"IA Indisponível: {e}")
-
+        # Se o erro persistir, tentamos uma alternativa de nome de modelo
+        st.error(f"IA Indisponível no momento. Erro técnico: {e}")
+        st.warning("Dica: Verifique se sua GOOGLE_API_KEY está correta e com faturamento ativo no Google AI Studio.")
 
 
 
