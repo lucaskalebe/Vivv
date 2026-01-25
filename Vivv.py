@@ -353,45 +353,38 @@ with exp_gestao:
                 st.cache_data.clear()
                 st.success("Preços/Nomes atualizados!")
                 st.rerun()
-# ================= 8. VIVV AI =================
+# ================= 8. VIVV AI (VERSÃO CORRIGIDA) =================
 st.write("---")
 st.subheader("💬 Vivv AI: Inteligência de Negócio")
 prompt = st.text_input("O que deseja analisar hoje?", placeholder="Ex: Como dobrar meu faturamento este mês?")
 
 if st.button("CONSULTAR IA") and prompt:
     try:
+        # 1. Configuração Explícita
         genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
         
-        # Ajuste no nome do modelo para evitar o erro 404
-        # 'gemini-1.5-flash-latest' ou 'gemini-1.5-flash' são os mais estáveis
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # 2. Seleção do Modelo (Sem o sufixo v1beta que causa o 404)
+        # O nome 'gemini-1.5-flash' é o alias estável.
+        model = genai.GenerativeModel(model_name='gemini-1.5-flash')
         
-        # Criando um contexto mais rico para a IA te ajudar melhor
         ctx = f"""
-        Você é o consultor de negócios da Vivv Pro.
-        Dados atuais do usuário:
-        - Total de Clientes: {len(clis)}
-        - Receita Total: R$ {faturamento:.2f}
-        - Despesas: R$ {despesas:.2f}
-        - Lucro Atual: R$ {faturamento-despesas:.2f}
-        
-        Pergunta do usuário: {prompt}
+        Você é o consultor estratégico da Vivv Pro. 
+        Dados: Clientes({len(clis)}), Lucro(R${faturamento-despesas:.2f}). 
+        Pergunta: {prompt}
         """
         
-        with st.spinner("Analisando seus dados..."):
-            res = model.generate_content(ctx)
-            st.info(res.text)
+        with st.spinner("Conectando ao cérebro da Vivv..."):
+            # 3. Chamada de conteúdo simples
+            response = model.generate_content(ctx)
             
+            if response.text:
+                st.info(response.text)
+            else:
+                st.warning("A IA retornou uma resposta vazia. Tente reformular a pergunta.")
+                
     except Exception as e:
-        # Se o erro persistir, tentamos uma alternativa de nome de modelo
-        st.error(f"IA Indisponível no momento. Erro técnico: {e}")
-        st.warning("Dica: Verifique se sua GOOGLE_API_KEY está correta e com faturamento ativo no Google AI Studio.")
-
-
-
-
-
-
+        st.error(f"Erro de Conexão: {e}")
+        st.code("Dica: Verifique se sua chave API no secrets.toml não tem espaços extras.")
 
 
 
