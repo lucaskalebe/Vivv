@@ -366,7 +366,7 @@ with exp_gestao:
                 st.rerun()
 
 
-# ================= 8. VIVV AI (CONEXÃO DIRETA REST) =================
+# ================= 8. VIVV AI (ROTA DE CONTINGÊNCIA) =================
 import requests
 
 st.write("---")
@@ -376,26 +376,34 @@ prompt = st.text_input("O que deseja analisar hoje?", placeholder="Ex: Como dobr
 if st.button("CONSULTAR IA") and prompt:
     try:
         api_key = st.secrets["GOOGLE_API_KEY"]
-        # Endpoint FORÇADO na versão v1 (estável)
-        url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={api_key}"
         
-        payload = {
-            "contents": [{
-                "parts": [{
-                    "text": f"Você é o consultor estratégico Vivv Pro. Dados: Clientes {len(clis)}, Lucro R$ {faturamento-despesas:.2f}. Pergunta: {prompt}"
-                }]
-            }]
-        }
-        
-        with st.spinner("Vivv AI analisando via rota expressa..."):
-            response = requests.post(url, json=payload)
-            res_json = response.json()
+        # Tentamos primeiro o 1.5 Flash, se falhar, tentamos o 1.5 Pro
+        modelos_para_testar = ["gemini-1.5-flash", "gemini-1.5-pro"]
+        sucesso = False
+
+        for model_id in modelos_para_testar:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_id}:generateContent?key={api_key}"
             
+            payload = {
+                "contents": [{
+                    "parts": [{
+                        "text": f"Você é o consultor estratégico Vivv Pro. Dados: Clientes {len(clis)}, Lucro R$ {faturamento-despesas:.2f}. Pergunta: {prompt}"
+                    }]
+                }]
+            }
+            
+            response = requests.post(url, json=payload)
             if response.status_code == 200:
+                res_json = response.json()
                 texto_ia = res_json['candidates'][0]['content']['parts'][0]['text']
-                st.info(texto_ia)
-            else:
-                st.error(f"Erro na API ({response.status_code}): {res_json.get('error', {}).get('message', 'Erro desconhecido')}")
+                st.info(f"**Vivv AI ({model_id}):**\n\n{texto_ia}")
+                sucesso = True
+                break
+        
+        if not sucesso:
+            st.error(f"Erro na API: O Google não reconheceu os modelos 1.5 Flash ou Pro. Verifique se sua API Key tem permissão para o Gemini 1.5.")
+            st.write(response.json()) # Mostra o erro real para depurarmos
 
     except Exception as e:
-        st.error(f"Erro crítico na IA: {e}")
+        st.error(f"Erro crítico: {e}")
+
