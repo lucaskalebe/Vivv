@@ -11,65 +11,74 @@ import hashlib
 # CSS Refinado para remover GitHub, Menu e Header de forma estável
 # ================= 1. CONFIGURAÇÃO E DESIGN VIVV =================
 st.set_page_config(page_title="Vivv Pro", layout="wide", page_icon="🚀")
+
 def hash_senha(senha):
     return hashlib.sha256(str.encode(senha)).hexdigest()
-    
-# CSS Único e Corrigido
+
+# CSS Único e Corrigido (Sem duplicidade de tags)
 st.markdown("""
 <style>
     header, [data-testid="stHeader"], .stAppDeployButton { display: none !important; }
 
-    /* 1. LOGO FIXO */
     .vivv-top-left {
-        position: fixed; 
-        top: 20px; 
-        left: 25px; 
-        color: #ffffff !important; 
-        font-size: 28px;
-        font-weight: 900; 
-        z-index: 999999;
+        position: fixed; top: 20px; left: 25px;
+        color: #ffffff !important; font-size: 28px;
+        font-weight: 900; z-index: 999999;
     }
 
     .stApp { background-color: #000205 !important; }
 
-    /* 2. AJUSTE DE ALTURA DA PÁGINA */
-    .block-container { 
-        padding-top: 60px !important; 
-        max-width: 95% !important; 
-    }
+    .block-container { padding-top: 60px !important; max-width: 95% !important; }
 
-    /* 3. CARDS OTIMIZADOS */
     .neon-card {
         background: linear-gradient(145deg, #000814, #001220);
         border: 1px solid #0056b3;
         border-radius: 12px;
-        padding: 12px 20px; /* Reduzi o padding vertical de 20px para 12px */
-        transition: all 0.3s ease-in-out; /* Fluidez na transição */
+        padding: 12px 20px;
+        transition: all 0.3s ease-in-out;
         cursor: pointer;
     }
 
-    /* 4. EFEITO DE BRILHO AO PASSAR O MOUSE */
     .neon-card:hover {
         border: 1px solid #00d4ff;
-        box-shadow: 0 0 20px rgba(0, 212, 255, 0.3); /* Brilho neon */
-        transform: translateY(-3px); /* Leve levantada para dar fluidez */
+        box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+        transform: translateY(-3px);
     }
 
-    /* Ajuste do tamanho dos números dentro do card */
     .neon-card h2 {
-        margin-top: 5px !important;
-        margin-bottom: 0px !important;
-        font-size: 1.8rem !important; /* Diminuído levemente */
+        margin: 5px 0 0 0 !important;
+        font-size: 1.8rem !important;
     }
 
     .orange-neon { color: #ff9100 !important; text-shadow: 0 0 15px rgba(255,145,0,0.5); text-align: center; }
+
+    /* ESTILO DO BOTÃO WHATSAPP */
+    .whatsapp-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 212, 255, 0.1);
+        color: #00d4ff !important;
+        border: 1px solid #00d4ff;
+        padding: 6px 15px;
+        border-radius: 8px;
+        text-decoration: none !important;
+        font-weight: bold;
+        transition: all 0.3s ease;
+    }
+
+    .whatsapp-button:hover {
+        background: #00d4ff;
+        color: #000814 !important;
+        box-shadow: 0 0 15px rgba(0, 212, 255, 0.6);
+        transform: scale(1.05);
+    }
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="vivv-top-left">Vivv</div>', unsafe_allow_html=True)
 
-
-# ================= 2. CONEXÃO FIREBASE (Mantém igual) =================
+# ================= 2. CONEXÃO FIREBASE =================
 @st.cache_resource
 def init_db():
     try:
@@ -82,7 +91,7 @@ def init_db():
 
 db = init_db()
 
-# ================= 3. LÓGICA DE NEGÓCIO (SESSÃO) =================
+# ================= 3. LOGIN / CADASTRO =================
 if "logado" not in st.session_state:
     st.session_state.logado = False
 
@@ -121,30 +130,28 @@ def verificar_acesso():
     if u_ref.exists:
         d = u_ref.to_dict()
         if not d.get("pago", False):
-            st.markdown('<h1 class="orange-neon">VIVV</h1>', unsafe_allow_html=True)
-            st.warning("### 🔒 Assinatura Necessária")
-            st.write("Sua conta de teste expirou ou não foi ativada.")
-            st.link_button("💳 ATIVAR ACESSO VIVV PRO", "https://buy.stripe.com/exemplo")
-            if st.button("🔄 Já realizei o pagamento"): st.rerun()
-            st.stop()
+            # Validação de Expiração
+            validade = d.get("validade")
+            if validade and datetime.now(timezone.utc) > validade.replace(tzinfo=timezone.utc):
+                st.markdown('<h1 class="orange-neon">VIVV</h1>', unsafe_allow_html=True)
+                st.warning("### 🔒 Assinatura Necessária")
+                st.link_button("💳 ATIVAR ACESSO VIVV PRO", "https://buy.stripe.com/exemplo")
+                if st.button("🔄 Já realizei o pagamento"): st.rerun()
+                st.stop()
 
 verificar_acesso()
 
-# ================= 5. COLETA DE DADOS =================
+# ================= 5. DASHBOARD =================
 user_ref = db.collection("usuarios").document(st.session_state.user_email)
 
-# Clientes e Serviços
 clis = [{"id": c.id, **c.to_dict()} for c in user_ref.collection("meus_clientes").stream()]
 srvs = [{"id": s.id, **s.to_dict()} for s in user_ref.collection("meus_servicos").stream()]
-
-# Agenda e Caixa
 agnd = [{"id": a.id, **a.to_dict()} for a in user_ref.collection("minha_agenda").where("status", "==", "Pendente").stream()]
 cx_list = [x.to_dict() for x in user_ref.collection("meu_caixa").stream()]
 
-faturamento = sum([float(x['valor']) for x in cx_list if x['tipo'] == 'Entrada'])
-despesas = sum([float(x['valor']) for x in cx_list if x['tipo'] == 'Saída'])
-
-# ================= 6. DASHBOARD VIVV =================
+# Cálculo seguro
+faturamento = sum([float(x.get('valor', 0)) for x in cx_list if x.get('tipo') == 'Entrada'])
+despesas = sum([float(x.get('valor', 0)) for x in cx_list if x.get('tipo') == 'Saída'])
 
 c_header1, c_header2 = st.columns([4,1])
 with c_header1:
@@ -154,12 +161,12 @@ with c_header2:
         st.session_state.logado = False
         st.rerun()
 
-# Métricas Principais
 m1, m2, m3, m4 = st.columns(4)
 m1.markdown(f'<div class="neon-card"><small>👥 CLIENTES</small><h2>{len(clis)}</h2></div>', unsafe_allow_html=True)
 m2.markdown(f'<div class="neon-card"><small>💰 RECEITA</small><h2 style="color:#00d4ff">R$ {faturamento:,.2f}</h2></div>', unsafe_allow_html=True)
 m3.markdown(f'<div class="neon-card"><small>📈 LUCRO</small><h2 style="color:#00ff88">R$ {faturamento-despesas:,.2f}</h2></div>', unsafe_allow_html=True)
 m4.markdown(f'<div class="neon-card"><small>📅 PENDENTES</small><h2 style="color:#ff9100">{len(agnd)}</h2></div>', unsafe_allow_html=True)
+
 
 # ================= 7. OPERAÇÕES =================
 st.write("---")
@@ -254,6 +261,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.info(res.text)
     except Exception as e:
         st.error(f"IA Indisponível: {e}")
+
 
 
 
