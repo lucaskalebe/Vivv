@@ -356,6 +356,7 @@ with exp_gestao:
 
 
 # ================= 8. VIVV AI (SOLUÇÃO DE INFRAESTRUTURA) =================
+# ================= 8. VIVV AI (SOLUÇÃO DE BAIXO NÍVEL) =================
 st.write("---")
 st.subheader("💬 Vivv AI: Inteligência de Negócio")
 prompt = st.text_input("O que deseja analisar hoje?", placeholder="Ex: Como dobrar meu faturamento este mês?")
@@ -365,27 +366,27 @@ if st.button("CONSULTAR IA") and prompt:
         # 1. Configuração de API
         genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
         
-        # 2. Forçar o modelo via 'gemini-1.5-flash' (Nome Estável)
-        # Em algumas versões do SDK, o 'models/' no início é obrigatório para evitar o 404
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # 2. Forçar a versão v1 explicitamente no cliente
+        # Isso substitui a lógica padrão que está tentando v1beta no seu servidor
+        from google.generativeai.types import RequestOptions
         
-        ctx = f"""
-        Você é o consultor Vivv Pro.
-        Dados: {len(clis)} clientes, Receita R$ {faturamento:.2f}, Lucro R$ {faturamento-despesas:.2f}.
-        Pergunta: {prompt}
-        """
+        model = genai.GenerativeModel(
+            model_name='gemini-1.5-flash',
+            # Esta linha abaixo é o segredo: ela força a rota estável
+            request_options=RequestOptions(api_version='v1')
+        )
         
-        with st.spinner("Conectando ao núcleo estável da IA..."):
-            # 3. Gerar conteúdo com tratamento de erro específico para 404
+        ctx = f"Dados: {len(clis)} clientes, Lucro R$ {faturamento-despesas:.2f}. Pergunta: {prompt}"
+        
+        with st.spinner("Forçando conexão com servidor estável..."):
             response = model.generate_content(ctx)
-            st.info(response.text)
+            if response.text:
+                st.info(response.text)
+            else:
+                st.warning("IA conectada, mas sem resposta. Tente novamente.")
                 
     except Exception as e:
-        if "404" in str(e):
-            st.error("Erro Crítico de Versão (404)")
-            st.warning("O servidor do Streamlit ainda está carregando uma versão antiga da biblioteca.")
-            st.info("💡 **Ação Final:** No seu requirements.txt, mude para: `google-generativeai==0.8.3` (use o '==' em vez de '>=' para proibir versões erradas).")
-        else:
-            st.error(f"Erro: {e}")
+        st.error(f"Erro persistente: {e}")
+        st.info("Se o erro 404 continuar com 'v1beta' no texto, o Streamlit está ignorando seu requirements.txt.")
 
 
