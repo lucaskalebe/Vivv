@@ -27,6 +27,19 @@ st.markdown("""
         padding-left: 25px; /* Espaço da esquerda */
         position: relative;
         z-index: 999;
+
+        }
+
+        .vivv-top-left {
+        position: absolute;
+        top: 25px; /* Espaço do teto */
+        left: 20px; /* Espaço da esquerda */
+        color: #ffffff !important;
+        font-size: 22px;
+        font-weight: 800;
+        font-family: 'Inter', sans-serif;
+        z-index: 9999;
+    
     }
 
     /* 2. AJUSTE DE TELA PARA CELULAR */
@@ -98,8 +111,8 @@ if "logado" not in st.session_state:
     st.session_state.logado = False
 
 if not st.session_state.logado:
-    st.markdown('<div class="vivv-header">Vivv</div>', unsafe_allow_html=True)
-    st.markdown('<p style="text-align:center; color:#888;">Gestão Inteligente & Performance</p>', unsafe_allow_html=True)
+st.markdown('<div class="vivv-top-left">Vivv</div>', unsafe_allow_html=True)
+st.markdown('<p style="text-align:center; color:#888;">Gestão Inteligente & Performance</p>', unsafe_allow_html=True)
     
     aba_login, aba_cadastro = st.tabs(["🔑 Acesso", "📝 Novo Cadastro"])
     
@@ -273,4 +286,5 @@ if st.button("CONSULTAR IA") and prompt:
         st.info(res.text)
     except Exception as e:
         st.error(f"IA Indisponível: {e}")
+
 
