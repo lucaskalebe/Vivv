@@ -8,12 +8,6 @@ from google.oauth2 import service_account
 import json
 import hashlib
 
-# ================= 1. CONFIGURAÇÃO E DESIGN ULTRA NEON =================
-st.set_page_config(page_title="Vivv Pro", layout="wide", page_icon="🚀")
-
-def hash_senha(senha):
-    return hashlib.sha256(str.encode(senha)).hexdigest()
-
 # CSS Refinado para remover GitHub, Menu e Header de forma estável
 # ================= 1. CONFIGURAÇÃO E DESIGN VIVV =================
 st.set_page_config(page_title="Vivv Pro", layout="wide", page_icon="🚀")
@@ -267,6 +261,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.info(res.text)
     except Exception as e:
         st.error(f"IA Indisponível: {e}")
+
 
 
 
