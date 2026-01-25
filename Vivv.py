@@ -164,8 +164,7 @@ with c_right:
         for a in agnd:
             with st.expander(f"📍 {a.get('data', 'Sem data')} às {a.get('hora', '---')} | {a.get('cliente', 'Cliente s/ nome')}"):
                 # Todas as linhas abaixo devem estar alinhadas aqui (recuadas)
-                st.write(f"**Serviço:** {a.get('servico', 'Não informado')} — **Valor:** R$ {a.get('preco', 0.0):.2f}")
-                
+                st.write(f"**Serviço:** {a.get('servico', 'Não informado')} — **Valor:** R$ {a.get('preco', 0.0):.2f}")                
                 col_btn1, col_btn2, col_btn3 = st.columns([1.5, 1, 1])
                 
                 tel_c = next((c.get('telefone', '') for c in clis if c.get('nome') == a.get('cliente')), "")
@@ -224,6 +223,7 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
             st.write(model.generate_content(ctx).text)
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
