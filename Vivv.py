@@ -113,8 +113,12 @@ if "logado" not in st.session_state:
     st.session_state.logado = False
 
 if not st.session_state.logado:
+    # ADICIONE ESSA LINHA AQUI:
     st.markdown('<h1 class="orange-neon">🚀 VIVV PRO</h1>', unsafe_allow_html=True)
+    
+    st.title("Acesso ao Sistema") # Título padrão opcional
     aba_login, aba_cadastro = st.tabs(["Entrar", "Cadastrar"])
+    # ... resto do código de login
     
     with aba_cadastro:
         with st.form("reg"):
@@ -183,6 +187,9 @@ faturamento = sum([float(x['valor']) for x in caixa if x['tipo'] == 'Entrada'])
 despesas = sum([float(x['valor']) for x in caixa if x['tipo'] == 'Saída'])
 
 # ================= 4. DASHBOARD =================
+
+st.markdown('<h1 class="orange-neon">🚀 VIVV PRO</h1>', unsafe_allow_html=True)
+
 col_title, col_logout = st.columns([5, 1])
 # Saudação menor conforme pedido
 col_title.markdown(f"##### 👋 Bem-vindo, <span style='color: #00d4ff;'>{st.session_state.user_email}</span>", unsafe_allow_html=True)
@@ -377,6 +384,7 @@ if btn_ia and prompt:
             st.info(resposta.text) # Exibe em um quadro azul para destaque
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
