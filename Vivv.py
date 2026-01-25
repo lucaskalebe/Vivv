@@ -49,22 +49,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Substitua a linha antiga: col_ops_l, col_ops_r = st.columns([1.5, 2])
-# Por estas novas 3 colunas:
-col_ops_l, col_btn_mid, col_ops_r = st.columns([1.5, 0.7, 2])
-
-with col_btn_mid:
-    st.write("<br><br><br>", unsafe_allow_html=True) # Espaçador para alinhar ao centro
-    if cx_list:
-        data_xlsx = gerar_excel(cx_list)
-        st.download_button(
-            label="📊 EXCEL",
-            data=data_xlsx,
-            file_name="fluxo_caixa_vivv.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-
-
 
 def hash_senha(senha):
     return hashlib.sha256(str.encode(senha)).hexdigest()
@@ -247,10 +231,13 @@ m3.markdown(f'<div class="neon-card"><small>📈 LUCRO</small><h2 style="color:#
 m4.markdown(f'<div class="neon-card"><small>📅 PENDENTES</small><h2 style="color:#ff9100">{len(agnd)}</h2></div>', unsafe_allow_html=True)
 
 
-# ================= 7. OPERAÇÕES (CORRIGIDO) =================
+# ================= 7. OPERAÇÕES (ORGANIZADO) =================
 st.write("---")
 
-# Criamos as 3 colunas UMA ÚNICA VEZ
+# 1. GARANTIMOS QUE OS DADOS EXISTEM ANTES DE CRIAR AS COLUNAS
+clis, srvs, agnd, cx_list = carregar_dados_usuario(st.session_state.user_email)
+
+# 2. AGORA CRIAMOS AS COLUNAS
 col_ops_l, col_btn_mid, col_ops_r = st.columns([1.5, 0.8, 2])
 
 # COLUNA DA ESQUERDA: Formuários de Cadastro
@@ -306,10 +293,10 @@ with col_ops_l:
                 })
                 st.rerun()
 
-# COLUNA CENTRAL: Botão de Exportação Excel
+# COLUNA CENTRAL: Botão de Exportação Excel (Sempre verificando se cx_list existe)
 with col_btn_mid:
-    st.write("<br><br><br>", unsafe_allow_html=True) # Espaçador para alinhar com o título
-    if cx_list:
+    st.write("<br><br><br>", unsafe_allow_html=True)
+    if 'cx_list' in locals() and cx_list:
         data_xlsx = gerar_excel(cx_list)
         st.download_button(
             label="📊 EXCEL",
@@ -332,7 +319,6 @@ with col_ops_r:
                 st.write(f"**Serviço:** {a.get('servico')} | **R$ {a.get('preco',0):.2f}**")
                 c1, c2, c3 = st.columns(3)
                 
-                # WhatsApp
                 raw_tel = next((c.get('telefone', '') for c in clis if c.get('nome') == a.get('cliente')), "")
                 clean_tel = "".join(filter(str.isdigit, raw_tel))
                 msg = urllib.parse.quote(f"VIVV PRO: Confirmado {a.get('servico')} às {a.get('hora')}!")
@@ -351,8 +337,10 @@ with col_ops_r:
                     st.cache_data.clear()
                     user_ref.collection("minha_agenda").document(a['id']).delete()
                     st.rerun()
+
+
         # ================= 7.5 GESTÃO DE CADASTROS (EDITÁVEL) =================
-# ================= 7.5 GESTÃO DE CADASTROS (EDITÁVEL) =================
+# ================= 7.5 GESTÃO DE CADASTROS (CORRIGIDO) =================
 st.write("---")
 st.subheader("⚙️ Gestão de Cadastros")
 exp_gestao = st.expander("Visualizar e Gerenciar Dados", expanded=False)
@@ -363,41 +351,33 @@ with exp_gestao:
     with tab_edit_cli:
         if clis:
             df_clis = pd.DataFrame(clis)
-            # Layout com colunas para tabela + ação de excluir
             col_tbl, col_act = st.columns([3, 1])
             
             with col_tbl:
-                # Mostramos apenas Nome e Telefone para edição
-                # use_container_width=True garante o layout otimizado
-                edited_df = st.data_editor(
-                    df_clis[["nome", "telefone"]], 
-                    key="edit_cli_tab", 
-                    use_container_width=True,
-                    num_rows="fixed"
-                )
+                # Usamos o ID como índice para garantir que a edição vincule ao documento certo
+                df_editor_cli = df_clis.set_index("id")[["nome", "telefone"]]
+                edited_df = st.data_editor(df_editor_cli, key="edit_cli_tab", use_container_width=True)
             
             with col_act:
                 st.write("🗑️ **Excluir**")
-                id_para_deletar = st.selectbox("Selecionar para remover", df_clis["nome"], key="del_cli_sel")
+                id_para_deletar = st.selectbox("Remover cliente:", df_clis["nome"], key="del_cli_sel")
                 if st.button("CONFIRMAR EXCLUSÃO", key="btn_del_cli"):
                     doc_id = df_clis[df_clis["nome"] == id_para_deletar]["id"].values[0]
                     user_ref.collection("meus_clientes").document(doc_id).delete()
                     st.cache_data.clear()
                     st.rerun()
 
-            if st.button("💾 SALVAR ALTERAÇÕES NOS CLIENTES"):
-                # Lógica para atualizar nomes/telefones editados
-                for index, row in edited_df.iterrows():
-                    original_id = df_clis.iloc[index]["id"]
-                    user_ref.collection("meus_clientes").document(original_id).update({
-                        "nome": row["nome"],
-                        "telefone": row["telefone"]
+            if st.button("💾 SALVAR ALTERAÇÕES CLIENTES"):
+                # Com o set_index("id"), o index agora É o ID do Firebase
+                for doc_id, row in edited_df.iterrows():
+                    user_ref.collection("meus_clientes").document(doc_id).update({
+                        "nome": row["nome"], "telefone": row["telefone"]
                     })
                 st.cache_data.clear()
-                st.success("Dados atualizados!")
+                st.success("Clientes atualizados!")
                 st.rerun()
         else:
-            st.info("Cadastre clientes no Painel de Controle.")
+            st.info("Nenhum cliente cadastrado.")
 
     with tab_edit_srv:
         if srvs:
@@ -405,30 +385,25 @@ with exp_gestao:
             col_tbl_s, col_act_s = st.columns([3, 1])
             
             with col_tbl_s:
-                edited_srv_df = st.data_editor(
-                    df_srvs[["nome", "preco"]], 
-                    key="edit_srv_tab", 
-                    use_container_width=True
-                )
+                df_editor_srv = df_srvs.set_index("id")[["nome", "preco"]]
+                edited_srv_df = st.data_editor(df_editor_srv, key="edit_srv_tab", use_container_width=True)
             
             with col_act_s:
                 st.write("🗑️ **Excluir**")
-                srv_para_deletar = st.selectbox("Serviço para remover", df_srvs["nome"], key="del_srv_sel")
+                srv_para_deletar = st.selectbox("Remover serviço:", df_srvs["nome"], key="del_srv_sel")
                 if st.button("CONFIRMAR EXCLUSÃO", key="btn_del_srv"):
                     s_id = df_srvs[df_srvs["nome"] == srv_para_deletar]["id"].values[0]
                     user_ref.collection("meus_servicos").document(s_id).delete()
                     st.cache_data.clear()
                     st.rerun()
 
-            if st.button("💾 SALVAR ALTERAÇÕES NOS SERVIÇOS"):
-                for index, row in edited_srv_df.iterrows():
-                    s_orig_id = df_srvs.iloc[index]["id"]
-                    user_ref.collection("meus_servicos").document(s_orig_id).update({
-                        "nome": row["nome"],
-                        "preco": row["preco"]
+            if st.button("💾 SALVAR ALTERAÇÕES SERVIÇOS"):
+                for s_id, row in edited_srv_df.iterrows():
+                    user_ref.collection("meus_servicos").document(s_id).update({
+                        "nome": row["nome"], "preco": row["preco"]
                     })
                 st.cache_data.clear()
-                st.success("Preços/Nomes atualizados!")
+                st.success("Serviços atualizados!")
                 st.rerun()
 
 # ================= 7.8 GRÁFICO DE PERFORMANCE =================
@@ -505,6 +480,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.error("Tempo esgotado: A IA está demorando muito para responder. Tente uma pergunta mais simples ou clique em Consultar novamente.")
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
+
 
 
 
