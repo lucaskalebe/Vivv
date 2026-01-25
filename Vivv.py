@@ -89,11 +89,9 @@ from google.cloud import firestore
 @st.cache_resource
 def init_db():
     try:
-        raw = st.secrets["FIREBASE_DETAILS"]
-        raw = raw.replace("\\n", "\n")
-        key_dict = json.loads(raw)
-
-        creds = service_account.Credentials.from_service_account_info(key_dict)
+        creds = service_account.Credentials.from_service_account_file(
+            "firebase_key.json"
+        )
         return firestore.Client(credentials=creds)
 
     except Exception as e:
@@ -104,6 +102,7 @@ def init_db():
 db = init_db()
 if db is None:
     st.stop()
+
 
 # ================= 3. LOGIN / CADASTRO =================
 if "logado" not in st.session_state:
@@ -405,6 +404,7 @@ if st.button("CONSULTAR IA") and prompt:
     except Exception as e:
         st.error(f"Erro na IA: {e}")
         st.info("💡 Se o erro 404 voltar, o problema é 100% no cache do Streamlit Cloud.")
+
 
 
 
