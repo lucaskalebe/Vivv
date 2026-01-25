@@ -77,9 +77,20 @@ st.markdown("""
     }
 
     /* Ajusta o espaçamento para o conteúdo subir */
+    .stApp {
+        margin-top: -60px !important; /* Puxa tudo para cima */
+        background-color: #000205 !important;
+    }
+
+    /* Ajusta o espaçamento interno para compensar a subida */
     .block-container {
-        padding-top: 0rem !important;
-        padding-bottom: 0rem !important;
+        padding-top: 60px !important; 
+        max-width: 95% !important;
+    }
+
+    /* Esconde a linha de decoração colorida que fica no topo */
+    [data-testid="stDecoration"] {
+        display: none !important;
     }
 
     /* 2. DESIGN LARANJA NEON E ALINHAMENTO */
@@ -133,15 +144,26 @@ st.markdown("""
         font-weight: bold;
     }
 
-    /* ESTE É O COMANDO QUE TIRA O GITHUB E O RODAPÉ */
-    .st-emotion-cache-18ni7ap, .st-emotion-cache-zq59db, 
-    [data-testid="stDecoration"], 
-    div[data-testid="stStatusWidget"] * {
+    /* 1. REMOÇÃO TOTAL DO TOPO, GITHUB E RODAPÉ */
+    [data-testid="stHeader"], 
+    header, 
+    footer, 
+    .stAppDeployButton, 
+    [data-testid="stDecoration"],
+    #MainMenu {
         display: none !important;
+        visibility: hidden !important;
     }
-</style>
-""", unsafe_allow_html=True)
 
+    /* 2. SOBE O APP PARA MATAR O ESPAÇO BRANCO */
+    .stApp {
+        margin-top: -60px !important;
+        background-color: #000205 !important;
+    }
+
+    .block-container {
+        padding-top: 0rem !important;
+    }
 
 
 # ================= 2. BANCO DE DADOS =================
@@ -414,6 +436,7 @@ if btn_ia and prompt:
             st.info(resposta.text) # Exibe em um quadro azul para destaque
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
