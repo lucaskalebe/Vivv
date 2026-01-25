@@ -17,29 +17,37 @@ st.set_page_config(page_title="Vivv Pro", layout="wide", page_icon="🚀")
 
 components.html("""
 <script>
-    const shadowRemover = () => {
-        // Remove pelo seletor de dados (mais estável)
+    const removeStreamlitElements = () => {
+        // Alvos: Header, Toolbar, Decoration (linha colorida) e o Botão Deploy
         const selectors = [
-            '[data-testid="stHeader"]',
-            '[data-testid="stToolbar"]',
+            'header', 
+            '[data-testid="stHeader"]', 
+            '[data-testid="stToolbar"]', 
             '[data-testid="stDecoration"]',
-            'footer',
-            '.stAppDeployButton'
+            '.stAppDeployButton',
+            'footer'
         ];
         
-        selectors.forEach(s => {
-            const el = window.parent.document.querySelector(s);
-            if (el) el.style.display = 'none';
+        const parentDoc = window.parent.document;
+        
+        selectors.forEach(selector => {
+            parentDoc.querySelectorAll(selector).forEach(el => {
+                el.style.display = 'none';
+                el.style.visibility = 'hidden';
+            });
         });
 
-        // Remove especificamente o link do GitHub pelo ícone
-        const githubIcon = window.parent.document.querySelector('a[href*="github.com"]');
-        if (githubIcon) githubIcon.style.display = 'none';
+        // Remove especificamente o ícone do GitHub e qualquer badge do Cloud
+        parentDoc.querySelectorAll('a').forEach(a => {
+            if (a.href.includes('github.com') || a.className.includes('viewerBadge')) {
+                a.style.display = 'none';
+            }
+        });
     };
-    
-    // Executa imediatamente e depois de 1 segundo para garantir
-    shadowRemover();
-    setTimeout(shadowRemover, 1000);
+
+    // Executa várias vezes porque o Streamlit demora a carregar os elementos
+    removeStreamlitElements();
+    setInterval(removeStreamlitElements, 500); 
 </script>
 """, height=0)
 
@@ -406,6 +414,7 @@ if btn_ia and prompt:
             st.info(resposta.text) # Exibe em um quadro azul para destaque
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
