@@ -111,8 +111,7 @@ if "logado" not in st.session_state:
     st.session_state.logado = False
 
 if not st.session_state.logado:
-st.markdown('<div class="vivv-top-left">Vivv</div>', unsafe_allow_html=True)
-st.markdown('<p style="text-align:center; color:#888;">Gestão Inteligente & Performance</p>', unsafe_allow_html=True)
+    st.markdown('<div class="vivv-top-left">Vivv</div>', unsafe_allow_html=True) # <--- 4 ESPAÇOS AQUI
     
     aba_login, aba_cadastro = st.tabs(["🔑 Acesso", "📝 Novo Cadastro"])
     
@@ -286,5 +285,6 @@ if st.button("CONSULTAR IA") and prompt:
         st.info(res.text)
     except Exception as e:
         st.error(f"IA Indisponível: {e}")
+
 
 
