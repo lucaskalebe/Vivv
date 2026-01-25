@@ -95,6 +95,13 @@ def init_db():
         st.error(f"Erro ao conectar ao Banco: {e}")
         return None
 
+
+# Inicialização do banco
+db = init_db()
+
+# Bloqueia o app se o Firebase não conectar
+if db is None:
+    st.stop()
 # ================= 3. LOGIN / CADASTRO =================
 if "logado" not in st.session_state:
     st.session_state.logado = False
@@ -395,5 +402,6 @@ if st.button("CONSULTAR IA") and prompt:
     except Exception as e:
         st.error(f"Erro na IA: {e}")
         st.info("💡 Se o erro 404 voltar, o problema é 100% no cache do Streamlit Cloud.")
+
 
 
