@@ -353,8 +353,9 @@ with exp_gestao:
                 st.cache_data.clear()
                 st.success("Preços/Nomes atualizados!")
                 st.rerun()
-# ================= 8. VIVV AI (SOLUÇÃO FINAL) =================
-# ================= 8. VIVV AI (SOLUÇÃO DEFINITIVA) =================
+
+
+# ================= 8. VIVV AI (SOLUÇÃO DE CACHE) =================
 st.write("---")
 st.subheader("💬 Vivv AI: Inteligência de Negócio")
 prompt = st.text_input("O que deseja analisar hoje?", placeholder="Ex: Como dobrar meu faturamento este mês?")
@@ -363,35 +364,24 @@ if st.button("CONSULTAR IA") and prompt:
     try:
         genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
         
-        # Usar o nome completo 'models/gemini-1.5-flash' resolve o conflito de versão da API
-        model = genai.GenerativeModel(model_name='models/gemini-1.5-flash')
+        # 'gemini-1.5-flash-latest' costuma "limpar" erros de 404/v1beta
+        model = genai.GenerativeModel(model_name='gemini-1.5-flash-latest')
         
-        ctx = f"""
-        Você é o consultor estratégico da Vivv Pro. 
-        Dados atuais: {len(clis)} clientes, faturamento R$ {faturamento:.2f}, lucro R$ {faturamento-despesas:.2f}. 
-        Pergunta: {prompt}
-        """
+        ctx = f"Dados Vivv: Clientes:{len(clis)}, Lucro:R${faturamento-despesas:.2f}. Pergunta: {prompt}"
         
-        with st.spinner("Vivv está consultando a base de dados..."):
+        with st.spinner("Vivv AI está analisando seus dados..."):
             response = model.generate_content(ctx)
             if response.text:
                 st.info(response.text)
             else:
-                st.warning("IA não retornou dados. Tente uma pergunta diferente.")
+                st.warning("IA retornou resposta vazia.")
                 
     except Exception as e:
         st.error(f"Erro de Conexão: {e}")
-        # Explicação amigável do erro técnico
-        if "404" in str(e):
-            st.markdown("""
-            > **Nota Técnica:** O Google mudou os endereços da API. 
-            > Se você estiver no **Streamlit Cloud**, adicione `google-generativeai>=0.8.3` no seu arquivo `requirements.txt`.
-            """)
-
-
-
-
-
-
+        st.markdown("""
+        **Se o erro 404 persistir:**
+        1. Vá no painel do **Streamlit Cloud**.
+        2. Clique em **'Reboot App'** (Reiniciar). Isso força a reinstalação do requirements.txt.
+        """)
 
 
