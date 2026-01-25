@@ -365,6 +365,42 @@ with exp_gestao:
                 st.success("Preços/Nomes atualizados!")
                 st.rerun()
 
+# ================= 7.8 GRÁFICO DE PERFORMANCE =================
+st.write("---")
+st.subheader("📊 Performance Financeira")
+
+if cx_list:
+    df_cx = pd.DataFrame(cx_list)
+    # Garante que a data seja lida corretamente
+    df_cx['valor'] = df_cx['valor'].astype(float)
+    
+    # Agrupa por Tipo para o Gráfico
+    resumo_grafico = df_cx.groupby('tipo')['valor'].sum().reset_index()
+    
+    import plotly.express as px
+    
+    fig = px.bar(
+        resumo_grafico, 
+        x='tipo', 
+        y='valor', 
+        color='tipo',
+        color_discrete_map={'Entrada': '#00d4ff', 'Saída': '#ff4b4b'},
+        text_auto='.2s',
+        title="Entradas vs Saídas Totais"
+    )
+    
+    fig.update_layout(
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font_color="white",
+        showlegend=False,
+        margin=dict(l=20, r=20, t=40, b=20),
+        height=300
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+else:
+    st.info("Lance dados no caixa para gerar os gráficos de performance.")
 
 # ================= 8. VIVV AI (VERSÃO 2026 - ALTO DESEMPENHO) =================
 import requests
@@ -403,3 +439,4 @@ if st.button("CONSULTAR IA") and prompt:
         st.error("Tempo esgotado: A IA está demorando muito para responder. Tente uma pergunta mais simples ou clique em Consultar novamente.")
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
+
