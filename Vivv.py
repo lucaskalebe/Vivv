@@ -8,6 +8,8 @@ from google.oauth2 import service_account
 import json
 import hashlib
 
+fuso_br = timezone(timedelta(hours=-3))
+
 # CSS Refinado para remover GitHub, Menu e Header de forma estável
 # ================= 1. CONFIGURAÇÃO E DESIGN VIVV =================
 st.set_page_config(page_title="Vivv Pro", layout="wide", page_icon="🚀")
@@ -116,13 +118,20 @@ if not st.session_state.logado:
             e = st.text_input("E-mail (Login)").lower().strip()
             s = st.text_input("Senha", type="password")
             if st.form_submit_button("CRIAR CONTA"):
-                val = datetime.now(timezone.utc) + timedelta(days=7)
-                db.collection("usuarios").document(e).set({
-                    "nome": n, "senha": hash_senha(s), 
-                    "pago": False, "validade": val
-                })
-                st.success("Criado! Vá para Acesso.")
-    st.stop()
+                if e and s:
+                    if db.collection("usuarios").document(e).get().exists:
+                        st.error("Este e-mail já está cadastrado.")
+                    else:
+                        val = datetime.now(fuso_br) + timedelta(days=7)
+                        db.collection("usuarios").document(e).set({
+                            "nome": n, "senha": hash_senha(s), 
+                            "pago": False, "validade": val
+                        })
+                        st.success("Conta criada! Use a aba Acesso para entrar.")
+                else:
+                    st.warning("Preencha e-mail e senha.")
+    
+    st.stop() # Bloqueia o resto do app se não estiver logado
 
 # ================= 4. VERIFICAÇÃO DE ASSINATURA =================
 def verificar_acesso():
@@ -132,7 +141,7 @@ def verificar_acesso():
         if not d.get("pago", False):
             # Validação de Expiração
             validade = d.get("validade")
-            if validade and datetime.now(timezone.utc) > validade.replace(tzinfo=timezone.utc):
+            if validade and datetime.now(fuso_br) > validade.replace(tzinfo=fuso_br):
                 st.markdown('<h1 class="orange-neon">VIVV</h1>', unsafe_allow_html=True)
                 st.warning("### 🔒 Assinatura Necessária")
                 st.link_button("💳 ATIVAR ACESSO VIVV PRO", "https://buy.stripe.com/exemplo")
@@ -144,12 +153,20 @@ verificar_acesso()
 # ================= 5. DASHBOARD =================
 user_ref = db.collection("usuarios").document(st.session_state.user_email)
 
-clis = [{"id": c.id, **c.to_dict()} for c in user_ref.collection("meus_clientes").stream()]
-srvs = [{"id": s.id, **s.to_dict()} for s in user_ref.collection("meus_servicos").stream()]
-agnd = [{"id": a.id, **a.to_dict()} for a in user_ref.collection("minha_agenda").where("status", "==", "Pendente").stream()]
-cx_list = [x.to_dict() for x in user_ref.collection("meu_caixa").stream()]
+@st.cache_data(ttl=60)
+def carregar_dados_usuario(email):
+    # Use o email para garantir que o cache é único por usuário
+    u_ref = db.collection("usuarios").document(email)
+    c = [{"id": doc.id, **doc.to_dict()} for doc in u_ref.collection("meus_clientes").stream()]
+    s = [{"id": doc.id, **doc.to_dict()} for doc in u_ref.collection("meus_servicos").stream()]
+    a = [{"id": doc.id, **doc.to_dict()} for doc in u_ref.collection("minha_agenda").where("status", "==", "Pendente").stream()]
+    cx = [doc.to_dict() for doc in u_ref.collection("meu_caixa").stream()]
+    return c, s, a, cx
 
-# Cálculo seguro
+# Chamada da função
+clis, srvs, agnd, cx_list = carregar_dados_usuario(st.session_state.user_email)
+
+# 3. Cálculos (permanecem iguais, mas agora usam os dados do cache)
 faturamento = sum([float(x.get('valor', 0)) for x in cx_list if x.get('tipo') == 'Entrada'])
 despesas = sum([float(x.get('valor', 0)) for x in cx_list if x.get('tipo') == 'Saída'])
 
@@ -185,6 +202,7 @@ with col_ops_l:
             h_ag = col_h.time_input("Hora")
             if st.form_submit_button("AGENDAR"):
                 if c_sel and s_sel:
+                    st.cache_data.clear() # <--- ADICIONE ESTA LINHA
                     p_v = next((s['preco'] for s in srvs if s['nome'] == s_sel), 0)
                     user_ref.collection("minha_agenda").add({
                         "cliente": c_sel, "servico": s_sel, "preco": p_v,
@@ -199,6 +217,7 @@ with col_ops_l:
             tel = st.text_input("WhatsApp")
             if st.form_submit_button("CADASTRAR"):
                 user_ref.collection("meus_clientes").add({"nome": nome, "telefone": tel})
+                st.cache_data.clear()  # <--- Adicione isso para limpar o cache e ler o novo cliente
                 st.rerun()
 
     with t3:
@@ -207,6 +226,7 @@ with col_ops_l:
             prec = st.number_input("Preço", min_value=0.0)
             if st.form_submit_button("SALVAR"):
                 user_ref.collection("meus_servicos").add({"nome": serv, "preco": prec})
+                st.cache_data.clear() # <--- ADICIONE ESTA LINHA
                 st.rerun()
 
     with t4:
@@ -215,6 +235,7 @@ with col_ops_l:
             vl = st.number_input("Valor", min_value=0.0)
             tp = st.selectbox("Tipo", ["Entrada", "Saída"])
             if st.form_submit_button("LANÇAR"):
+                st.cache_data.clear() # <--- ADICIONE ESTA LINHA
                 user_ref.collection("meu_caixa").add({
                     "descricao": ds, "valor": vl, "tipo": tp, "data": firestore.SERVER_TIMESTAMP
                 })
@@ -238,6 +259,7 @@ with col_ops_r:
 
                 
                 if c2.button("✅", key=f"f_{a['id']}"):
+                    st.cache_data.clear()
                     user_ref.collection("minha_agenda").document(a['id']).update({"status": "Concluído"})
                     user_ref.collection("meu_caixa").add({
                         "descricao": f"Serviço: {a.get('cliente')}", "valor": a.get('preco', 0),
@@ -246,6 +268,7 @@ with col_ops_r:
                     st.rerun()
                 
                 if c3.button("❌", key=f"d_{a['id']}"):
+                    st.cache_data.clear()
                     user_ref.collection("minha_agenda").document(a['id']).delete()
                     st.rerun()
 
@@ -262,6 +285,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.info(res.text)
     except Exception as e:
         st.error(f"IA Indisponível: {e}")
+
 
 
 
