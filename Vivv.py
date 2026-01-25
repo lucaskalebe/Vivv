@@ -71,28 +71,24 @@ if not st.session_state.logado:
             if u.exists and u.to_dict().get("senha") == hash_senha(ls):
                 st.session_state.logado, st.session_state.user_email = True, le
                 st.rerun()
-    st.stop()
+    st.stop() # O app para aqui se não estiver logado
 
-
+# ESTA FUNÇÃO PRECISA ESTAR EXATAMENTE ASSIM:
 def verificar_acesso():
-    # Estas linhas abaixo PRECISAM de 4 espaços (ou um TAB) de recuo
+    # As linhas abaixo têm 4 espaços de recuo (1 TAB)
     u_ref = db.collection("usuarios").document(st.session_state.user_email).get()
     if u_ref.exists:
         d = u_ref.to_dict()
         if not d.get("pago", False):
             st.warning("### 🔒 Acesso Restrito")
             st.write("Sua assinatura ainda não foi ativada. Conclua a ativação para liberar o sistema.")
-            st.link_button("💳 ATIVAR MINHA CONTA", "https://buy.stripe.com/seu_link_aqui")
+            st.link_button("💳 ATIVAR MINHA CONTA", "https://buy.stripe.com/test_6oU4gB7Q4glM1JZ2Z06J200")
             if st.button("🔄 Já paguei, atualizar"): 
                 st.rerun()
-            st.stop() 
+            st.stop() # Trava aqui se não houver pagamento confirmado
 
-# Esta linha fica encostada na esquerda de novo, para chamar a função
+# Chamada da função encostada na esquerda
 verificar_acesso()
-    
-
-
-
 
 # ================= 3. BUSCA DE DADOS =================
 user_ref = db.collection("usuarios").document(st.session_state.user_email)
@@ -314,6 +310,7 @@ if btn_ia and prompt:
             st.info(resposta.text) # Exibe em um quadro azul para destaque
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
