@@ -95,8 +95,18 @@ st.markdown("""
         border-radius: 10px; 
         font-weight: bold;
     }
+
+    /* ESTE É O COMANDO QUE TIRA O GITHUB E O RODAPÉ */
+    .st-emotion-cache-18ni7ap, .st-emotion-cache-zq59db, 
+    [data-testid="stDecoration"], 
+    div[data-testid="stStatusWidget"] * {
+        display: none !important;
+    }
 </style>
 """, unsafe_allow_html=True)
+
+
+
 # ================= 2. BANCO DE DADOS =================
 @st.cache_resource
 def init_db():
@@ -367,6 +377,7 @@ if btn_ia and prompt:
             st.info(resposta.text) # Exibe em um quadro azul para destaque
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
