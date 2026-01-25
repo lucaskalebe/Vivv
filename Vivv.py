@@ -366,38 +366,40 @@ with exp_gestao:
                 st.rerun()
 
 
-# ================= 8. VIVV AI (VERSÃO SIMPLIFICADA) =================
+# ================= 8. VIVV AI (VERSÃO PATH ABSOLUTO) =================
 st.write("---")
 st.subheader("💬 Vivv AI: Inteligência de Negócio")
 prompt = st.text_input("O que deseja analisar hoje?", placeholder="Ex: Como dobrar meu faturamento?")
 
 if st.button("CONSULTAR IA") and prompt:
     try:
-        # 1. Configuração Direta
+        # 1. Configuração de API
         genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
         
-        # 2. Inicialização sem parâmetros extras para evitar 'unexpected argument'
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # 2. Uso do Path Absoluto para evitar erro de v1beta/v1
+        # Usar 'models/gemini-1.5-flash' força o roteamento correto
+        model = genai.GenerativeModel('models/gemini-1.5-flash')
         
         ctx = f"""
         Você é o consultor estratégico Vivv Pro.
-        Analise estes dados:
-        - Clientes: {len(clis)}
-        - Lucro: R$ {faturamento-despesas:.2f}
+        Analise os dados reais do negócio e responda ao usuário de forma prática.
         
-        Pergunta: {prompt}
+        DADOS DO NEGÓCIO:
+        - Total de Clientes: {len(clis)}
+        - Lucro Atual: R$ {faturamento-despesas:.2f}
+        
+        PERGUNTA DO USUÁRIO: {prompt}
         """
         
         with st.spinner("Vivv AI analisando..."):
-            # 3. Chamada limpa
+            # Chamada padrão
             response = model.generate_content(ctx)
             
-            if response and response.text:
+            if response.text:
                 st.info(response.text)
             else:
-                st.warning("IA não conseguiu gerar uma resposta agora.")
+                st.warning("O modelo respondeu, mas o texto veio vazio.")
 
     except Exception as e:
         st.error(f"Erro na IA: {e}")
-        st.info("💡 Se aparecer '404', a única saída é deletar o app no Streamlit Cloud e criar um 'New App'.")
-
+        st.info("💡 Se o erro 404 persistir, a biblioteca no servidor está desatualizada.")
