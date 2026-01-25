@@ -19,9 +19,10 @@ st.markdown("""
 <style>
     header, [data-testid="stHeader"], .stAppDeployButton { display: none !important; }
 
+    /* 1. LOGO FIXO */
     .vivv-top-left {
         position: fixed; 
-        top: 20px;       /* Ajustado para subir um pouco */
+        top: 20px; 
         left: 25px; 
         color: #ffffff !important; 
         font-size: 28px;
@@ -31,15 +32,37 @@ st.markdown("""
 
     .stApp { background-color: #000205 !important; }
 
+    /* 2. AJUSTE DE ALTURA DA PÁGINA */
     .block-container { 
-        padding-top: 60px !important; /* Diminuído para o e-mail subir mais */
+        padding-top: 60px !important; 
         max-width: 95% !important; 
     }
-    .orange-neon { color: #ff9100 !important; text-shadow: 0 0 15px rgba(255,145,0,0.5); text-align: center; }
+
+    /* 3. CARDS OTIMIZADOS */
     .neon-card {
         background: linear-gradient(145deg, #000814, #001220);
-        border: 1px solid #0056b3; border-radius: 15px; padding: 20px;
+        border: 1px solid #0056b3;
+        border-radius: 12px;
+        padding: 12px 20px; /* Reduzi o padding vertical de 20px para 12px */
+        transition: all 0.3s ease-in-out; /* Fluidez na transição */
+        cursor: pointer;
     }
+
+    /* 4. EFEITO DE BRILHO AO PASSAR O MOUSE */
+    .neon-card:hover {
+        border: 1px solid #00d4ff;
+        box-shadow: 0 0 20px rgba(0, 212, 255, 0.3); /* Brilho neon */
+        transform: translateY(-3px); /* Leve levantada para dar fluidez */
+    }
+
+    /* Ajuste do tamanho dos números dentro do card */
+    .neon-card h2 {
+        margin-top: 5px !important;
+        margin-bottom: 0px !important;
+        font-size: 1.8rem !important; /* Diminuído levemente */
+    }
+
+    .orange-neon { color: #ff9100 !important; text-shadow: 0 0 15px rgba(255,145,0,0.5); text-align: center; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -231,6 +254,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.info(res.text)
     except Exception as e:
         st.error(f"IA Indisponível: {e}")
+
 
 
 
