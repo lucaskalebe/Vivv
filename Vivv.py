@@ -7,13 +7,64 @@ from google.cloud import firestore
 from google.oauth2 import service_account
 import json
 import hashlib
-
+import io
 
 fuso_br = timezone(timedelta(hours=-3))
-
+# ================= 6. EXPORTAÇÃO E LAYOUT (NOVO) =================
 # CSS Refinado para remover GitHub, Menu e Header de forma estável
 # ================= 1. CONFIGURAÇÃO E DESIGN VIVV =================
 st.set_page_config(page_title="Vivv Pro", layout="wide", page_icon="🚀")
+
+import io
+
+# Função para processar o Excel
+def gerar_excel(dados):
+    if not dados: return None
+    df_export = pd.DataFrame(dados)
+    # Ajusta para as colunas que você pediu
+    cols = {'descricao': 'Cliente/Descrição', 'valor': 'Valor', 'tipo': 'Tipo', 'servico': 'Serviço'}
+    df_export = df_export.rename(columns=cols).drop(columns=['id'], errors='ignore')
+    
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df_export.to_excel(writer, index=False, sheet_name='Fluxo de Caixa')
+    return output.getvalue()
+
+# CSS do Botão Neon
+st.markdown("""
+<style>
+    .stDownloadButton button {
+        background: linear-gradient(45deg, #00d4ff, #0056b3) !important;
+        border: 1px solid #00d4ff !important;
+        color: white !important;
+        box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
+        transition: 0.3s;
+        width: 100%;
+        font-weight: bold;
+    }
+    .stDownloadButton button:hover {
+        box-shadow: 0 0 25px rgba(0, 212, 255, 0.8) !important;
+        transform: scale(1.05);
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Substitua a linha antiga: col_ops_l, col_ops_r = st.columns([1.5, 2])
+# Por estas novas 3 colunas:
+col_ops_l, col_btn_mid, col_ops_r = st.columns([1.5, 0.7, 2])
+
+with col_btn_mid:
+    st.write("<br><br><br>", unsafe_allow_html=True) # Espaçador para alinhar ao centro
+    if cx_list:
+        data_xlsx = gerar_excel(cx_list)
+        st.download_button(
+            label="📊 EXCEL",
+            data=data_xlsx,
+            file_name="fluxo_caixa_vivv.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+
 
 def hash_senha(senha):
     return hashlib.sha256(str.encode(senha)).hexdigest()
@@ -196,10 +247,13 @@ m3.markdown(f'<div class="neon-card"><small>📈 LUCRO</small><h2 style="color:#
 m4.markdown(f'<div class="neon-card"><small>📅 PENDENTES</small><h2 style="color:#ff9100">{len(agnd)}</h2></div>', unsafe_allow_html=True)
 
 
-# ================= 7. OPERAÇÕES =================
+# ================= 7. OPERAÇÕES (CORRIGIDO) =================
 st.write("---")
-col_ops_l, col_ops_r = st.columns([1.5, 2])
 
+# Criamos as 3 colunas UMA ÚNICA VEZ
+col_ops_l, col_btn_mid, col_ops_r = st.columns([1.5, 0.8, 2])
+
+# COLUNA DA ESQUERDA: Formuários de Cadastro
 with col_ops_l:
     st.subheader("⚡ Painel de Controle")
     t1, t2, t3, t4 = st.tabs(["📅 Agenda", "👤 Cliente", "🛠️ Serviço", "📉 Caixa"])
@@ -213,7 +267,7 @@ with col_ops_l:
             h_ag = col_h.time_input("Hora")
             if st.form_submit_button("AGENDAR"):
                 if c_sel and s_sel:
-                    st.cache_data.clear() # <--- ADICIONE ESTA LINHA
+                    st.cache_data.clear()
                     p_v = next((s['preco'] for s in srvs if s['nome'] == s_sel), 0)
                     user_ref.collection("minha_agenda").add({
                         "cliente": c_sel, "servico": s_sel, "preco": p_v,
@@ -228,7 +282,7 @@ with col_ops_l:
             tel = st.text_input("WhatsApp")
             if st.form_submit_button("CADASTRAR"):
                 user_ref.collection("meus_clientes").add({"nome": nome, "telefone": tel})
-                st.cache_data.clear()  # <--- Adicione isso para limpar o cache e ler o novo cliente
+                st.cache_data.clear()
                 st.rerun()
 
     with t3:
@@ -237,7 +291,7 @@ with col_ops_l:
             prec = st.number_input("Preço", min_value=0.0)
             if st.form_submit_button("SALVAR"):
                 user_ref.collection("meus_servicos").add({"nome": serv, "preco": prec})
-                st.cache_data.clear() # <--- ADICIONE ESTA LINHA
+                st.cache_data.clear()
                 st.rerun()
 
     with t4:
@@ -246,12 +300,28 @@ with col_ops_l:
             vl = st.number_input("Valor", min_value=0.0)
             tp = st.selectbox("Tipo", ["Entrada", "Saída"])
             if st.form_submit_button("LANÇAR"):
-                st.cache_data.clear() # <--- ADICIONE ESTA LINHA
+                st.cache_data.clear()
                 user_ref.collection("meu_caixa").add({
                     "descricao": ds, "valor": vl, "tipo": tp, "data": firestore.SERVER_TIMESTAMP
                 })
                 st.rerun()
 
+# COLUNA CENTRAL: Botão de Exportação Excel
+with col_btn_mid:
+    st.write("<br><br><br>", unsafe_allow_html=True) # Espaçador para alinhar com o título
+    if cx_list:
+        data_xlsx = gerar_excel(cx_list)
+        st.download_button(
+            label="📊 EXCEL",
+            data=data_xlsx,
+            file_name="fluxo_caixa_vivv.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            help="Exportar fluxo de caixa para Excel"
+        )
+    else:
+        st.button("📊 SEM DADOS", disabled=True)
+
+# COLUNA DA DIREITA: Lista de Agendamentos
 with col_ops_r:
     st.subheader("📋 Agendamentos:")
     if not agnd:
@@ -262,12 +332,11 @@ with col_ops_r:
                 st.write(f"**Serviço:** {a.get('servico')} | **R$ {a.get('preco',0):.2f}**")
                 c1, c2, c3 = st.columns(3)
                 
-                # WhatsApp Link
+                # WhatsApp
                 raw_tel = next((c.get('telefone', '') for c in clis if c.get('nome') == a.get('cliente')), "")
                 clean_tel = "".join(filter(str.isdigit, raw_tel))
                 msg = urllib.parse.quote(f"VIVV PRO: Confirmado {a.get('servico')} às {a.get('hora')}!")
                 c1.markdown(f'<a href="https://wa.me/55{clean_tel}?text={msg}" target="_blank" class="whatsapp-button">📱 Whats</a>', unsafe_allow_html=True)
-
                 
                 if c2.button("✅", key=f"f_{a['id']}"):
                     st.cache_data.clear()
@@ -282,9 +351,6 @@ with col_ops_r:
                     st.cache_data.clear()
                     user_ref.collection("minha_agenda").document(a['id']).delete()
                     st.rerun()
-
-        
-
         # ================= 7.5 GESTÃO DE CADASTROS (EDITÁVEL) =================
 # ================= 7.5 GESTÃO DE CADASTROS (EDITÁVEL) =================
 st.write("---")
@@ -439,5 +505,6 @@ if st.button("CONSULTAR IA") and prompt:
         st.error("Tempo esgotado: A IA está demorando muito para responder. Tente uma pergunta mais simples ou clique em Consultar novamente.")
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
+
 
 
