@@ -366,40 +366,32 @@ with exp_gestao:
                 st.rerun()
 
 
-# ================= 8. VIVV AI (SOLUÇÃO FINAL - ROTA ESTÁVEL) =================
+# ================= 8. VIVV AI (DEPURAÇÃO DE MODELOS) =================
 import requests
 
 st.write("---")
-st.subheader("💬 Vivv AI: Inteligência de Negócio")
-prompt = st.text_input("O que deseja analisar hoje?", placeholder="Ex: Como dobrar meu faturamento?")
+st.subheader("💬 Vivv AI: Diagnóstico de Conexão")
 
-if st.button("CONSULTAR IA") and prompt:
+if st.button("VERIFICAR MODELOS DISPONÍVEIS"):
     try:
         api_key = st.secrets["GOOGLE_API_KEY"]
+        # Endpoint para listar modelos permitidos para sua chave
+        url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
         
-        # Tentamos o Flash na v1 (estável) e o Pro na v1beta como último recurso
-        testes = [
-            {"url": f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={api_key}"},
-            {"url": f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={api_key}"}
-        ]
+        response = requests.get(url)
+        res_json = response.json()
         
-        sucesso = False
-        for teste in testes:
-            payload = {
-                "contents": [{"parts": [{"text": f"Atue como consultor Vivv Pro. Dados: Clientes {len(clis)}, Lucro R$ {faturamento-despesas:.2f}. Pergunta: {prompt}"}]}]
-            }
+        if response.status_code == 200:
+            modelos = [m['name'] for m in res_json.get('models', []) if 'generateContent' in m.get('supportedGenerationMethods', [])]
+            st.success("Sua chave funciona! Modelos que você pode usar:")
+            st.write(modelos)
             
-            response = requests.post(teste["url"], json=payload, timeout=10)
-            if response.status_code == 200:
-                res_json = response.json()
-                texto_ia = res_json['candidates'][0]['content']['parts'][0]['text']
-                st.info(f"**Vivv AI:**\n\n{texto_ia}")
-                sucesso = True
-                break
-        
-        if not sucesso:
-            st.error("Erro: O Google não reconheceu os modelos. Isso geralmente indica que sua API KEY expirou ou não tem permissão para o Gemini.")
-            st.json(response.json()) # Mostra o erro exato para suporte
-
+            # Tenta usar o primeiro da lista automaticamente
+            if modelos:
+                st.info(f"Dica: Substitua 'gemini-1.5-flash' por '{modelos[0].split('/')[-1]}' no seu código.")
+        else:
+            st.error(f"Erro ao listar modelos: {res_json.get('error', {}).get('message', 'Erro desconhecido')}")
+            st.json(res_json)
+            
     except Exception as e:
-        st.error(f"Erro inesperado: {e}")
+        st.error(f"Erro de conexão: {e}")
