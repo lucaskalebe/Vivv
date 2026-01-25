@@ -8,6 +8,7 @@ from google.oauth2 import service_account
 import json
 import hashlib
 
+
 fuso_br = timezone(timedelta(hours=-3))
 
 # CSS Refinado para remover GitHub, Menu e Header de forma estável
@@ -88,13 +89,9 @@ from google.cloud import firestore
 @st.cache_resource
 def init_db():
     try:
-        key_dict = {
-            "type": "service_account",
-            "project_id": st.secrets["FIREBASE_PROJECT_ID"],
-            "client_email": st.secrets["FIREBASE_CLIENT_EMAIL"],
-            "private_key": st.secrets["FIREBASE_PRIVATE_KEY"].replace("\r", ""),
-            "token_uri": "https://oauth2.googleapis.com/token",
-        }
+        raw = st.secrets["FIREBASE_DETAILS"]
+        raw = raw.replace("\\n", "\n")
+        key_dict = json.loads(raw)
 
         creds = service_account.Credentials.from_service_account_info(key_dict)
         return firestore.Client(credentials=creds)
@@ -104,8 +101,6 @@ def init_db():
         return None
 
 
-
-# Inicialização do banco
 db = init_db()
 if db is None:
     st.stop()
@@ -410,6 +405,7 @@ if st.button("CONSULTAR IA") and prompt:
     except Exception as e:
         st.error(f"Erro na IA: {e}")
         st.info("💡 Se o erro 404 voltar, o problema é 100% no cache do Streamlit Cloud.")
+
 
 
 
