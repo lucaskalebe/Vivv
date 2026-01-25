@@ -5,6 +5,7 @@ numpy
 plotly
 sqlalchemy
 google-cloud-firestore
+google-auth
 
 
 
