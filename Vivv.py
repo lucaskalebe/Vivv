@@ -199,6 +199,7 @@ with c_right:
 
 
 # ================= 6. BANCO DE DADOS EDITÁVEL (VOLTOU!) =================
+# ================= 6. BANCO DE DADOS EDITÁVEL (COM SALVAMENTO REAL) =================
 st.write("---")
 st.subheader("🗄️ Gestão de Dados (Editável)")
 exp_db = st.expander("Clique para abrir a edição de Clientes e Serviços")
@@ -207,19 +208,37 @@ with exp_db:
     col_db1, col_db2 = st.columns(2)
     
     with col_db1:
-        st.write("👤 **Clientes Cadastrados**")
+        st.write("👤 **Clientes** (Edite e clique fora para salvar)")
         if clis:
             df_clis = pd.DataFrame(clis)
-            # st.data_editor permite que você altere os dados visualmente
-            st.data_editor(df_clis, use_container_width=True, key="edit_clis")
+            # Capturamos as edições
+            edição_cli = st.data_editor(df_clis, use_container_width=True, key="editor_clientes")
+            
+            # Botão para processar mudanças se necessário (ou pode ser automático)
+            if st.button("Salvar Alterações de Clientes"):
+                for i, row in edição_cli.iterrows():
+                    # Localiza o documento original pelo nome (ou ID se você salvar o ID no dict)
+                    docs = user_ref.collection("meus_clientes").where("nome", "==", df_clis.iloc[i]['nome']).stream()
+                    for doc in docs:
+                        doc.reference.update({"nome": row['nome'], "telefone": row['telefone']})
+                st.success("Clientes atualizados!")
+                st.rerun()
         else:
             st.info("Sem clientes.")
 
     with col_db2:
-        st.write("💰 **Serviços Disponíveis**")
+        st.write("💰 **Serviços** (Edite e clique fora para salvar)")
         if srvs:
             df_srvs = pd.DataFrame(srvs)
-            st.data_editor(df_srvs, use_container_width=True, key="edit_srvs")
+            edição_srv = st.data_editor(df_srvs, use_container_width=True, key="editor_servicos")
+            
+            if st.button("Salvar Alterações de Serviços"):
+                for i, row in edição_srv.iterrows():
+                    docs = user_ref.collection("meus_servicos").where("nome", "==", df_srvs.iloc[i]['nome']).stream()
+                    for doc in docs:
+                        doc.reference.update({"nome": row['nome'], "preco": row['preco']})
+                st.success("Serviços atualizados!")
+                st.rerun()
         else:
             st.info("Sem serviços.")
 # ================= 7. IA CONSULTOR DE NEGÓCIOS (AJUSTADA PARA TOPO) =================
@@ -245,6 +264,7 @@ if btn_ia and prompt:
             st.info(resposta.text) # Exibe em um quadro azul para destaque
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
