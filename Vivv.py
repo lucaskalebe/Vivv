@@ -6,7 +6,11 @@ import google.generativeai as genai
 from google.cloud import firestore
 from google.oauth2 import service_account
 import json
+import hashlib
 
+def hash_senha(senha):
+    return hashlib.sha256(str.encode(senha)).hexdigest()
+    
 # ================= 1. CONFIGURAÇÃO E DESIGN ULTRA NEON =================
 st.set_page_config(page_title="Vivv Pro", layout="wide", page_icon="🚀")
 st.markdown("<div id='top'></div>", unsafe_allow_html=True)
@@ -264,6 +268,7 @@ if btn_ia and prompt:
             st.info(resposta.text) # Exibe em um quadro azul para destaque
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
