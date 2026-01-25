@@ -12,28 +12,37 @@ def hash_senha(senha):
     return hashlib.sha256(str.encode(senha)).hexdigest()
 
 # ================= 1. CONFIGURAÇÃO E DESIGN ULTRA NEON =================
+# ================= 1. CONFIGURAÇÃO E DESIGN ULTRA NEON =================
 st.set_page_config(page_title="Vivv Pro", layout="wide", page_icon="🚀")
 
 st.markdown("""
 <style>
-    /* 1. LIMPEZA TOTAL (Esconde GitHub, Menus, Header e Footer) */
+    /* 1. LIMPEZA PROFUNDA (Remove GitHub, Botão Deploy, Menu e Cabeçalho) */
     [data-testid="stHeader"], 
     header, 
     #MainMenu, 
     footer,
     .stAppDeployButton,
-    .viewerBadge_container__1QS1n {
+    .viewerBadge_container__1QS1n,
+    .st-emotion-cache-18ni7ap, 
+    .st-emotion-cache-zq59db {
         display: none !important;
         visibility: hidden !important;
+        height: 0;
     }
 
-    /* Remove o espaço em branco que sobra no topo */
+    /* Remove a barra superior e ajusta o espaçamento */
+    .stApp [data-testid="stToolbar"] {
+        display: none !important;
+    }
+
+    /* Tira o espaço em branco que sobra no topo */
     .block-container {
-        padding-top: 1rem !important;
+        padding-top: 0rem !important;
         padding-bottom: 0rem !important;
     }
 
-    /* 2. ESTILO VISUAL ORIGINAL (Neon & Dark Mode) */
+    /* 2. ESTILIZAÇÃO VISUAL (Neon & Dark Mode) */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
     
     .stApp { 
@@ -357,6 +366,7 @@ if btn_ia and prompt:
             st.info(resposta.text) # Exibe em um quadro azul para destaque
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
