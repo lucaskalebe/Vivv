@@ -17,6 +17,9 @@ st.markdown("<div id='top'></div>", unsafe_allow_html=True)
 
 st.markdown("""
 <style>
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
     .stApp { background-color: #000205; color: #d1d1d1; font-family: 'Inter', sans-serif; }
     .neon-card {
@@ -310,6 +313,7 @@ if btn_ia and prompt:
             st.info(resposta.text) # Exibe em um quadro azul para destaque
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
