@@ -73,8 +73,21 @@ if not st.session_state.logado:
 
 # ================= 3. BUSCA DE DADOS =================
 user_ref = db.collection("usuarios").document(st.session_state.user_email)
-clis = [c.to_dict() for c in user_ref.collection("meus_clientes").stream()]
-srvs = [s.to_dict() for s in user_ref.collection("meus_servicos").stream()]
+
+# Modifique a Seção 3 para incluir o ID
+clis = []
+for c in user_ref.collection("meus_clientes").stream():
+    d = c.to_dict()
+    d['id'] = c.id  # Guardamos o ID único do Firestore aqui
+    clis.append(d)
+
+srvs = []
+for s in user_ref.collection("meus_servicos").stream():
+    d = s.to_dict()
+    d['id'] = s.id  # Guardamos o ID único do Firestore aqui
+    srvs.append(d)
+
+
 agnd = []
 for a in user_ref.collection("minha_agenda").where("status", "==", "Pendente").stream():
     d = a.to_dict(); d['id'] = a.id; agnd.append(d)
@@ -212,21 +225,39 @@ with exp_db:
     col_db1, col_db2 = st.columns(2)
     
     with col_db1:
-        st.write("👤 **Clientes** (Edite e clique fora para salvar)")
+        st.write("👤 **Clientes**")
         if clis:
             df_clis = pd.DataFrame(clis)
-            # Capturamos as edições
-            edição_cli = st.data_editor(df_clis, use_container_width=True, key="editor_clientes")
+            # Mostramos o editor, mas podemos esconder a coluna 'id' para o usuário não mexer
+            edição_cli = st.data_editor(df_clis, column_config={"id": None}, use_container_width=True)
             
-            # Botão para processar mudanças se necessário (ou pode ser automático)
             if st.button("Salvar Alterações de Clientes"):
                 for i, row in edição_cli.iterrows():
-                    # Localiza o documento original pelo nome (ou ID se você salvar o ID no dict)
-                    docs = user_ref.collection("meus_clientes").where("nome", "==", df_clis.iloc[i]['nome']).stream()
-                    for doc in docs:
-                        doc.reference.update({"nome": row['nome'], "telefone": row['telefone']})
+                    # ATUALIZAÇÃO PELO ID ÚNICO:
+                    user_ref.collection("meus_clientes").document(row['id']).update({
+                        "nome": row['nome'], 
+                        "telefone": row['telefone']
+                    })
                 st.success("Clientes atualizados!")
                 st.rerun()
+
+    with col_db2:
+        st.write("💰 **Serviços**")
+        if srvs:
+            df_srvs = pd.DataFrame(srvs)
+            edição_srv = st.data_editor(df_srvs, column_config={"id": None}, use_container_width=True)
+            
+            if st.button("Salvar Alterações de Serviços"):
+                for i, row in edição_srv.iterrows():
+                    # ATUALIZAÇÃO PELO ID ÚNICO:
+                    user_ref.collection("meus_servicos").document(row['id']).update({
+                        "nome": row['nome'], 
+                        "preco": row['preco']
+                    })
+                st.success("Serviços atualizados!")
+                st.rerun()
+
+
         else:
             st.info("Sem clientes.")
 
@@ -268,6 +299,7 @@ if btn_ia and prompt:
             st.info(resposta.text) # Exibe em um quadro azul para destaque
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
