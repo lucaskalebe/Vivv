@@ -12,61 +12,78 @@ import streamlit.components.v1 as components
 def hash_senha(senha):
     return hashlib.sha256(str.encode(senha)).hexdigest()
 
-# ================= 1. CONFIGURAÇÃO E DESIGN ULTRA NEON (BARRA REMOVIDA) =================
+# ================= 1. CONFIGURAÇÃO E DESIGN ULTRA NEON (LIMPEZA TOTAL) =================
 st.set_page_config(page_title="Vivv Pro", layout="wide", page_icon="🚀")
 
-# JAVASCRIPT: Deleta os elementos do Streamlit em tempo real
+# JAVASCRIPT: O "Exterminador" de elementos do Streamlit e GitHub
 components.html("""
 <script>
-    const cleanUp = () => {
+    const terminateStreamlit = () => {
         const frame = window.parent.document;
+        
+        // 1. Remove elementos por ID e Classe (Menu, Deploy, Toolbar)
         const selectors = [
-            'header', '[data-testid="stHeader"]', 
-            '[data-testid="stToolbar"]', '.stAppDeployButton',
-            'footer', '#MainMenu', '[data-testid="stDecoration"]'
+            'header', '[data-testid="stHeader"]', '[data-testid="stToolbar"]', 
+            '.stAppDeployButton', 'footer', '#MainMenu', '[data-testid="stDecoration"]'
         ];
         selectors.forEach(s => {
-            const nodes = frame.querySelectorAll(s);
-            nodes.forEach(n => { n.style.display = 'none'; n.style.visibility = 'hidden'; });
+            frame.querySelectorAll(s).forEach(n => n.remove());
         });
+
+        // 2. Remove especificamente o ícone do GitHub e badges
+        frame.querySelectorAll('a').forEach(link => {
+            if (link.href.includes('github.com') || link.innerHTML.includes('viewerBadge')) {
+                link.remove();
+            }
+        });
+        
+        // 3. Remove qualquer "div" que contenha o badge do Streamlit Cloud
+        frame.querySelectorAll('div[class*="viewerBadge"]').forEach(badge => badge.remove());
     }
-    cleanUp();
-    setInterval(cleanUp, 300);
+    
+    // Executa imediatamente e repete para garantir
+    terminateStreamlit();
+    setInterval(terminateStreamlit, 500);
 </script>
 """, height=0)
 
 st.markdown("""
 <style>
-    /* 1. REMOÇÃO TOTAL DE INTERFACE PADRÃO */
+    /* DESIGN DO TÍTULO E CABEÇALHO PERSONALIZADO */
+    .header-container {
+        text-align: center;
+        padding-bottom: 20px;
+    }
+    
+    /* ESCONDE TUDO NO CSS TAMBÉM */
     [data-testid="stHeader"], header, .stAppDeployButton, footer, #MainMenu, 
-    [data-testid="stDecoration"], [data-testid="stToolbar"] {
+    [data-testid="stDecoration"], [data-testid="stToolbar"], .viewerBadge_container__1QS1n {
         display: none !important;
         visibility: hidden !important;
     }
 
-    /* 2. CONFIGURAÇÃO DO CORPO E SUBIDA DO APP */
+    /* SOBE O APP E MANTÉM O FUNDO BLACK */
     .stApp {
         background-color: #000205 !important;
         color: #d1d1d1;
         font-family: 'Inter', sans-serif;
-        margin-top: -110px !important; /* COBRE O TOPO TOTALMENTE */
+        margin-top: -115px !important; /* COBRE O TOPO */
     }
 
     .block-container {
         padding-top: 0rem !important;
-        padding-bottom: 0rem !important;
         max-width: 95% !important;
     }
 
-    /* 3. DESIGN NEON (MANTIDO E MELHORADO) */
+    /* ESTILO NEON MANTIDO */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
 
     .orange-neon { 
         color: #ff9100 !important; 
         text-shadow: 0 0 15px rgba(255, 145, 0, 0.7); 
-        font-size: 2.5rem; 
+        font-size: 2.8rem; 
         font-weight: 800; 
-        text-align: center;
+        margin-bottom: 10px;
     }
 
     .neon-card {
@@ -75,33 +92,21 @@ st.markdown("""
         border-radius: 15px;
         padding: 20px;
         box-shadow: 0 0 15px rgba(0, 86, 179, 0.1);
-        transition: all 0.3s ease-in-out;
-        min-height: 150px;
     }
-
-    .neon-card:hover { 
-        transform: translateY(-5px); 
-        box-shadow: 0 0 30px rgba(0, 212, 255, 0.4); 
-        border-color: #00d4ff; 
-    }
-
-    [data-testid="stMetric"] {
-        background: linear-gradient(145deg, #000814, #001220);
-        border: 1px solid #0056b3;
-        border-radius: 15px;
-        padding: 15px !important;
-    }
-
+    
     div.stButton > button {
         background: linear-gradient(45deg, #003566, #000814) !important;
         color: #00d4ff !important; 
         border: 1px solid #00d4ff !important; 
         border-radius: 10px; 
-        font-weight: bold;
     }
 </style>
 """, unsafe_allow_html=True)
 
+# EXIBE O NOME DO APP QUE TINHA SUMIDO
+st.markdown('<div class="header-container"><h1 class="orange-neon">🚀 VIVV PRO</h1></div>', unsafe_allow_html=True)
+
+# ================= 2. BANCO DE DADOS =================
 
 # ================= 2. BANCO DE DADOS =================
 @st.cache_resource
@@ -373,6 +378,7 @@ if btn_ia and prompt:
             st.info(resposta.text) # Exibe em um quadro azul para destaque
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
