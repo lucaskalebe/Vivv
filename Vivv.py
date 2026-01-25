@@ -155,7 +155,7 @@ def verificar_acesso():
             if validade and datetime.now(fuso_br) > validade.replace(tzinfo=fuso_br):
                 st.markdown('<h1 class="orange-neon">VIVV</h1>', unsafe_allow_html=True)
                 st.warning("### 🔒 Assinatura Necessária")
-                st.link_button("💳 ATIVAR ACESSO VIVV PRO", "https://buy.stripe.com/exemplo")
+                st.link_button("💳 ATIVAR ACESSO VIVV PRO", "https://buy.stripe.com/test_6oU4gB7Q4glM1JZ2Z06J200")
                 if st.button("🔄 Já realizei o pagamento"): st.rerun()
                 st.stop()
 
@@ -439,4 +439,5 @@ if st.button("CONSULTAR IA") and prompt:
         st.error("Tempo esgotado: A IA está demorando muito para responder. Tente uma pergunta mais simples ou clique em Consultar novamente.")
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
+
 
