@@ -12,37 +12,39 @@ def hash_senha(senha):
     return hashlib.sha256(str.encode(senha)).hexdigest()
 
 # ================= 1. CONFIGURAÇÃO E DESIGN ULTRA NEON =================
-# ================= 1. CONFIGURAÇÃO E DESIGN ULTRA NEON =================
 st.set_page_config(page_title="Vivv Pro", layout="wide", page_icon="🚀")
 
 st.markdown("""
 <style>
-    /* 1. LIMPEZA PROFUNDA (Remove GitHub, Botão Deploy, Menu e Cabeçalho) */
+    /* 1. REMOÇÃO AGRESSIVA (GitHub, Deploy, Menu, Header) */
+    /* Isso ataca as classes ocultas do Streamlit Cloud */
     [data-testid="stHeader"], 
     header, 
     #MainMenu, 
     footer,
     .stAppDeployButton,
     .viewerBadge_container__1QS1n,
-    .st-emotion-cache-18ni7ap, 
+    [data-testid="stToolbar"],
+    .st-emotion-cache-18ni7ap,
     .st-emotion-cache-zq59db {
         display: none !important;
         visibility: hidden !important;
-        height: 0;
+        height: 0 !important;
+        width: 0 !important;
     }
 
-    /* Remove a barra superior e ajusta o espaçamento */
-    .stApp [data-testid="stToolbar"] {
+    /* Remove a barra de ferramentas superior e o ícone do GitHub */
+    [data-testid="stDecoration"] {
         display: none !important;
     }
 
-    /* Tira o espaço em branco que sobra no topo */
+    /* Ajusta o espaçamento para não sobrar buraco no topo */
     .block-container {
         padding-top: 0rem !important;
         padding-bottom: 0rem !important;
     }
 
-    /* 2. ESTILIZAÇÃO VISUAL (Neon & Dark Mode) */
+    /* 2. ESTILO VISUAL NEON (Seu design original) */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
     
     .stApp { 
@@ -74,24 +76,6 @@ st.markdown("""
         border-radius: 10px; 
         width: 100%;
         font-weight: bold;
-    }
-
-    .orange-neon { 
-        color: #ff9100 !important; 
-        text-shadow: 0 0 15px rgba(255, 145, 0, 0.7); 
-        font-size: 2.5rem; 
-        font-weight: 800; 
-    }
-
-    .wa-link { 
-        background: #25D366; 
-        color: black !important; 
-        padding: 10px; 
-        border-radius: 8px; 
-        font-weight: bold; 
-        text-decoration: none; 
-        display: block; 
-        text-align: center; 
     }
 </style>
 """, unsafe_allow_html=True)
@@ -366,6 +350,7 @@ if btn_ia and prompt:
             st.info(resposta.text) # Exibe em um quadro azul para destaque
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
