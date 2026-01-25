@@ -12,95 +12,54 @@ import streamlit.components.v1 as components
 def hash_senha(senha):
     return hashlib.sha256(str.encode(senha)).hexdigest()
 
-# ================= 1. CONFIGURAÇÃO E DESIGN ULTRA NEON =================
+# ================= 1. CONFIGURAÇÃO E DESIGN ULTRA NEON (BARRA REMOVIDA) =================
 st.set_page_config(page_title="Vivv Pro", layout="wide", page_icon="🚀")
 
+# JAVASCRIPT: Deleta os elementos do Streamlit em tempo real
 components.html("""
 <script>
-    const removeStreamlitElements = () => {
-        // Alvos: Header, Toolbar, Decoration (linha colorida) e o Botão Deploy
+    const cleanUp = () => {
+        const frame = window.parent.document;
         const selectors = [
-            'header', 
-            '[data-testid="stHeader"]', 
-            '[data-testid="stToolbar"]', 
-            '[data-testid="stDecoration"]',
-            '.stAppDeployButton',
-            'footer'
+            'header', '[data-testid="stHeader"]', 
+            '[data-testid="stToolbar"]', '.stAppDeployButton',
+            'footer', '#MainMenu', '[data-testid="stDecoration"]'
         ];
-        
-        const parentDoc = window.parent.document;
-        
-        selectors.forEach(selector => {
-            parentDoc.querySelectorAll(selector).forEach(el => {
-                el.style.display = 'none';
-                el.style.visibility = 'hidden';
-            });
+        selectors.forEach(s => {
+            const nodes = frame.querySelectorAll(s);
+            nodes.forEach(n => { n.style.display = 'none'; n.style.visibility = 'hidden'; });
         });
-
-        // Remove especificamente o ícone do GitHub e qualquer badge do Cloud
-        parentDoc.querySelectorAll('a').forEach(a => {
-            if (a.href.includes('github.com') || a.className.includes('viewerBadge')) {
-                a.style.display = 'none';
-            }
-        });
-    };
-
-    // Executa várias vezes porque o Streamlit demora a carregar os elementos
-    removeStreamlitElements();
-    setInterval(removeStreamlitElements, 500); 
+    }
+    cleanUp();
+    setInterval(cleanUp, 300);
 </script>
 """, height=0)
 
 st.markdown("""
 <style>
-    /* 1. REMOÇÃO AGRESSIVA DE COMPONENTES DO STREAMLIT */
-    /* Remove Header, GitHub, Botão Deploy e o Rodapé Vermelho */
-    [data-testid="stHeader"], 
-    header, 
-    .stAppDeployButton, 
-    footer, 
-    #MainMenu,
-    [data-testid="stDecoration"],
-    [data-testid="stToolbar"],
-    .viewerBadge_container__1QS1n,
-    div[class^="viewerBadge"] {
+    /* 1. REMOÇÃO TOTAL DE INTERFACE PADRÃO */
+    [data-testid="stHeader"], header, .stAppDeployButton, footer, #MainMenu, 
+    [data-testid="stDecoration"], [data-testid="stToolbar"] {
         display: none !important;
         visibility: hidden !important;
-        height: 0 !important;
     }
 
-    /* Remove especificamente o rodapé "Hosted with Streamlit" */
-    div[data-testid="stStatusWidget"] {
-        visibility: hidden;
-        height: 0%;
-        position: fixed;
-    }
-
-    /* Ajusta o espaçamento para o conteúdo subir */
+    /* 2. CONFIGURAÇÃO DO CORPO E SUBIDA DO APP */
     .stApp {
-        margin-top: -60px !important; /* Puxa tudo para cima */
         background-color: #000205 !important;
+        color: #d1d1d1;
+        font-family: 'Inter', sans-serif;
+        margin-top: -110px !important; /* COBRE O TOPO TOTALMENTE */
     }
 
-    /* Ajusta o espaçamento interno para compensar a subida */
     .block-container {
-        padding-top: 60px !important; 
+        padding-top: 0rem !important;
+        padding-bottom: 0rem !important;
         max-width: 95% !important;
     }
 
-    /* Esconde a linha de decoração colorida que fica no topo */
-    [data-testid="stDecoration"] {
-        display: none !important;
-    }
-
-    /* 2. DESIGN LARANJA NEON E ALINHAMENTO */
+    /* 3. DESIGN NEON (MANTIDO E MELHORADO) */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
-    
-    .stApp { 
-        background-color: #000205; 
-        color: #d1d1d1; 
-        font-family: 'Inter', sans-serif; 
-    }
 
     .orange-neon { 
         color: #ff9100 !important; 
@@ -110,15 +69,6 @@ st.markdown("""
         text-align: center;
     }
 
-    /* Ajuste para alinhar os cards (Métricas) */
-    [data-testid="stMetric"] {
-        background: linear-gradient(145deg, #000814, #001220);
-        border: 1px solid #0056b3;
-        border-radius: 15px;
-        padding: 15px !important;
-        box-shadow: 0 0 10px rgba(0, 86, 179, 0.1);
-    }
-
     .neon-card {
         background: linear-gradient(145deg, #000814, #001220);
         border: 1px solid #0056b3;
@@ -126,7 +76,7 @@ st.markdown("""
         padding: 20px;
         box-shadow: 0 0 15px rgba(0, 86, 179, 0.1);
         transition: all 0.3s ease-in-out;
-        min-height: 150px; /* Garante alinhamento vertical */
+        min-height: 150px;
     }
 
     .neon-card:hover { 
@@ -135,7 +85,13 @@ st.markdown("""
         border-color: #00d4ff; 
     }
 
-    /* Botões */
+    [data-testid="stMetric"] {
+        background: linear-gradient(145deg, #000814, #001220);
+        border: 1px solid #0056b3;
+        border-radius: 15px;
+        padding: 15px !important;
+    }
+
     div.stButton > button {
         background: linear-gradient(45deg, #003566, #000814) !important;
         color: #00d4ff !important; 
@@ -143,37 +99,10 @@ st.markdown("""
         border-radius: 10px; 
         font-weight: bold;
     }
-
-    /* 1. REMOÇÃO TOTAL DO TOPO, GITHUB E RODAPÉ */
-    [data-testid="stHeader"], 
-    header, 
-    footer, 
-    .stAppDeployButton, 
-    [data-testid="stDecoration"],
-    #MainMenu {
-        display: none !important;
-        visibility: hidden !important;
-    }
-
-    /* 2. SOBE O APP PARA MATAR O ESPAÇO BRANCO */
-    .stApp {
-        margin-top: -60px !important;
-        background-color: #000205 !important;
-    }
-
-    /* 1. ZERE O PADDING PARA O CONTEÚDO SUBIR TOTALMENTE */
-    .block-container {
-        padding-top: 0rem !important; /* Mude de 60px para 0 */
-        max-width: 95% !important;
-    }
-
-    /* 2. AUMENTE A "SUBIDA" DO APP */
-    .stApp {
-        margin-top: -80px !important;
-        background-color: #000205 !important;
-    }
 </style>
-""", unsafe_allow_html=True) # <--- ESSA LINHA É OBRIGATÓRIA AQUI!
+""", unsafe_allow_html=True)
+
+
 # ================= 2. BANCO DE DADOS =================
 @st.cache_resource
 def init_db():
@@ -444,6 +373,7 @@ if btn_ia and prompt:
             st.info(resposta.text) # Exibe em um quadro azul para destaque
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
