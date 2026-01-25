@@ -12,39 +12,38 @@ def hash_senha(senha):
     return hashlib.sha256(str.encode(senha)).hexdigest()
 
 # ================= 1. CONFIGURAÇÃO E DESIGN ULTRA NEON =================
+# ================= 1. CONFIGURAÇÃO E DESIGN ULTRA NEON =================
 st.set_page_config(page_title="Vivv Pro", layout="wide", page_icon="🚀")
 
 st.markdown("""
 <style>
-    /* 1. REMOÇÃO AGRESSIVA (GitHub, Deploy, Menu, Header) */
-    /* Isso ataca as classes ocultas do Streamlit Cloud */
+    /* --- 1. REMOÇÃO DO GITHUB E MENUS (FORÇA BRUTA) --- */
+    /* Remove o cabeçalho inteiro, botões de deploy e ícone do GitHub */
     [data-testid="stHeader"], 
     header, 
+    .stAppDeployButton, 
     #MainMenu, 
-    footer,
-    .stAppDeployButton,
+    footer, 
     .viewerBadge_container__1QS1n,
-    [data-testid="stToolbar"],
-    .st-emotion-cache-18ni7ap,
-    .st-emotion-cache-zq59db {
+    [data-testid="stDecoration"],
+    [data-testid="stToolbar"] {
         display: none !important;
         visibility: hidden !important;
         height: 0 !important;
-        width: 0 !important;
     }
 
-    /* Remove a barra de ferramentas superior e o ícone do GitHub */
-    [data-testid="stDecoration"] {
+    /* Remove o link específico do GitHub no canto superior */
+    #root > div:nth-child(1) > div > div > div > div > section > header > div > div > a {
         display: none !important;
     }
 
-    /* Ajusta o espaçamento para não sobrar buraco no topo */
+    /* Ajusta o espaçamento do topo para não ficar buraco */
     .block-container {
-        padding-top: 0rem !important;
+        padding-top: 1rem !important;
         padding-bottom: 0rem !important;
     }
 
-    /* 2. ESTILO VISUAL NEON (Seu design original) */
+    /* --- 2. RESTAURAÇÃO DO DESIGN LARANJA NEON --- */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
     
     .stApp { 
@@ -53,14 +52,23 @@ st.markdown("""
         font-family: 'Inter', sans-serif; 
     }
 
+    /* Título Laranja Neon */
+    .orange-neon { 
+        color: #ff9100 !important; 
+        text-shadow: 0 0 20px rgba(255, 145, 0, 0.8), 0 0 40px rgba(255, 145, 0, 0.4); 
+        font-size: 3rem; 
+        font-weight: 800; 
+        text-align: center;
+        margin-bottom: 10px;
+    }
+
     .neon-card {
         background: linear-gradient(145deg, #000814, #001220);
         border: 1px solid #0056b3;
         border-radius: 15px;
-        padding: 20px;
+        padding: 25px;
         box-shadow: 0 0 15px rgba(0, 86, 179, 0.1);
         transition: all 0.3s ease-in-out;
-        text-align: center;
     }
 
     .neon-card:hover { 
@@ -69,17 +77,38 @@ st.markdown("""
         border-color: #00d4ff; 
     }
 
+    /* Botões Personalizados */
     div.stButton > button {
-        background: linear-gradient(45deg, #003566, #000814);
-        color: #00d4ff; 
-        border: 1px solid #00d4ff; 
-        border-radius: 10px; 
+        background: linear-gradient(45deg, #003566, #000814) !important;
+        color: #00d4ff !important; 
+        border: 1px solid #00d4ff !important; 
+        border-radius: 12px !important; 
         width: 100%;
         font-weight: bold;
+        height: 3em;
+        transition: 0.3s;
+    }
+    
+    div.stButton > button:hover {
+        border-color: #ff9100 !important;
+        color: #ff9100 !important;
+        box-shadow: 0 0 15px rgba(255, 145, 0, 0.5);
+    }
+
+    /* Link do WhatsApp */
+    .wa-link { 
+        background: #25D366; 
+        color: black !important; 
+        padding: 12px; 
+        border-radius: 10px; 
+        font-weight: bold; 
+        text-decoration: none; 
+        display: block; 
+        text-align: center;
+        margin-top: 10px;
     }
 </style>
 """, unsafe_allow_html=True)
-
 # ================= 2. BANCO DE DADOS =================
 @st.cache_resource
 def init_db():
@@ -350,6 +379,7 @@ if btn_ia and prompt:
             st.info(resposta.text) # Exibe em um quadro azul para destaque
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
