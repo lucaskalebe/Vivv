@@ -116,7 +116,7 @@ st.markdown('<h1 class="orange-neon">VIVV</h1>', unsafe_allow_html=True)
 
 c_header1, c_header2 = st.columns([4,1])
 with c_header1:
-    st.markdown(f"##### 🚀 Seja bem vindo,: <span style='color:#00d4ff'>{st.session_state.user_email}</span>", unsafe_allow_html=True)
+    st.markdown(f"##### 🚀 adm: <span style='color:#00d4ff'>{st.session_state.user_email}</span>", unsafe_allow_html=True)
 with c_header2:
     if st.button("SAIR"):
         st.session_state.logado = False
@@ -222,6 +222,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.info(res.text)
     except Exception as e:
         st.error(f"IA Indisponível: {e}")
+
 
 
 
