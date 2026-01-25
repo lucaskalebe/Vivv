@@ -17,8 +17,29 @@ st.set_page_config(page_title="Vivv Pro", layout="wide", page_icon="🚀")
 
 components.html("""
 <script>
-    const elements = window.parent.document.querySelectorAll('.stAppDeployButton, header, footer, #MainMenu, [data-testid="stHeader"]');
-    elements.forEach(el => el.style.display = 'none');
+    const shadowRemover = () => {
+        // Remove pelo seletor de dados (mais estável)
+        const selectors = [
+            '[data-testid="stHeader"]',
+            '[data-testid="stToolbar"]',
+            '[data-testid="stDecoration"]',
+            'footer',
+            '.stAppDeployButton'
+        ];
+        
+        selectors.forEach(s => {
+            const el = window.parent.document.querySelector(s);
+            if (el) el.style.display = 'none';
+        });
+
+        // Remove especificamente o link do GitHub pelo ícone
+        const githubIcon = window.parent.document.querySelector('a[href*="github.com"]');
+        if (githubIcon) githubIcon.style.display = 'none';
+    };
+    
+    // Executa imediatamente e depois de 1 segundo para garantir
+    shadowRemover();
+    setTimeout(shadowRemover, 1000);
 </script>
 """, height=0)
 
@@ -385,6 +406,7 @@ if btn_ia and prompt:
             st.info(resposta.text) # Exibe em um quadro azul para destaque
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
