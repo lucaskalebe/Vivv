@@ -112,7 +112,6 @@ faturamento = sum([float(x['valor']) for x in cx_list if x['tipo'] == 'Entrada']
 despesas = sum([float(x['valor']) for x in cx_list if x['tipo'] == 'Saída'])
 
 # ================= 6. DASHBOARD VIVV =================
-st.markdown('<h1 class="orange-neon">VIVV</h1>', unsafe_allow_html=True)
 
 c_header1, c_header2 = st.columns([4,1])
 with c_header1:
@@ -222,6 +221,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.info(res.text)
     except Exception as e:
         st.error(f"IA Indisponível: {e}")
+
 
 
 
