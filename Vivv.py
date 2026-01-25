@@ -339,7 +339,7 @@ with col_ops_r:
                     st.rerun()
 
 
-# ================= 7.5 GESTÃO DE CADASTROS (OTIMIZADO) =================
+# ================= 7.5 GESTÃO DE CADASTROS (CORRIGIDO) =================
 st.write("---")
 st.subheader("⚙️ Gestão de Cadastros")
 exp_gestao = st.expander("Visualizar e Gerenciar Dados", expanded=False)
@@ -353,7 +353,6 @@ with exp_gestao:
             col_tbl, col_act = st.columns([3, 1])
             
             with col_tbl:
-                # O ID vira o index para que o Streamlit saiba exatamente qual linha é qual
                 df_editor_cli = df_clis.set_index("id")[["nome", "telefone"]]
                 edited_df = st.data_editor(df_editor_cli, key="edit_cli_tab", use_container_width=True)
             
@@ -367,7 +366,6 @@ with exp_gestao:
                     st.rerun()
 
             if st.button("💾 SALVAR ALTERAÇÕES CLIENTES"):
-                # .iterrows() agora retorna o doc_id (index) e os dados da linha
                 for doc_id, row in edited_df.iterrows():
                     user_ref.collection("meus_clientes").document(doc_id).update({
                         "nome": row["nome"], "telefone": row["telefone"]
@@ -375,46 +373,54 @@ with exp_gestao:
                 st.cache_data.clear()
                 st.success("Clientes atualizados!")
                 st.rerun()
+
+    with tab_edit_srv:
+        if srvs: # AQUI ESTAVA O ERRO DE IDENTAÇÃO NO SEU CÓDIGO
+            df_srvs = pd.DataFrame(srvs)
+            col_tbl_s, col_act_s = st.columns([3, 1])
+            
+            with col_tbl_s:
+                df_editor_srv = df_srvs.set_index("id")[["nome", "preco"]]
+                edited_srv_df = st.data_editor(df_editor_srv, key="edit_srv_tab", use_container_width=True)
+            
+            with col_act_s:
+                st.write("🗑️ **Excluir**")
+                srv_para_deletar = st.selectbox("Remover serviço:", df_srvs["nome"], key="del_srv_sel")
+                if st.button("CONFIRMAR EXCLUSÃO", key="btn_del_srv"):
+                    s_id = df_srvs[df_srvs["nome"] == srv_para_deletar]["id"].values[0]
+                    user_ref.collection("meus_servicos").document(s_id).delete()
+                    st.cache_data.clear()
+                    st.rerun()
+
+            if st.button("💾 SALVAR ALTERAÇÕES SERVIÇOS"):
+                for s_id, row in edited_srv_df.iterrows():
+                    user_ref.collection("meus_servicos").document(s_id).update({
+                        "nome": row["nome"], "preco": row["preco"]
+                    })
+                st.cache_data.clear()
+                st.success("Serviços atualizados!")
+                st.rerun()
+
 # ================= 7.8 GRÁFICO DE PERFORMANCE =================
 st.write("---")
 st.subheader("📊 Performance Financeira")
 
 if cx_list:
     df_cx = pd.DataFrame(cx_list)
-    # Garante que a data seja lida corretamente
     df_cx['valor'] = df_cx['valor'].astype(float)
-    
-    # Agrupa por Tipo para o Gráfico
     resumo_grafico = df_cx.groupby('tipo')['valor'].sum().reset_index()
     
     import plotly.express as px
-    
     fig = px.bar(
-        resumo_grafico, 
-        x='tipo', 
-        y='valor', 
-        color='tipo',
+        resumo_grafico, x='tipo', y='valor', color='tipo',
         color_discrete_map={'Entrada': '#00d4ff', 'Saída': '#ff4b4b'},
-        text_auto='.2s',
-        title="Entradas vs Saídas Totais"
+        text_auto='.2s', title="Entradas vs Saídas Totais"
     )
-    
-    fig.update_layout(
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        font_color="white",
-        showlegend=False,
-        margin=dict(l=20, r=20, t=40, b=20),
-        height=300
-    )
-    
+    fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", height=300)
     st.plotly_chart(fig, use_container_width=True)
-else:
-    st.info("Lance dados no caixa para gerar os gráficos de performance.")
 
-# ================= 8. VIVV AI (VERSÃO 2026 - ALTO DESEMPENHO) =================
+# ================= 8. VIVV AI =================
 import requests
-
 st.write("---")
 st.subheader("💬 Vivv AI: Inteligência de Negócio")
 prompt = st.text_input("O que deseja analisar hoje?", placeholder="Ex: Como dobrar meu faturamento?")
@@ -422,35 +428,23 @@ prompt = st.text_input("O que deseja analisar hoje?", placeholder="Ex: Como dobr
 if st.button("CONSULTAR IA") and prompt:
     try:
         api_key = st.secrets["GOOGLE_API_KEY"]
-        
-        # Endpoint confirmado v1 com Gemini 2.5 Flash
         url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={api_key}"
         
-        payload = {
-            "contents": [{
-                "parts": [{
-                    "text": f"Atue como consultor Vivv Pro. Analise os dados: {len(clis)} clientes, faturamento R$ {faturamento:.2f}, despesas R$ {despesas:.2f}. Pergunta: {prompt}. Responda em tópicos curtos."
-                }]
-            }]
-        }
+        # Melhorando o contexto para a IA ser mais inteligente
+        contexto_ia = f"""
+        Dados atuais: {len(clis)} clientes, faturamento R$ {faturamento:.2f}, despesas R$ {despesas:.2f}.
+        Serviços: {', '.join([s['nome'] for s in srvs]) if srvs else 'Nenhum'}.
+        Pergunta: {prompt}
+        """
         
-        with st.spinner("Vivv AI 2.5 processando análise profunda..."):
-            # Aumentamos o timeout para 60 segundos para evitar o erro de 'Read timed out'
+        payload = {"contents": [{"parts": [{"text": contexto_ia}]}]}
+        
+        with st.spinner("Analisando..."):
             response = requests.post(url, json=payload, timeout=60)
-            res_json = response.json()
-            
             if response.status_code == 200:
-                texto_ia = res_json['candidates'][0]['content']['parts'][0]['text']
-                st.info(f"🚀 **Análise Vivv AI 2.5:**\n\n{texto_ia}")
+                st.info(f"🚀 **Análise Vivv AI:**\n\n{response.json()['candidates'][0]['content']['parts'][0]['text']}")
             else:
-                st.error(f"Erro na API: {res_json.get('error', {}).get('message', 'Erro desconhecido')}")
-                
-    except requests.exceptions.Timeout:
-        st.error("Tempo esgotado: A IA está demorando muito para responder. Tente uma pergunta mais simples ou clique em Consultar novamente.")
+                st.error("Erro na consulta da IA.")
     except Exception as e:
-        st.error(f"Erro de conexão: {e}")
-
-
-
-
+        st.error(f"Erro: {e}")
 
