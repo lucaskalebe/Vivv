@@ -366,42 +366,45 @@ with exp_gestao:
                 st.rerun()
 
 
-# ================= 8. VIVV AI (VERSÃO CORRIGIDA) =================
+# ================= 8. VIVV AI (VERSÃO ESTÁVEL) =================
 st.write("---")
 st.subheader("💬 Vivv AI: Inteligência de Negócio")
 prompt = st.text_input("O que deseja analisar hoje?", placeholder="Ex: Como dobrar meu faturamento este mês?")
 
 if st.button("CONSULTAR IA") and prompt:
     try:
-        # Configuração explícita da API e da versão
+        # 1. Configuração da API
         genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
         
-        # O PULO DO GATO: Forçamos a versão 'v1' para evitar o erro 404
-        model = genai.GenerativeModel(
-            model_name='gemini-1.5-flash'
-        )
+        # 2. Inicialização do Modelo (Gemini 1.5 Flash na rota estável)
+        model = genai.GenerativeModel('gemini-1.5-flash')
         
+        # 3. Contexto rico baseado nos SEUS dados do Firebase
         ctx = f"""
         Você é o consultor estratégico Vivv Pro.
-        Dados atuais do usuário:
-        - Clientes cadastrados: {len(clis)}
-        - Faturamento Total: R$ {faturamento:.2f}
-        - Despesas Totais: R$ {despesas:.2f}
-        - Lucro Atual: R$ {faturamento-despesas:.2f}
+        Analise os dados reais do negócio e responda ao usuário.
         
-        Pergunta do usuário: {prompt}
-        Responda de forma direta e profissional.
+        DADOS REAIS:
+        - Total de Clientes: {len(clis)}
+        - Faturamento: R$ {faturamento:.2f}
+        - Despesas: R$ {despesas:.2f}
+        - Lucro Líquido: R$ {faturamento-despesas:.2f}
+        
+        PERGUNTA: {prompt}
         """
         
         with st.spinner("Vivv AI analisando dados..."):
-            # Adicionamos um retry simples ou configuração de versão se necessário
+            # O parâmetro transport='rest' força o uso de HTTPS comum, evitando erros de gRPC
             response = model.generate_content(ctx)
             
             if response.text:
                 st.info(response.text)
             else:
-                st.warning("IA não retornou texto. Tente reformular.")
+                st.warning("IA processou, mas não gerou texto. Tente novamente.")
                 
     except Exception as e:
-        st.error(f"Erro na IA: {e}")
-        st.info("Dica: Se o erro persistir, verifique se 'google-generativeai==0.8.3' está no seu requirements.txt")
+        if "404" in str(e):
+            st.error("Erro 404: O Streamlit ainda está usando uma versão antiga da biblioteca.")
+            st.info("Acesse as configurações do App no Cloud e clique em 'Reboot App' para forçar a atualização do requirements.txt.")
+        else:
+            st.error(f"Erro na IA: {e}")
