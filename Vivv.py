@@ -215,8 +215,7 @@ with c_right:
                     st.rerun()
 
 
-# ================= 6. BANCO DE DADOS EDITÁVEL (VOLTOU!) =================
-# ================= 6. BANCO DE DADOS EDITÁVEL (COM SALVAMENTO REAL) =================
+# ================= 6. BANCO DE DADOS EDITÁVEL (LIMPO E SEGURO) =================
 st.write("---")
 st.subheader("🗄️ Gestão de Dados (Editável)")
 exp_db = st.expander("Clique para abrir a edição de Clientes e Serviços")
@@ -228,54 +227,47 @@ with exp_db:
         st.write("👤 **Clientes**")
         if clis:
             df_clis = pd.DataFrame(clis)
-            # Mostramos o editor, mas podemos esconder a coluna 'id' para o usuário não mexer
-            edição_cli = st.data_editor(df_clis, column_config={"id": None}, use_container_width=True)
+            # Ocultamos a coluna 'id' para o usuário não editar o que não deve
+            edição_cli = st.data_editor(
+                df_clis, 
+                column_config={"id": None}, 
+                use_container_width=True, 
+                key="editor_clis_final"
+            )
             
-            if st.button("Salvar Alterações de Clientes"):
+            if st.button("Salvar Alterações de Clientes", key="btn_save_clis"):
                 for i, row in edição_cli.iterrows():
-                    # ATUALIZAÇÃO PELO ID ÚNICO:
                     user_ref.collection("meus_clientes").document(row['id']).update({
                         "nome": row['nome'], 
                         "telefone": row['telefone']
                     })
                 st.success("Clientes atualizados!")
                 st.rerun()
+        else:
+            st.info("Sem clientes cadastrados.")
 
     with col_db2:
         st.write("💰 **Serviços**")
         if srvs:
             df_srvs = pd.DataFrame(srvs)
-            edição_srv = st.data_editor(df_srvs, column_config={"id": None}, use_container_width=True)
+            # Ocultamos a coluna 'id' aqui também
+            edição_srv = st.data_editor(
+                df_srvs, 
+                column_config={"id": None}, 
+                use_container_width=True, 
+                key="editor_srvs_final"
+            )
             
-            if st.button("Salvar Alterações de Serviços"):
+            if st.button("Salvar Alterações de Serviços", key="btn_save_srvs"):
                 for i, row in edição_srv.iterrows():
-                    # ATUALIZAÇÃO PELO ID ÚNICO:
                     user_ref.collection("meus_servicos").document(row['id']).update({
                         "nome": row['nome'], 
                         "preco": row['preco']
                     })
                 st.success("Serviços atualizados!")
                 st.rerun()
-
-
         else:
-            st.info("Sem clientes.")
-
-    with col_db2:
-        st.write("💰 **Serviços** (Edite e clique fora para salvar)")
-        if srvs:
-            df_srvs = pd.DataFrame(srvs)
-            edição_srv = st.data_editor(df_srvs, use_container_width=True, key="editor_servicos")
-            
-            if st.button("Salvar Alterações de Serviços"):
-                for i, row in edição_srv.iterrows():
-                    docs = user_ref.collection("meus_servicos").where("nome", "==", df_srvs.iloc[i]['nome']).stream()
-                    for doc in docs:
-                        doc.reference.update({"nome": row['nome'], "preco": row['preco']})
-                st.success("Serviços atualizados!")
-                st.rerun()
-        else:
-            st.info("Sem serviços.")
+            st.info("Sem serviços cadastrados.")
 # ================= 7. IA CONSULTOR DE NEGÓCIOS (AJUSTADA PARA TOPO) =================
 st.write("---")
 st.subheader("💬 Vivv AI: Consultor de Negócios")
