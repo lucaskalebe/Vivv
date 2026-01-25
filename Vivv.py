@@ -10,6 +10,35 @@ import hashlib
 
 def hash_senha(senha):
     return hashlib.sha256(str.encode(senha)).hexdigest()
+
+import streamlit as st
+from google.cloud import firestore
+
+db = firestore.Client()
+
+# Supondo que você já tenha o e-mail do usuário logado
+email_usuario = st.session_state.get("email") 
+
+def verificar_acesso():
+    user_ref = db.collection("usuarios").document(email_usuario).get()
+    dados = user_ref.to_dict()
+
+    if not dados.get("pago"):
+        st.warning("### 🔒 Acesso Restrito")
+        st.write("Sua assinatura ainda não foi ativada. Clique no botão abaixo para concluir a instalação (R$ 300) e garantir seu acesso.")
+        
+        # O LINK QUE VOCÊ GEROU NA ÚLTIMA IMAGEM
+        link_stripe = "https://buy.stripe.com/test_6oU4gB7Q4glM1JZ2Z06J200"
+        
+        st.link_button("💳 ATIVAR MINHA CONTA AGORA", link_stripe)
+        st.stop() # Bloqueia o restante do código do app
+
+verificar_acesso()
+
+# --- ABAIXO DAQUI SÓ APARECE SE O USUÁRIO ESTIVER PAGO ---
+st.success("Bem-vindo ao Vivv Pro!")
+
+
     
 # ================= 1. CONFIGURAÇÃO E DESIGN ULTRA NEON =================
 st.set_page_config(page_title="Vivv Pro", layout="wide", page_icon="🚀")
@@ -291,6 +320,7 @@ if btn_ia and prompt:
             st.info(resposta.text) # Exibe em um quadro azul para destaque
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
