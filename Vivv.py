@@ -73,7 +73,9 @@ if not st.session_state.logado:
                 st.rerun()
     st.stop()
 
-    def verificar_acesso():
+
+def verificar_acesso():
+    # Estas linhas abaixo PRECISAM de 4 espaços (ou um TAB) de recuo
     u_ref = db.collection("usuarios").document(st.session_state.user_email).get()
     if u_ref.exists:
         d = u_ref.to_dict()
@@ -81,8 +83,11 @@ if not st.session_state.logado:
             st.warning("### 🔒 Acesso Restrito")
             st.write("Sua assinatura ainda não foi ativada. Conclua a ativação para liberar o sistema.")
             st.link_button("💳 ATIVAR MINHA CONTA", "https://buy.stripe.com/seu_link_aqui")
-            if st.button("🔄 Já paguei, atualizar"): st.rerun()
-            st.stop() # Mata o código aqui se não pagou
+            if st.button("🔄 Já paguei, atualizar"): 
+                st.rerun()
+            st.stop() 
+
+# Esta linha fica encostada na esquerda de novo, para chamar a função
 verificar_acesso()
     
 
@@ -309,6 +314,7 @@ if btn_ia and prompt:
             st.info(resposta.text) # Exibe em um quadro azul para destaque
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
