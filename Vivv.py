@@ -101,7 +101,7 @@ if not st.session_state.logado:
     with aba_login:
         le = st.text_input("E-mail", key="l_email").lower().strip()
         ls = st.text_input("Senha", type="password", key="l_pass")
-        if st.button("ENTRAR NO VIVV"):
+        if st.button("ENTRAR"):
             u = db.collection("usuarios").document(le).get()
             if u.exists and u.to_dict().get("senha") == hash_senha(ls):
                 st.session_state.logado = True
@@ -262,6 +262,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.info(res.text)
     except Exception as e:
         st.error(f"IA Indisponível: {e}")
+
 
 
 
