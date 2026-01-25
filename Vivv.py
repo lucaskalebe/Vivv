@@ -357,6 +357,7 @@ with exp_gestao:
 
 # ================= 8. VIVV AI (SOLUÇÃO DE INFRAESTRUTURA) =================
 # ================= 8. VIVV AI (SOLUÇÃO DE BAIXO NÍVEL) =================
+# ================= 8. VIVV AI (VERSÃO COMPATÍVEL) =================
 st.write("---")
 st.subheader("💬 Vivv AI: Inteligência de Negócio")
 prompt = st.text_input("O que deseja analisar hoje?", placeholder="Ex: Como dobrar meu faturamento este mês?")
@@ -366,27 +367,28 @@ if st.button("CONSULTAR IA") and prompt:
         # 1. Configuração de API
         genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
         
-        # 2. Forçar a versão v1 explicitamente no cliente
-        # Isso substitui a lógica padrão que está tentando v1beta no seu servidor
-        from google.generativeai.types import RequestOptions
+        # 2. Inicialização Simples e Direta
+        # Removido o RequestOptions para evitar erro de 'unexpected keyword'
+        model = genai.GenerativeModel('gemini-1.5-flash')
         
-        model = genai.GenerativeModel(
-            model_name='gemini-1.5-flash',
-            # Esta linha abaixo é o segredo: ela força a rota estável
-            request_options=RequestOptions(api_version='v1')
-        )
+        ctx = f"""
+        Você é o consultor estratégico Vivv Pro.
+        Dados atuais:
+        - Clientes: {len(clis)}
+        - Lucro: R$ {faturamento-despesas:.2f}
         
-        ctx = f"Dados: {len(clis)} clientes, Lucro R$ {faturamento-despesas:.2f}. Pergunta: {prompt}"
+        Pergunta do usuário: {prompt}
+        """
         
-        with st.spinner("Forçando conexão com servidor estável..."):
+        with st.spinner("Vivv AI analisando dados..."):
+            # 3. Chamada de geração
             response = model.generate_content(ctx)
+            
             if response.text:
                 st.info(response.text)
             else:
-                st.warning("IA conectada, mas sem resposta. Tente novamente.")
+                st.warning("IA não retornou texto. Tente reformular a pergunta.")
                 
     except Exception as e:
-        st.error(f"Erro persistente: {e}")
-        st.info("Se o erro 404 continuar com 'v1beta' no texto, o Streamlit está ignorando seu requirements.txt.")
-
-
+        st.error(f"Erro na IA: {e}")
+        st.info("💡 Se o erro 404 voltar, o problema é 100% no cache do Streamlit Cloud.")
