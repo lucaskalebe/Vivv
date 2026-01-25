@@ -9,6 +9,7 @@ import json
 
 # ================= 1. CONFIGURAÇÃO E DESIGN ULTRA NEON =================
 st.set_page_config(page_title="Vivv Pro", layout="wide", page_icon="🚀")
+st.markdown("<div id='top'></div>", unsafe_allow_html=True)
 
 st.markdown("""
 <style>
@@ -223,6 +224,7 @@ if prompt := st.chat_input("Como posso melhorar meu lucro hoje?"):
             st.write(model.generate_content(ctx).text)
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
