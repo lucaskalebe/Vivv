@@ -339,8 +339,7 @@ with col_ops_r:
                     st.rerun()
 
 
-        # ================= 7.5 GESTÃO DE CADASTROS (EDITÁVEL) =================
-# ================= 7.5 GESTÃO DE CADASTROS (CORRIGIDO) =================
+# ================= 7.5 GESTÃO DE CADASTROS (OTIMIZADO) =================
 st.write("---")
 st.subheader("⚙️ Gestão de Cadastros")
 exp_gestao = st.expander("Visualizar e Gerenciar Dados", expanded=False)
@@ -354,7 +353,7 @@ with exp_gestao:
             col_tbl, col_act = st.columns([3, 1])
             
             with col_tbl:
-                # Usamos o ID como índice para garantir que a edição vincule ao documento certo
+                # O ID vira o index para que o Streamlit saiba exatamente qual linha é qual
                 df_editor_cli = df_clis.set_index("id")[["nome", "telefone"]]
                 edited_df = st.data_editor(df_editor_cli, key="edit_cli_tab", use_container_width=True)
             
@@ -368,7 +367,7 @@ with exp_gestao:
                     st.rerun()
 
             if st.button("💾 SALVAR ALTERAÇÕES CLIENTES"):
-                # Com o set_index("id"), o index agora É o ID do Firebase
+                # .iterrows() agora retorna o doc_id (index) e os dados da linha
                 for doc_id, row in edited_df.iterrows():
                     user_ref.collection("meus_clientes").document(doc_id).update({
                         "nome": row["nome"], "telefone": row["telefone"]
@@ -376,36 +375,6 @@ with exp_gestao:
                 st.cache_data.clear()
                 st.success("Clientes atualizados!")
                 st.rerun()
-        else:
-            st.info("Nenhum cliente cadastrado.")
-
-    with tab_edit_srv:
-        if srvs:
-            df_srvs = pd.DataFrame(srvs)
-            col_tbl_s, col_act_s = st.columns([3, 1])
-            
-            with col_tbl_s:
-                df_editor_srv = df_srvs.set_index("id")[["nome", "preco"]]
-                edited_srv_df = st.data_editor(df_editor_srv, key="edit_srv_tab", use_container_width=True)
-            
-            with col_act_s:
-                st.write("🗑️ **Excluir**")
-                srv_para_deletar = st.selectbox("Remover serviço:", df_srvs["nome"], key="del_srv_sel")
-                if st.button("CONFIRMAR EXCLUSÃO", key="btn_del_srv"):
-                    s_id = df_srvs[df_srvs["nome"] == srv_para_deletar]["id"].values[0]
-                    user_ref.collection("meus_servicos").document(s_id).delete()
-                    st.cache_data.clear()
-                    st.rerun()
-
-            if st.button("💾 SALVAR ALTERAÇÕES SERVIÇOS"):
-                for s_id, row in edited_srv_df.iterrows():
-                    user_ref.collection("meus_servicos").document(s_id).update({
-                        "nome": row["nome"], "preco": row["preco"]
-                    })
-                st.cache_data.clear()
-                st.success("Serviços atualizados!")
-                st.rerun()
-
 # ================= 7.8 GRÁFICO DE PERFORMANCE =================
 st.write("---")
 st.subheader("📊 Performance Financeira")
@@ -480,6 +449,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.error("Tempo esgotado: A IA está demorando muito para responder. Tente uma pergunta mais simples ou clique em Consultar novamente.")
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
+
 
 
 
