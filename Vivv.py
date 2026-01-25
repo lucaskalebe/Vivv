@@ -107,22 +107,27 @@ with c_left:
             c_s = st.selectbox("Selecione o Cliente", [c['nome'] for c in clis]) if clis else st.warning("Cadastre um cliente primeiro")
             s_s = st.selectbox("Selecione o Serviço", [s['nome'] for s in srvs]) if srvs else st.warning("Cadastre um serviço primeiro")
             
-            # Novos campos: Data e Hora
+            # Novos campos: Data (BR) e Hora
             col_d, col_h = st.columns(2)
+            # Adicionado format="DD/MM/YYYY" para o padrão brasileiro
             d_ag = col_d.date_input("Data do Agendamento", format="DD/MM/YYYY")
+            h_ag = col_h.time_input("Horário")
             
             if st.form_submit_button("CONFIRMAR AGENDAMENTO"):
-                p_v = next((s['preco'] for s in srvs if s['nome'] == s_s), 0)
-                user_ref.collection("minha_agenda").add({
-                    "cliente": c_s, 
-                    "servico": s_s, 
-                    "preco": p_v, 
-                    "status": "Pendente", 
-                    "data": str(d_ag),
-                    "hora": str(h_ag)
-                })
-                st.success("Agendado com sucesso!")
-                st.rerun()
+                if clis and srvs:
+                    p_v = next((s['preco'] for s in srvs if s['nome'] == s_s), 0)
+                    user_ref.collection("minha_agenda").add({
+                        "cliente": c_s, 
+                        "servico": s_s, 
+                        "preco": p_v, 
+                        "status": "Pendente", 
+                        "data": d_ag.strftime('%d/%m/%Y'), # Salva no banco já formatado BR
+                        "hora": h_ag.strftime('%H:%M')     # Salva apenas HH:MM
+                    })
+                    st.success("Agendado com sucesso!")
+                    st.rerun()
+                else:
+                    st.error("Certifique-se de ter clientes e serviços cadastrados.")
 
     with t2:
         with st.form("f_cli"):
@@ -233,6 +238,7 @@ if btn_ia and prompt:
             st.info(resposta.text) # Exibe em um quadro azul para destaque
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
