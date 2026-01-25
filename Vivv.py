@@ -366,7 +366,7 @@ with exp_gestao:
                 st.rerun()
 
 
-# ================= 8. VIVV AI (VERSÃO GEMINI 2.5 FLASH) =================
+# ================= 8. VIVV AI (VERSÃO 2026 - ALTO DESEMPENHO) =================
 import requests
 
 st.write("---")
@@ -377,27 +377,29 @@ if st.button("CONSULTAR IA") and prompt:
     try:
         api_key = st.secrets["GOOGLE_API_KEY"]
         
-        # Usando o modelo topo da sua lista: Gemini 2.5 Flash
-        # A rota 'v1' é a correta para modelos estáveis em 2026
+        # Endpoint confirmado v1 com Gemini 2.5 Flash
         url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={api_key}"
         
         payload = {
             "contents": [{
                 "parts": [{
-                    "text": f"Atue como consultor estratégico Vivv Pro. Dados atuais: {len(clis)} clientes, faturamento R$ {faturamento:.2f}, despesas R$ {despesas:.2f}. Pergunta: {prompt}"
+                    "text": f"Atue como consultor Vivv Pro. Analise os dados: {len(clis)} clientes, faturamento R$ {faturamento:.2f}, despesas R$ {despesas:.2f}. Pergunta: {prompt}. Responda em tópicos curtos."
                 }]
             }]
         }
         
-        with st.spinner("Vivv AI (v2.5) analisando dados..."):
-            response = requests.post(url, json=payload, timeout=15)
+        with st.spinner("Vivv AI 2.5 processando análise profunda..."):
+            # Aumentamos o timeout para 60 segundos para evitar o erro de 'Read timed out'
+            response = requests.post(url, json=payload, timeout=60)
             res_json = response.json()
             
             if response.status_code == 200:
                 texto_ia = res_json['candidates'][0]['content']['parts'][0]['text']
-                st.info(f"🚀 **Vivv AI 2.5 Flash:**\n\n{texto_ia}")
+                st.info(f"🚀 **Análise Vivv AI 2.5:**\n\n{texto_ia}")
             else:
                 st.error(f"Erro na API: {res_json.get('error', {}).get('message', 'Erro desconhecido')}")
                 
+    except requests.exceptions.Timeout:
+        st.error("Tempo esgotado: A IA está demorando muito para responder. Tente uma pergunta mais simples ou clique em Consultar novamente.")
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
