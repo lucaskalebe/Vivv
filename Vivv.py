@@ -161,11 +161,19 @@ st.markdown("""
         background-color: #000205 !important;
     }
 
+    /* 1. ZERE O PADDING PARA O CONTEÚDO SUBIR TOTALMENTE */
     .block-container {
-        padding-top: 0rem !important;
+        padding-top: 0rem !important; /* Mude de 60px para 0 */
+        max-width: 95% !important;
     }
 
-
+    /* 2. AUMENTE A "SUBIDA" DO APP */
+    .stApp {
+        margin-top: -80px !important;
+        background-color: #000205 !important;
+    }
+</style>
+""", unsafe_allow_html=True) # <--- ESSA LINHA É OBRIGATÓRIA AQUI!
 # ================= 2. BANCO DE DADOS =================
 @st.cache_resource
 def init_db():
@@ -436,6 +444,7 @@ if btn_ia and prompt:
             st.info(resposta.text) # Exibe em um quadro azul para destaque
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
