@@ -7,12 +7,20 @@ from google.cloud import firestore
 from google.oauth2 import service_account
 import json
 import hashlib
+import streamlit.components.v1 as components
 
 def hash_senha(senha):
     return hashlib.sha256(str.encode(senha)).hexdigest()
 
 # ================= 1. CONFIGURAÇÃO E DESIGN ULTRA NEON =================
 st.set_page_config(page_title="Vivv Pro", layout="wide", page_icon="🚀")
+
+components.html("""
+<script>
+    const elements = window.parent.document.querySelectorAll('.stAppDeployButton, header, footer, #MainMenu, [data-testid="stHeader"]');
+    elements.forEach(el => el.style.display = 'none');
+</script>
+""", height=0)
 
 st.markdown("""
 <style>
@@ -377,6 +385,7 @@ if btn_ia and prompt:
             st.info(resposta.text) # Exibe em um quadro azul para destaque
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
