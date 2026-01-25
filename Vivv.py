@@ -17,11 +17,16 @@ def hash_senha(senha):
 # CSS Refinado para remover GitHub, Menu e Header de forma estável
 st.markdown("""
 <style>
-    /* 1. REMOÇÃO DE ELEMENTOS DO STREAMLIT */
-    header, [data-testid="stHeader"], footer, .stAppDeployButton, 
-    [data-testid="stDecoration"], [data-testid="stToolbar"], #MainMenu {
-        display: none !important;
-        visibility: hidden !important;
+
+    .vivv-header {
+        color: #ffffff !important;
+        font-family: 'Inter', sans-serif;
+        font-size: 26px;
+        font-weight: 800;
+        padding-top: 45px; /* Espaço do teto */
+        padding-left: 25px; /* Espaço da esquerda */
+        position: relative;
+        z-index: 999;
     }
 
     /* 2. AJUSTE DE TELA PARA CELULAR */
@@ -93,7 +98,7 @@ if "logado" not in st.session_state:
     st.session_state.logado = False
 
 if not st.session_state.logado:
-    st.markdown('<h1 class="orange-neon">VIVV</h1>', unsafe_allow_html=True)
+    st.markdown('<div class="vivv-header">Vivv</div>', unsafe_allow_html=True)
     st.markdown('<p style="text-align:center; color:#888;">Gestão Inteligente & Performance</p>', unsafe_allow_html=True)
     
     aba_login, aba_cadastro = st.tabs(["🔑 Acesso", "📝 Novo Cadastro"])
@@ -268,3 +273,4 @@ if st.button("CONSULTAR IA") and prompt:
         st.info(res.text)
     except Exception as e:
         st.error(f"IA Indisponível: {e}")
+
