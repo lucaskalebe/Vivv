@@ -366,7 +366,7 @@ with exp_gestao:
                 st.rerun()
 
 
-# ================= 8. VIVV AI (ROTA DE CONTINGÊNCIA) =================
+# ================= 8. VIVV AI (SOLUÇÃO FINAL - ROTA ESTÁVEL) =================
 import requests
 
 st.write("---")
@@ -377,33 +377,29 @@ if st.button("CONSULTAR IA") and prompt:
     try:
         api_key = st.secrets["GOOGLE_API_KEY"]
         
-        # Tentamos primeiro o 1.5 Flash, se falhar, tentamos o 1.5 Pro
-        modelos_para_testar = ["gemini-1.5-flash", "gemini-1.5-pro"]
+        # Tentamos o Flash na v1 (estável) e o Pro na v1beta como último recurso
+        testes = [
+            {"url": f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={api_key}"},
+            {"url": f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={api_key}"}
+        ]
+        
         sucesso = False
-
-        for model_id in modelos_para_testar:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_id}:generateContent?key={api_key}"
-            
+        for teste in testes:
             payload = {
-                "contents": [{
-                    "parts": [{
-                        "text": f"Você é o consultor estratégico Vivv Pro. Dados: Clientes {len(clis)}, Lucro R$ {faturamento-despesas:.2f}. Pergunta: {prompt}"
-                    }]
-                }]
+                "contents": [{"parts": [{"text": f"Atue como consultor Vivv Pro. Dados: Clientes {len(clis)}, Lucro R$ {faturamento-despesas:.2f}. Pergunta: {prompt}"}]}]
             }
             
-            response = requests.post(url, json=payload)
+            response = requests.post(teste["url"], json=payload, timeout=10)
             if response.status_code == 200:
                 res_json = response.json()
                 texto_ia = res_json['candidates'][0]['content']['parts'][0]['text']
-                st.info(f"**Vivv AI ({model_id}):**\n\n{texto_ia}")
+                st.info(f"**Vivv AI:**\n\n{texto_ia}")
                 sucesso = True
                 break
         
         if not sucesso:
-            st.error(f"Erro na API: O Google não reconheceu os modelos 1.5 Flash ou Pro. Verifique se sua API Key tem permissão para o Gemini 1.5.")
-            st.write(response.json()) # Mostra o erro real para depurarmos
+            st.error("Erro: O Google não reconheceu os modelos. Isso geralmente indica que sua API KEY expirou ou não tem permissão para o Gemini.")
+            st.json(response.json()) # Mostra o erro exato para suporte
 
     except Exception as e:
-        st.error(f"Erro crítico: {e}")
-
+        st.error(f"Erro inesperado: {e}")
