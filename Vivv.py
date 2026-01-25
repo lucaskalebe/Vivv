@@ -18,13 +18,23 @@ def hash_senha(senha):
 st.markdown("""
 <style>
     header, [data-testid="stHeader"], .stAppDeployButton { display: none !important; }
+
     .vivv-top-left {
-        position: fixed; top: 30px; left: 25px;
-        color: #ffffff !important; font-size: 28px;
-        font-weight: 900; z-index: 999999;
+        position: fixed; 
+        top: 20px;       /* Ajustado para subir um pouco */
+        left: 25px; 
+        color: #ffffff !important; 
+        font-size: 28px;
+        font-weight: 900; 
+        z-index: 999999;
     }
+
     .stApp { background-color: #000205 !important; }
-    .block-container { padding-top: 80px !important; max-width: 95% !important; }
+
+    .block-container { 
+        padding-top: 60px !important; /* Diminuído para o e-mail subir mais */
+        max-width: 95% !important; 
+    }
     .orange-neon { color: #ff9100 !important; text-shadow: 0 0 15px rgba(255,145,0,0.5); text-align: center; }
     .neon-card {
         background: linear-gradient(145deg, #000814, #001220);
@@ -221,6 +231,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.info(res.text)
     except Exception as e:
         st.error(f"IA Indisponível: {e}")
+
 
 
 
