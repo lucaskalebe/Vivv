@@ -272,6 +272,87 @@ with col_ops_r:
                     user_ref.collection("minha_agenda").document(a['id']).delete()
                     st.rerun()
 
+        
+
+        # ================= 7.5 GESTÃO DE CADASTROS (EDITÁVEL) =================
+# ================= 7.5 GESTÃO DE CADASTROS (EDITÁVEL) =================
+st.write("---")
+st.subheader("⚙️ Gestão de Cadastros")
+exp_gestao = st.expander("Visualizar e Gerenciar Dados", expanded=False)
+
+with exp_gestao:
+    tab_edit_cli, tab_edit_srv = st.tabs(["👥 Meus Clientes", "🛠️ Meus Serviços"])
+    
+    with tab_edit_cli:
+        if clis:
+            df_clis = pd.DataFrame(clis)
+            # Layout com colunas para tabela + ação de excluir
+            col_tbl, col_act = st.columns([3, 1])
+            
+            with col_tbl:
+                # Mostramos apenas Nome e Telefone para edição
+                # use_container_width=True garante o layout otimizado
+                edited_df = st.data_editor(
+                    df_clis[["nome", "telefone"]], 
+                    key="edit_cli_tab", 
+                    use_container_width=True,
+                    num_rows="fixed"
+                )
+            
+            with col_act:
+                st.write("🗑️ **Excluir**")
+                id_para_deletar = st.selectbox("Selecionar para remover", df_clis["nome"], key="del_cli_sel")
+                if st.button("CONFIRMAR EXCLUSÃO", key="btn_del_cli"):
+                    doc_id = df_clis[df_clis["nome"] == id_para_deletar]["id"].values[0]
+                    user_ref.collection("meus_clientes").document(doc_id).delete()
+                    st.cache_data.clear()
+                    st.rerun()
+
+            if st.button("💾 SALVAR ALTERAÇÕES NOS CLIENTES"):
+                # Lógica para atualizar nomes/telefones editados
+                for index, row in edited_df.iterrows():
+                    original_id = df_clis.iloc[index]["id"]
+                    user_ref.collection("meus_clientes").document(original_id).update({
+                        "nome": row["nome"],
+                        "telefone": row["telefone"]
+                    })
+                st.cache_data.clear()
+                st.success("Dados atualizados!")
+                st.rerun()
+        else:
+            st.info("Cadastre clientes no Painel de Controle.")
+
+    with tab_edit_srv:
+        if srvs:
+            df_srvs = pd.DataFrame(srvs)
+            col_tbl_s, col_act_s = st.columns([3, 1])
+            
+            with col_tbl_s:
+                edited_srv_df = st.data_editor(
+                    df_srvs[["nome", "preco"]], 
+                    key="edit_srv_tab", 
+                    use_container_width=True
+                )
+            
+            with col_act_s:
+                st.write("🗑️ **Excluir**")
+                srv_para_deletar = st.selectbox("Serviço para remover", df_srvs["nome"], key="del_srv_sel")
+                if st.button("CONFIRMAR EXCLUSÃO", key="btn_del_srv"):
+                    s_id = df_srvs[df_srvs["nome"] == srv_para_deletar]["id"].values[0]
+                    user_ref.collection("meus_servicos").document(s_id).delete()
+                    st.cache_data.clear()
+                    st.rerun()
+
+            if st.button("💾 SALVAR ALTERAÇÕES NOS SERVIÇOS"):
+                for index, row in edited_srv_df.iterrows():
+                    s_orig_id = df_srvs.iloc[index]["id"]
+                    user_ref.collection("meus_servicos").document(s_orig_id).update({
+                        "nome": row["nome"],
+                        "preco": row["preco"]
+                    })
+                st.cache_data.clear()
+                st.success("Preços/Nomes atualizados!")
+                st.rerun()
 # ================= 8. VIVV AI =================
 st.write("---")
 st.subheader("💬 Vivv AI: Inteligência de Negócio")
@@ -285,6 +366,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.info(res.text)
     except Exception as e:
         st.error(f"IA Indisponível: {e}")
+
 
 
 
