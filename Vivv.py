@@ -133,13 +133,16 @@ if not st.session_state.logado:
 
     
     with aba_login:
-        le, ls = st.text_input("E-mail"), st.text_input("Senha", type="password")
+        le, ls = st.text_input("E-mail", key="login_email"), st.text_input("Senha", type="password", key="login_pass")
         if st.button("ACESSAR"):
             u = db.collection("usuarios").document(le).get()
             if u.exists and u.to_dict().get("senha") == hash_senha(ls):
-                st.session_state.logado, st.session_state.user_email = True, le
+                st.session_state.logado = True
+                st.session_state.user_email = le
+                st.success("Login realizado! Entrando...")
                 st.rerun()
-    st.stop() # O app para aqui se não estiver logado
+            else:
+                st.error("E-mail ou senha incorretos.")
 
 # ESTA FUNÇÃO PRECISA ESTAR EXATAMENTE ASSIM:
 def verificar_acesso():
@@ -378,6 +381,7 @@ if btn_ia and prompt:
             st.info(resposta.text) # Exibe em um quadro azul para destaque
     except Exception as e:
         st.error(f"Erro na IA: {e}")
+
 
 
 
