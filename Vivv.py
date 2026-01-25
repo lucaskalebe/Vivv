@@ -354,45 +354,39 @@ with exp_gestao:
                 st.success("Preços/Nomes atualizados!")
                 st.rerun()
 # ================= 8. VIVV AI (SOLUÇÃO FINAL) =================
+# ================= 8. VIVV AI (SOLUÇÃO DEFINITIVA) =================
 st.write("---")
 st.subheader("💬 Vivv AI: Inteligência de Negócio")
 prompt = st.text_input("O que deseja analisar hoje?", placeholder="Ex: Como dobrar meu faturamento este mês?")
 
 if st.button("CONSULTAR IA") and prompt:
     try:
-        # 1. Configuração com transporte restrito para evitar v1beta
         genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
         
-        # 2. Forçamos o uso do modelo estável
-        # Usar 'models/gemini-1.5-flash' garante que ele busque no diretório correto
-        model = genai.GenerativeModel(model_name='gemini-1.5-flash')
+        # Usar o nome completo 'models/gemini-1.5-flash' resolve o conflito de versão da API
+        model = genai.GenerativeModel(model_name='models/gemini-1.5-flash')
         
         ctx = f"""
         Você é o consultor estratégico da Vivv Pro. 
-        Contexto do Negócio:
-        - Clientes Cadastrados: {len(clis)}
-        - Faturamento: R$ {faturamento:.2f}
-        - Despesas: R$ {despesas:.2f}
-        - Lucro Líquido: R$ {faturamento-despesas:.2f}
-        
-        Pergunta do usuário: {prompt}
+        Dados atuais: {len(clis)} clientes, faturamento R$ {faturamento:.2f}, lucro R$ {faturamento-despesas:.2f}. 
+        Pergunta: {prompt}
         """
         
-        with st.spinner("Acessando inteligência estratégica..."):
-            # 3. Gerar conteúdo
+        with st.spinner("Vivv está consultando a base de dados..."):
             response = model.generate_content(ctx)
-            
-            # Verificação de segurança para a resposta
-            if response.candidates:
+            if response.text:
                 st.info(response.text)
             else:
-                st.warning("A IA não conseguiu gerar uma resposta. Verifique os filtros de segurança no Google AI Studio.")
+                st.warning("IA não retornou dados. Tente uma pergunta diferente.")
                 
     except Exception as e:
-        # Se o erro 404 persistir, o problema pode ser a versão da biblioteca instalada
         st.error(f"Erro de Conexão: {e}")
-        st.info("💡 **Dica de mestre:** Se estiver rodando localmente, execute: `pip install -U google-generativeai` e reinicie o app.")
-
+        # Explicação amigável do erro técnico
+        if "404" in str(e):
+            st.markdown("""
+            > **Nota Técnica:** O Google mudou os endereços da API. 
+            > Se você estiver no **Streamlit Cloud**, adicione `google-generativeai>=0.8.3` no seu arquivo `requirements.txt`.
+            """)
 
 
 
