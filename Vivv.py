@@ -137,12 +137,11 @@ with col_ops_l:
     t1, t2, t3, t4 = st.tabs(["📅 Agenda", "👤 Cliente", "🛠️ Serviço", "📉 Caixa"])
     
     with t1:
-        # Formulário de Agendamento
-        with st.form(key="form_main_agenda", clear_on_submit=True):
+        with st.form(key="form_agenda", clear_on_submit=True):
             st.markdown("### 📅 Novo Agendamento")
-            with st.popover("👤 Selecionar Cliente e Serviço", use_container_width=True):
-                c_sel = st.selectbox("Escolha o Cliente", [c['nome'] for c in clis], key="sel_cli_ag") if clis else None
-                s_sel = st.selectbox("Escolha o Serviço", [s['nome'] for s in srvs], key="sel_srv_ag") if srvs else None
+            # Seleção compacta
+            c_sel = st.selectbox("Cliente", [c['nome'] for c in clis], key="at_cli") if clis else st.warning("Cadastre um cliente primeiro!")
+            s_sel = st.selectbox("Serviço", [s['nome'] for s in srvs], key="at_srv") if srvs else st.warning("Cadastre um serviço!")
             
             col_d, col_h = st.columns(2)
             d_ag = col_d.date_input("Data", format="DD/MM/YYYY")
@@ -158,9 +157,43 @@ with col_ops_l:
                     })
                     st.cache_data.clear()
                     st.rerun()
-    # ... (mantenha aqui os conteúdos de t2, t3 e t4 que você já tem)
 
-# --- COLUNA DA DIREITA: LISTA COMPACTA ---
+    with t2:
+        with st.form("form_cliente", clear_on_submit=True):
+            st.markdown("### 👤 Novo Cliente")
+            n_cli = st.text_input("Nome Completo")
+            t_cli = st.text_input("WhatsApp (com DDD)")
+            if st.form_submit_button("SALVAR CLIENTE", use_container_width=True):
+                if n_cli:
+                    user_ref.collection("meus_clientes").add({"nome": n_cli, "telefone": t_cli})
+                    st.cache_data.clear()
+                    st.rerun()
+
+    with t3:
+        with st.form("form_servico", clear_on_submit=True):
+            st.markdown("### 🛠️ Novo Serviço")
+            n_srv = st.text_input("Nome do Serviço")
+            p_srv = st.number_input("Preço (R$)", min_value=0.0, step=10.0)
+            if st.form_submit_button("SALVAR SERVIÇO", use_container_width=True):
+                if n_srv:
+                    user_ref.collection("meus_servicos").add({"nome": n_srv, "preco": p_srv})
+                    st.cache_data.clear()
+                    st.rerun()
+
+    with t4:
+        with st.form("form_caixa", clear_on_submit=True):
+            st.markdown("### 📉 Lançamento Manual")
+            desc_cx = st.text_input("Descrição")
+            val_cx = st.number_input("Valor", min_value=0.0)
+            tipo_cx = st.selectbox("Tipo", ["Entrada", "Saída"])
+            if st.form_submit_button("LANÇAR", use_container_width=True):
+                user_ref.collection("meu_caixa").add({
+                    "descricao": desc_cx, "valor": val_cx, "tipo": tipo_cx, "data": datetime.now()
+                })
+                st.cache_data.clear()
+                st.rerun()
+
+# --- COLUNA DA DIREITA: LISTA ULTRA COMPACTA ---
 with col_ops_r:
     st.subheader("📋 Próximos Atendimentos")
     if not agnd:
@@ -183,7 +216,7 @@ with col_ops_r:
 
                 with c3:
                     b1, b2 = st.columns(2)
-                    # Finalizar
+                    # Finalizar (Check)
                     if b1.button("✅", key=f"f_{item['id']}", help="Concluir"):
                         user_ref.collection("minha_agenda").document(item['id']).update({"status": "Concluido"})
                         user_ref.collection("meu_caixa").add({
@@ -313,5 +346,6 @@ if st.button("CONSULTAR IA") and prompt:
                 
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
+
 
 
