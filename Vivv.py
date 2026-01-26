@@ -51,6 +51,7 @@ window.addEventListener("scroll", () => {
 
 
 
+
 @st.cache_resource
 def init_db():
     try:
@@ -404,6 +405,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.error("Tempo esgotado: A IA está demorando muito para responder. Tente uma pergunta mais simples ou clique em Consultar novamente.")
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
+
 
 
 
