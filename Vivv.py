@@ -315,24 +315,55 @@ with col_perf_r:
         use_container_width=True
     )
 
-# ================= 8. VIVV AI: INTELIGÊNCIA ARTIFICIAL (GEMINI 2.0) =================
+# ================= 8. VIVV AI: INTELIGÊNCIA ARTIFICIAL (CORRIGIDO) =================
 st.write("---")
 st.subheader("💬 Vivv AI: Consultoria Estratégica")
-prompt = st.text_input("Analise seu negócio ou peça dicas de marketing:", placeholder="Ex: Como posso atrair mais clientes este mês?")
+prompt = st.text_input("Analise seu negócio ou peça dicas:", placeholder="Ex: Como posso atrair mais clientes este mês?")
 
 if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt:
     try:
+        # 1. Verifica se a chave existe nos Secrets
+        if "GOOGLE_API_KEY" not in st.secrets:
+            st.error("Chave 'GOOGLE_API_KEY' não encontrada nos Secrets do Streamlit.")
+            st.stop()
+            
         api_key = st.secrets["GOOGLE_API_KEY"]
-        url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key={api_key}"
+        # Endpoint v1beta para garantir compatibilidade com o modelo 2.0
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
         
-        ctx = f"Dados atuais: {len(clis)} clientes, Receita {format_brl(faturamento)}, Despesas {format_brl(despesas)}. Pergunta: {prompt}"
-        payload = {"contents": [{"parts": [{"text": f"Responda como consultor de negócios premium Vivv Pro. Seja direto, use emojis e dê dicas práticas baseadas nos dados: {ctx}"}]}]}
+        ctx = f"Dados: {len(clis)} clientes, Receita {format_brl(faturamento)}, Despesas {format_brl(despesas)}."
+        
+        payload = {
+            "contents": [{
+                "parts": [{
+                    "text": f"Atue como consultor Vivv Pro. Analise: {ctx}. Pergunta: {prompt}. Responda em tópicos curtos e práticos."
+                }]
+            }],
+            "generationConfig": {
+                "temperature": 0.7,
+                "maxOutputTokens": 800,
+            }
+        }
         
         with st.spinner("Vivv AI processando inteligência..."):
-            res = requests.post(url, json=payload, timeout=30).json()
-            if 'candidates' in res:
-                st.markdown(f'<div class="ia-box">{res["candidates"][0]["content"]["parts"][0]["text"]}</div>', unsafe_allow_html=True)
-            else: st.error("Erro na resposta da IA.")
-    except Exception as e: st.error(f"IA Indisponível: {e}")
+            response = requests.post(url, json=payload, timeout=30)
+            res = response.json()
+            
+            # 2. Tratamento de Erros da Resposta
+            if response.status_code == 200:
+                if 'candidates' in res and len(res['candidates']) > 0:
+                    texto_ia = res['candidates'][0]['content']['parts'][0]['text']
+                    st.markdown(f'<div class="ia-box">{texto_ia}</div>', unsafe_allow_html=True)
+                else:
+                    st.warning("A IA não gerou uma resposta. Tente refazer a pergunta.")
+            elif response.status_code == 403:
+                st.error("Erro 403: Sua chave API pode estar errada ou sem permissão para o Gemini 2.0.")
+            elif response.status_code == 429:
+                st.error("Erro 429: Limite de requisições excedido. Aguarde um momento.")
+            else:
+                st.error(f"Erro {response.status_code}: {res.get('error', {}).get('message', 'Erro desconhecido na API')}")
 
-st.markdown("<br><p style='text-align:center; color:#444;'>Vivv Pro © 2026 - High Performance Business</p>", unsafe_allow_html=True)
+    except requests.exceptions.Timeout:
+        st.error("A conexão com a IA demorou muito. Tente novamente.")
+    except Exception as e:
+        st.error(f"Erro inesperado: {str(e)}")
