@@ -373,7 +373,8 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
             st.error("O sistema da Google está instável agora (Erro 429). Tente novamente em 1 minuto.")
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
-st.markdown("<br><p style='text-align:center; color:#555;'>Suporte 24h - (11) 989710009</p>", unsafe_allow_html=True)
+st.markdown("<br><p style='text-align:center; color:#555;'> Contato Suporte 4002-8922 </p>", unsafe_allow_html=True)
+
 
 
 
