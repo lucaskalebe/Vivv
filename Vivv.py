@@ -7,8 +7,7 @@ from google.cloud import firestore
 from google.oauth2 import service_account
 import json
 import hashlib
-import xlsxwriter
-import io
+
 
 fuso_br = timezone(timedelta(hours=-3))
 
@@ -56,51 +55,6 @@ st.markdown("""
 
     .orange-neon { color: #ff9100 !important; text-shadow: 0 0 15px rgba(255,145,0,0.5); text-align: center; }
 
-
-    /* Efeito de Vidro no Formulário */
-[data-testid="stForm"] {
-    background: rgba(255, 255, 255, 0.03) !important;
-    border: 1px solid rgba(0, 212, 255, 0.2) !important;
-    border-radius: 20px !important;
-    padding: 30px !important;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8) !important;
-}
-
-/* Estilização dos Inputs para ficarem modernos */
-.stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] {
-    background-color: rgba(0, 0, 0, 0.3) !important;
-    border: 1px solid #333 !important;
-    border-radius: 10px !important;
-    color: white !important;
-    transition: all 0.3s ease;
-}
-
-.stTextInput input:focus {
-    border-color: #00d4ff !important;
-    box-shadow: 0 0 10px rgba(0, 212, 255, 0.2) !important;
-}
-
-/* Botão de Lançamento Elevado */
-.stButton button {
-    width: 100%;
-    background: linear-gradient(90deg, #0056b3, #00d4ff) !important;
-    border: none !important;
-    color: white !important;
-    font-weight: bold !important;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    height: 45px;
-    transition: 0.4s !important;
-}
-
-.stButton button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 212, 255, 0.4) !important;
-}
-    
-
-
-
     /* ESTILO DO BOTÃO WHATSAPP */
     .whatsapp-button {
         display: inline-flex;
@@ -124,9 +78,6 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
-
-
-
 
 st.markdown('<div class="vivv-top-left">Vivv</div>', unsafe_allow_html=True)
 
@@ -211,11 +162,9 @@ def verificar_acesso():
 verificar_acesso()
 
 # ================= 5. DASHBOARD =================
-
 user_ref = db.collection("usuarios").document(st.session_state.user_email)
 
 @st.cache_data(ttl=60)
-
 def carregar_dados_usuario(email):
     # Use o email para garantir que o cache é único por usuário
     u_ref = db.collection("usuarios").document(email)
@@ -240,59 +189,12 @@ with c_header2:
         st.session_state.logado = False
         st.rerun()
 
-# ================= 6. CABEÇALHO ÚNICO (DASHBOARD) =================
-c_header1, c_header2 = st.columns([3, 2])
-
-with c_header1:
-    st.markdown(f"##### 🚀 adm: <span style='color:#00d4ff'>{st.session_state.user_email}</span>", unsafe_allow_html=True)
-
-with c_header2:
-    col_exc, col_sair = st.columns(2)
-    
-    with col_exc:
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        if clis:
-            df_c = pd.DataFrame(clis).drop(columns=['id'], errors='ignore')
-            # Remove fuso horário de qualquer coluna de data para o Excel aceitar
-            for col in df_c.select_dtypes(include=['datetime64[ns, UTC]', 'datetimetz']).columns:
-                df_c[col] = df_c[col].dt.tz_localize(None)
-            df_c.to_excel(writer, sheet_name='Clientes', index=False)
-            
-        if cx_list:
-            df_cx = pd.DataFrame(cx_list)
-            # Mesma limpeza para a planilha de financeiro
-            for col in df_cx.select_dtypes(include=['datetime64[ns, UTC]', 'datetimetz']).columns:
-                df_cx[col] = df_cx[col].dt.tz_localize(None)
-            df_cx.to_excel(writer, sheet_name='Financeiro', index=False)
-    
-    st.download_button(
-        label="📊 EXCEL",
-        data=output.getvalue(),
-        file_name=f"Relatorio_{datetime.now().strftime('%d_%m_%Y')}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
-
-    with col_sair:
-        if st.button("SAIR", key="btn_logout_top"):
-            st.session_state.logado = False
-            st.rerun()
-
-
-def format_brl(valor):
-    # Transforma 1234.56 em "1,234.56", depois inverte os sinais para o padrão BR
-    return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-
 m1, m2, m3, m4 = st.columns(4)
-
 m1.markdown(f'<div class="neon-card"><small>👥 CLIENTES</small><h2>{len(clis)}</h2></div>', unsafe_allow_html=True)
-
-# Aqui chamamos a função format_brl passando o valor:
-m2.markdown(f'<div class="neon-card"><small>💰 RECEITA</small><h2 style="color:#00d4ff">{format_brl(faturamento)}</h2></div>', unsafe_allow_html=True)
-
-m3.markdown(f'<div class="neon-card"><small>📈 LUCRO</small><h2 style="color:#00ff88">{format_brl(faturamento-despesas)}</h2></div>', unsafe_allow_html=True)
-
+m2.markdown(f'<div class="neon-card"><small>💰 RECEITA</small><h2 style="color:#00d4ff">R$ {faturamento:,.2f}</h2></div>', unsafe_allow_html=True)
+m3.markdown(f'<div class="neon-card"><small>📈 LUCRO</small><h2 style="color:#00ff88">R$ {faturamento-despesas:,.2f}</h2></div>', unsafe_allow_html=True)
 m4.markdown(f'<div class="neon-card"><small>📅 PENDENTES</small><h2 style="color:#ff9100">{len(agnd)}</h2></div>', unsafe_allow_html=True)
+
 
 # ================= 7. OPERAÇÕES =================
 st.write("---")
@@ -303,30 +205,23 @@ with col_ops_l:
     t1, t2, t3, t4 = st.tabs(["📅 Agenda", "👤 Cliente", "🛠️ Serviço", "📉 Caixa"])
     
     with t1:
-        # Note que o st.form DEVE ter um recuo (4 espaços ou 1 Tab) em relação ao 'with t1'
-        with st.form("f_ag"): 
-            # O popover tem mais um recuo em relação ao form
-            with st.popover("👤 Selecionar Cliente e Serviço", use_container_width=True):
-                c_sel = st.selectbox("Cliente", [c['nome'] for c in clis]) if clis else None
-                s_sel = st.selectbox("Serviço", [s['nome'] for s in srvs]) if srvs else None
-            
+        with st.form("f_ag"):
+            c_sel = st.selectbox("Cliente", [c['nome'] for c in clis]) if clis else None
+            s_sel = st.selectbox("Serviço", [s['nome'] for s in srvs]) if srvs else None
             col_d, col_h = st.columns(2)
             d_ag = col_d.date_input("Data", format="DD/MM/YYYY")
             h_ag = col_h.time_input("Hora")
-            
             if st.form_submit_button("AGENDAR"):
                 if c_sel and s_sel:
-                    st.cache_data.clear()
+                    st.cache_data.clear() # <--- ADICIONE ESTA LINHA
                     p_v = next((s['preco'] for s in srvs if s['nome'] == s_sel), 0)
                     user_ref.collection("minha_agenda").add({
-                        "cliente": c_sel, 
-                        "servico": s_sel, 
-                        "preco": p_v,
-                        "status": "Pendente", 
-                        "data": d_ag.strftime('%d/%m/%Y'),
+                        "cliente": c_sel, "servico": s_sel, "preco": p_v,
+                        "status": "Pendente", "data": d_ag.strftime('%d/%m/%Y'),
                         "hora": h_ag.strftime('%H:%M')
                     })
                     st.rerun()
+
     with t2:
         with st.form("f_cli"):
             nome = st.text_input("Nome")
@@ -544,17 +439,6 @@ if st.button("CONSULTAR IA") and prompt:
         st.error("Tempo esgotado: A IA está demorando muito para responder. Tente uma pergunta mais simples ou clique em Consultar novamente.")
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
-
-
-
-
-
-
-
-
-
-
-
 
 
 
