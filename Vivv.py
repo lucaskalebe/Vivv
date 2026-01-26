@@ -8,6 +8,7 @@ from google.oauth2 import service_account
 import json
 import hashlib
 import xlsxwriter
+import io
 
 fuso_br = timezone(timedelta(hours=-3))
 
@@ -535,6 +536,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.error("Tempo esgotado: A IA está demorando muito para responder. Tente uma pergunta mais simples ou clique em Consultar novamente.")
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
+
 
 
 
