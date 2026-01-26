@@ -289,41 +289,42 @@ with col_ops_r:
 st.write("---")
 col_ops_l, col_ops_r = st.columns([1.5, 2])
 
-with col_ops_l:
-    st.subheader("⚡ Painel de Controle")
-    t1, t2, t3, t4 = st.tabs(["📅 Agenda", "👤 Cliente", "🛠️ Serviço", "📉 Caixa"])
-
-    with t1:
-    # Esta linha abaixo PRECISA ter pelo menos 4 espaços (ou 1 Tab) de recuo
+with t1:
+    # Esta linha abaixo PRECISA ter 4 espaços (ou 1 Tab) de recuo em relação ao 'with t1'
     with st.form(key="form_main_agenda", clear_on_submit=True):
         st.markdown("### 📅 Novo Agendamento")
         
-        # O popover tem 8 espaços (2 Tabs) de recuo
+        # O popover tem 8 espaços de recuo (2 Tabs)
         with st.popover("👤 Selecionar Cliente e Serviço", use_container_width=True):
             c_sel = st.selectbox("Escolha o Cliente", [c['nome'] for c in clis], key="sel_cli_ag") if clis else None
             s_sel = st.selectbox("Escolha o Serviço", [s['nome'] for s in srvs], key="sel_srv_ag") if srvs else None
         
         col_d, col_h = st.columns(2)
         with col_d:
-            d_ag = st.date_input("Data", format="DD/MM/YYYY")
+            d_ag = st.date_input("Data do Atendimento", format="DD/MM/YYYY")
         with col_h:
             h_ag = st.time_input("Horário")
 
+        # Botão de submissão
         if st.form_submit_button("CONFIRMAR AGENDAMENTO", use_container_width=True):
-            # Tudo aqui dentro tem 8 espaços de recuo
             if c_sel and s_sel:
+                # Busca o preço do serviço selecionado
                 preco_v = next((s['preco'] for s in srvs if s['nome'] == s_sel), 0)
+                
+                # Salva no Firebase
                 user_ref.collection("minha_agenda").add({
                     "cliente": c_sel,
                     "servico": s_sel,
                     "preco": preco_v,
                     "status": "Pendente",
                     "data": d_ag.strftime('%d/%m/%Y'),
-                    "hora": h_ag.strftime('%H:%M')
+                    "hora": h_ag.strftime('%H:%M'),
+                    "timestamp": datetime.now()
                 })
+                
                 st.cache_data.clear()
+                st.success(f"✅ Agendado para {c_sel}!")
                 st.rerun()
-    
     with t2:
         with st.form("f_cli"):
             nome = st.text_input("Nome")
@@ -541,6 +542,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.error("Tempo esgotado: A IA está demorando muito para responder. Tente uma pergunta mais simples ou clique em Consultar novamente.")
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
+
 
 
 
