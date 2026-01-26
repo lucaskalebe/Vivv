@@ -181,12 +181,13 @@ m4.markdown(f'<div class="metric-card"><small>⏳ Pendentes</small><h2 style="co
 
 st.write("<br>", unsafe_allow_html=True)
 
-# ================= 6 e 7. GESTÃO E AGENDA (VERSÃO FINAL COMPACTA) =================
-# ================= 6 e 7. GESTÃO E AGENDA (VERSÃO UNIFICADA V5) =================
+
+# ================= 7. GESTÃO AVANÇADA, EXCEL E PERFORMANCE =================
+# ================= 6, 7 e 8. PAINEL UNIFICADO (ANTI-ERRO) =================
 st.write("---")
 col_ops_l, col_ops_r = st.columns([1.3, 1])
 
-# Filtro de segurança para a agenda de hoje
+# Filtro de hoje para a agenda
 hoje_str = datetime.now(fuso_br).strftime('%d/%m/%Y')
 clis_hoje = [a for a in agnd if a.get('data') == hoje_str]
 
@@ -195,12 +196,12 @@ with col_ops_l:
     t1, t2, t3, t4 = st.tabs(["📅 Agendar", "👤 Clientes", "🛠️ Serviços", "💸 Caixa"])
     
     with t1:
-        with st.form("form_ag_v5", clear_on_submit=True):
-            cli_n = st.selectbox("Cliente", [c['nome'] for c in clis], key="c_v5") if clis else None
-            srv_n = st.selectbox("Serviço", [s['nome'] for s in srvs], key="s_v5") if srvs else None
+        with st.form("form_ag_vFINAL", clear_on_submit=True):
+            cli_n = st.selectbox("Cliente", [c['nome'] for c in clis], key="cli_vF") if clis else None
+            srv_n = st.selectbox("Serviço", [s['nome'] for s in srvs], key="srv_vF") if srvs else None
             c_d, c_h = st.columns(2)
-            d_val = c_d.date_input("Data", key="d_v5")
-            h_val = c_h.time_input("Horário", key="h_v5")
+            d_val = c_d.date_input("Data", key="dat_vF")
+            h_val = c_h.time_input("Horário", key="hor_vF")
             if st.form_submit_button("CONFIRMAR AGENDAMENTO", use_container_width=True):
                 if cli_n and srv_n:
                     p_s = next((s['preco'] for s in srvs if s['nome'] == srv_n), 0)
@@ -212,27 +213,27 @@ with col_ops_l:
                     st.cache_data.clear(); st.rerun()
 
     with t2:
-        with st.form("form_cli_v5", clear_on_submit=True):
-            nome_c = st.text_input("Nome", key="nc_v5")
-            tel_c = st.text_input("WhatsApp", key="tc_v5")
+        with st.form("form_cli_vFINAL", clear_on_submit=True):
+            nome_c = st.text_input("Nome", key="nom_vF")
+            tel_c = st.text_input("WhatsApp", key="tel_vF")
             if st.form_submit_button("CADASTRAR CLIENTE", use_container_width=True):
                 if nome_c:
                     user_ref.collection("meus_clientes").add({"nome": nome_c, "telefone": tel_c})
                     st.cache_data.clear(); st.rerun()
 
     with t3:
-        with st.form("form_srv_v5", clear_on_submit=True):
-            nome_s = st.text_input("Serviço", key="ns_v5")
-            preco_s = st.number_input("Preço", min_value=0.0, key="ps_v5")
+        with st.form("form_srv_vFINAL", clear_on_submit=True):
+            nome_s = st.text_input("Serviço", key="nsr_vF")
+            preco_s = st.number_input("Preço", min_value=0.0, key="pre_vF")
             if st.form_submit_button("SALVAR SERVIÇO", use_container_width=True):
                 user_ref.collection("meus_servicos").add({"nome": nome_s, "preco": preco_s})
                 st.cache_data.clear(); st.rerun()
 
     with t4:
-        with st.form("form_cx_v5", clear_on_submit=True):
-            desc_cx = st.text_input("Descrição", key="dc_v5")
-            valor_cx = st.number_input("Valor", min_value=0.0, key="vc_v5")
-            tipo_cx = st.selectbox("Tipo", ["Entrada", "Saída"], key="tx_v5")
+        with st.form("form_cx_vFINAL", clear_on_submit=True):
+            desc_cx = st.text_input("Descrição", key="dsc_vF")
+            valor_cx = st.number_input("Valor", min_value=0.0, key="vlr_vF")
+            tipo_cx = st.selectbox("Tipo", ["Entrada", "Saída"], key="tip_vF")
             if st.form_submit_button("LANÇAR", use_container_width=True):
                 user_ref.collection("meu_caixa").add({
                     "descricao": desc_cx, "valor": valor_cx, "tipo": tipo_cx, 
@@ -255,286 +256,33 @@ with col_ops_r:
                 with c1:
                     st.markdown(f"**{ag['hora']}** | {ag['cliente']}<br><small style='color:#888'>{ag['servico']}</small>", unsafe_allow_html=True)
                 with c2:
-                    st.markdown(f'''<a href="https://wa.me/55{t_clean}" target="_blank" style="text-decoration:none;"><div style="background-color:#25D366; color:white; text-align:center; padding:5px; border-radius:5px; font-size:10px; font-weight:bold; margin-top:5px;">WHATS</div></a>''', unsafe_allow_html=True)
-                with c3:
-                    if st.button("✅", key=f"ok_v5_{id_a}", use_container_width=True):
-                        user_ref.collection("minha_agenda").document(id_a).update({"status": "Concluido"})
-                        user_ref.collection("meu_caixa").add({"data": hoje_str, "descricao": f"Serviço: {ag['cliente']}", "valor": ag.get('preco', 0), "tipo": "Entrada", "timestamp": datetime.now()})
-                        st.cache_data.clear(); st.rerun()
-                with c4:
-                    if st.button("✖", key=f"del_v5_{id_a}", use_container_width=True):
-                        user_ref.collection("minha_agenda").document(id_a).delete()
-                        st.cache_data.clear(); st.rerun()
-
-# --- IMPORTANTE: Certifique-se de que NÃO existe código de "Agenda" ou "Próximos Atendimentos" abaixo desta linha até a IA ---
-
-with col_ops_r:
-    st.markdown("### 📋 Próximos Atendimentos")
-    with st.expander(f"Agenda de Hoje ({len(clis_hoje)})", expanded=True):
-        if not clis_hoje:
-            st.info("Agenda limpa para hoje.")
-        else:
-            for ag in clis_hoje:
-                id_a = ag.get('id')
-                t_raw = next((c.get('telefone', '') for c in clis if c.get('nome') == ag['cliente']), "")
-                t_clean = "".join(filter(str.isdigit, str(t_raw)))
-                
-                c1, c2, c3, c4 = st.columns([2.5, 1, 1, 1])
-                with c1:
-                    st.markdown(f"**{ag['hora']}** | {ag['cliente']}<br><small style='color:#888'>{ag['servico']}</small>", unsafe_allow_html=True)
-                with c2:
                     st.markdown(f'<a href="https://wa.me/55{t_clean}" target="_blank" style="text-decoration:none;"><div style="background-color:#25D366; color:white; text-align:center; padding:5px; border-radius:5px; font-size:10px; font-weight:bold; margin-top:5px;">WHATS</div></a>', unsafe_allow_html=True)
                 with c3:
-                    if st.button("✅", key=f"f_v4_{id_a}", use_container_width=True):
+                    if st.button("✅", key=f"btn_ok_vF_{id_a}", use_container_width=True):
                         user_ref.collection("minha_agenda").document(id_a).update({"status": "Concluido"})
                         user_ref.collection("meu_caixa").add({"data": hoje_str, "descricao": f"Serviço: {ag['cliente']}", "valor": ag.get('preco', 0), "tipo": "Entrada", "timestamp": datetime.now()})
                         st.cache_data.clear(); st.rerun()
                 with c4:
-                    if st.button("✖", key=f"x_v4_{id_a}", use_container_width=True):
+                    if st.button("✖", key=f"btn_del_vF_{id_a}", use_container_width=True):
                         user_ref.collection("minha_agenda").document(id_a).delete()
                         st.cache_data.clear(); st.rerun()
 
-    with t2:
-        # Chave única: form_cli_v3 (Aqui estava o seu erro!)
-        with st.form("form_cli_v3", clear_on_submit=True):
-            nome_c = st.text_input("Nome do Cliente", key="input_nome_c")
-            tel_c = st.text_input("WhatsApp (ex: 11999999999)", key="input_tel_c")
-            if st.form_submit_button("CADASTRAR CLIENTE", use_container_width=True):
-                if nome_c:
-                    user_ref.collection("meus_clientes").add({"nome": nome_c, "telefone": tel_c})
-                    st.cache_data.clear(); st.rerun()
-
-    with t3:
-        with st.form("form_srv_v3", clear_on_submit=True):
-            nome_s = st.text_input("Nome do Serviço", key="input_nome_s")
-            preco_s = st.number_input("Preço", min_value=0.0, step=10.0, key="input_preco_s")
-            if st.form_submit_button("SALVAR SERVIÇO", use_container_width=True):
-                user_ref.collection("meus_servicos").add({"nome": nome_s, "preco": preco_s})
-                st.cache_data.clear(); st.rerun()
-
-    with t4:
-        with st.form("form_cx_v3", clear_on_submit=True):
-            desc_cx = st.text_input("Descrição", key="input_desc_cx")
-            valor_cx = st.number_input("Valor", min_value=0.0, key="input_val_cx")
-            tipo_cx = st.selectbox("Tipo", ["Entrada", "Saída"], key="sel_tipo_cx")
-            if st.form_submit_button("LANÇAR", use_container_width=True):
-                user_ref.collection("meu_caixa").add({
-                    "descricao": desc_cx, "valor": valor_cx, "tipo": tipo_cx, 
-                    "data": hoje_str, "timestamp": datetime.now()
-                })
-                st.cache_data.clear(); st.rerun()
-
-with col_ops_r:
-    st.markdown("### 📋 Próximos Atendimentos")
-    # Removido qualquer formulário daqui para evitar conflitos
-    with st.expander(f"Agenda de Hoje ({len(clis_hoje)})", expanded=True):
-        if not clis_hoje:
-            st.info("Agenda limpa para hoje.")
-        else:
-            for ag in clis_hoje:
-                id_a = ag.get('id')
-                t_raw = next((c.get('telefone', '') for c in clis if c.get('nome') == ag['cliente']), "")
-                t_clean = "".join(filter(str.isdigit, str(t_raw)))
-                
-                c1, c2, c3, c4 = st.columns([2.5, 1, 1, 1])
-                with c1:
-                    st.markdown(f"**{ag['hora']}** | {ag['cliente']}<br><small style='color:#888'>{ag['servico']}</small>", unsafe_allow_html=True)
-                with c2:
-                    st.markdown(f'<a href="https://wa.me/55{t_clean}" target="_blank" style="text-decoration:none;"><div style="background-color:#25D366; color:white; text-align:center; padding:5px; border-radius:5px; font-size:10px; font-weight:bold; margin-top:5px;">WHATS</div></a>', unsafe_allow_html=True)
-                with c3:
-                    if st.button("✅", key=f"btn_f_{id_a}", use_container_width=True):
-                        user_ref.collection("minha_agenda").document(id_a).update({"status": "Concluido"})
-                        user_ref.collection("meu_caixa").add({"data": hoje_str, "descricao": f"Serviço: {ag['cliente']}", "valor": ag.get('preco', 0), "tipo": "Entrada", "timestamp": datetime.now()})
-                        st.cache_data.clear(); st.rerun()
-                with c4:
-                    if st.button("✖", key=f"btn_x_{id_a}", use_container_width=True):
-                        user_ref.collection("minha_agenda").document(id_a).delete()
-                        st.cache_data.clear(); st.rerun()
-
-    with t2:
-        with st.form("form_cli_master", clear_on_submit=True):
-            nome_c = st.text_input("Nome do Cliente")
-            tel_c = st.text_input("WhatsApp (ex: 11999999999)")
-            if st.form_submit_button("CADASTRAR CLIENTE", use_container_width=True):
-                if nome_c:
-                    user_ref.collection("meus_clientes").add({"nome": nome_c, "telefone": tel_c})
-                    st.cache_data.clear(); st.rerun()
-
-    with t3:
-        with st.form("form_srv_master", clear_on_submit=True):
-            nome_s = st.text_input("Nome do Serviço")
-            preco_s = st.number_input("Preço de Venda", min_value=0.0, step=10.0)
-            if st.form_submit_button("SALVAR SERVIÇO", use_container_width=True):
-                user_ref.collection("meus_servicos").add({"nome": nome_s, "preco": preco_s})
-                st.cache_data.clear(); st.rerun()
-
-    with t4:
-        with st.form("form_cx_master", clear_on_submit=True):
-            desc_cx = st.text_input("Descrição")
-            valor_cx = st.number_input("Valor", min_value=0.0)
-            tipo_cx = st.selectbox("Tipo", ["Entrada", "Saída"])
-            if st.form_submit_button("LANÇAR", use_container_width=True):
-                user_ref.collection("meu_caixa").add({
-                    "descricao": desc_cx, "valor": valor_cx, "tipo": tipo_cx, 
-                    "data": hoje_str, "timestamp": datetime.now()
-                })
-                st.cache_data.clear(); st.rerun()
-
-with col_ops_r:
-    st.markdown("### 📋 Próximos Atendimentos")
-    with st.expander(f"Agenda de Hoje ({len(clis_hoje)})", expanded=True):
-        if not clis_hoje:
-            st.info("Agenda limpa para hoje.")
-        else:
-            for ag in clis_hoje:
-                id_a = ag.get('id')
-                # WhatsApp Link Dinâmico
-                t_raw = next((c.get('telefone', '') for c in clis if c.get('nome') == ag['cliente']), "")
-                t_clean = "".join(filter(str.isdigit, str(t_raw)))
-                
-                c1, c2, c3, c4 = st.columns([2.5, 1, 1, 1])
-                with c1:
-                    st.markdown(f"**{ag['hora']}** | {ag['cliente']}<br><small style='color:#888'>{ag['servico']}</small>", unsafe_allow_html=True)
-                with c2:
-                    st.markdown(f'<a href="https://wa.me/55{t_clean}" target="_blank" style="text-decoration:none;"><div style="background-color:#25D366; color:white; text-align:center; padding:5px; border-radius:5px; font-size:10px; font-weight:bold; margin-top:5px;">WHATS</div></a>', unsafe_allow_html=True)
-                with c3:
-                    if st.button("✅", key=f"f_{id_a}", use_container_width=True):
-                        user_ref.collection("minha_agenda").document(id_a).update({"status": "Concluido"})
-                        user_ref.collection("meu_caixa").add({"data": hoje_str, "descricao": f"Serviço: {ag['cliente']}", "valor": ag.get('preco', 0), "tipo": "Entrada", "timestamp": datetime.now()})
-                        st.cache_data.clear(); st.rerun()
-                with c4:
-                    if st.button("✖", key=f"x_{id_a}", use_container_width=True):
-                        user_ref.collection("minha_agenda").document(id_a).delete()
-                        st.cache_data.clear(); st.rerun()
-
-    with t2:
-        with st.form("form_cli_master", clear_on_submit=True):
-            nome_c = st.text_input("Nome do Cliente")
-            tel_c = st.text_input("WhatsApp (ex: 11999999999)")
-            if st.form_submit_button("CADASTRAR CLIENTE", use_container_width=True):
-                if nome_c:
-                    user_ref.collection("meus_clientes").add({"nome": nome_c, "telefone": tel_c})
-                    st.cache_data.clear(); st.rerun()
-
-    with t3:
-        with st.form("form_srv_master", clear_on_submit=True):
-            nome_s = st.text_input("Nome do Serviço")
-            preco_s = st.number_input("Preço de Venda", min_value=0.0, step=50.0)
-            if st.form_submit_button("SALVAR SERVIÇO", use_container_width=True):
-                user_ref.collection("meus_servicos").add({"nome": nome_s, "preco": preco_s})
-                st.cache_data.clear(); st.rerun()
-
-    with t4:
-        with st.form("form_cx_master", clear_on_submit=True):
-            desc_cx = st.text_input("Descrição da Transação")
-            valor_cx = st.number_input("Valor", min_value=0.0)
-            tipo_cx = st.selectbox("Tipo", ["Entrada", "Saída"])
-            if st.form_submit_button("EFETUAR LANÇAMENTO", use_container_width=True):
-                user_ref.collection("meu_caixa").add({
-                    "descricao": desc_cx, "valor": valor_cx, "tipo": tipo_cx, 
-                    "data": datetime.now().strftime('%d/%m/%Y'), "timestamp": datetime.now()
-                })
-                st.cache_data.clear(); st.rerun()
-
-with col_ops_r:
-    st.markdown("### 📋 Próximos Atendimentos")
-    if not agnd:
-        st.info("Sua agenda está limpa por enquanto.")
-    else:
-        for a in agnd:
-            with st.container(border=True):
-                c_a1, c_a2, c_a3 = st.columns([2.5, 0.7, 1.3])
-                with c_a1:
-                    st.markdown(f"**{a['hora']}** | {a['cliente']}")
-                    st.caption(f"🛠️ {a['servico']} • {format_brl(a.get('preco',0))}")
-                
-                with c_a2:
-                    # WhatsApp Link
-                    tel_raw = next((c.get('telefone', '') for c in clis if c.get('nome') == a['cliente']), "")
-                    tel_clean = "".join(filter(str.isdigit, tel_raw))
-                    msg = urllib.parse.quote(f"Olá {a['cliente']}, confirmando seu horário para {a['servico']} às {a['hora']}. Confirmado? 🚀")
-                    st.markdown(f'[![Whats](https://img.shields.io/badge/-%20-25D366?style=flat&logo=whatsapp&logoColor=white)](https://wa.me/55{tel_clean}?text={msg})')
-                
-                with c_a3:
-                    b_f, b_c = st.columns(2)
-                    if b_f.button("✅", key=f"f_{a['id']}", help="Finalizar"):
-                        user_ref.collection("minha_agenda").document(a['id']).update({"status": "Concluido"})
-                        user_ref.collection("meu_caixa").add({
-                            "data": datetime.now().strftime('%d/%m/%Y'),
-                            "descricao": f"Serviço: {a['cliente']}",
-                            "valor": a.get('preco', 0), "tipo": "Entrada", "timestamp": datetime.now()
-                        })
-                        st.cache_data.clear(); st.rerun()
-                    if b_c.button("❌", key=f"x_{a['id']}", help="Cancelar"):
-                        user_ref.collection("minha_agenda").document(a['id']).delete()
-                        st.cache_data.clear(); st.rerun()
-
-# ================= 7. LISTA DE ATENDIMENTOS (VERSÃO MASTER COMPACTA) =================
+# ================= 9. PERFORMANCE E IA (RESUMO) =================
 st.write("---")
-st.subheader("📋 Próximos Atendimentos")
+col_p1, col_p2 = st.columns(2)
+with col_p1:
+    st.subheader("📊 Performance")
+    if cx_list:
+        df_cx = pd.DataFrame(cx_list)
+        fig = px.pie(df_cx, values='valor', names='tipo', hole=.6, color='tipo', color_discrete_map={'Entrada': '#00d4ff', 'Saída': '#ff4b4b'})
+        st.plotly_chart(fig, use_container_width=True)
 
-# Criamos o container expansível para limpar o visual do Painel
-with st.expander(f"Ver Lista de Hoje", expanded=True):
-    # Filtramos apenas agendamentos de hoje (certifique-se que 'clis_hoje' existe)
-    if not clis_hoje:
-        st.info("Nenhum atendimento agendado para hoje.")
-    else:
-        # Estilo CSS para garantir que a linha seja fina e os botões fiquem alinhados
-        st.markdown("""
-            <style>
-                .compact-row { 
-                    display: flex; align-items: center; justify-content: space-between;
-                    padding: 5px; border-bottom: 1px solid #2e3136;
-                }
-            </style>
-        """, unsafe_allow_html=True)
+with col_p2:
+    st.subheader("⚙️ Configurações")
+    if st.button("📥 BAIXAR RELATÓRIO EXCEL", use_container_width=True):
+        st.info("Gerando relatório...")
 
-        for agend in clis_hoje:
-            # Extração segura para evitar NameError
-            id_ag = agend.get('id', '0')
-            nome = agend.get('cliente', 'Cliente')
-            hora = agend.get('horario', '--:--')
-            serv = agend.get('servico', 'Serviço')
-            # Limpeza do telefone para o link do WhatsApp
-            tel_bruto = str(agend.get('telefone', ''))
-            tel_limpo = "".join(filter(str.isdigit, tel_bruto))
-
-            # Layout em Colunas para ficar tudo em uma linha só
-            c1, c2, c3, c4 = st.columns([3, 1, 1, 1])
-            
-            with c1:
-                st.markdown(f"**{hora}** | {nome} <br><small style='color:#888'>{serv}</small>", unsafe_allow_html=True)
-            
-            with c2:
-                # Botão WhatsApp (Link Direto)
-                st.markdown(f'''
-                    <a href="https://wa.me/{tel_limpo}" target="_blank" style="text-decoration:none;">
-                        <div style="background-color:#25D366; color:white; text-align:center; 
-                        padding:6px; border-radius:5px; font-size:10px; font-weight:bold; margin-top:5px;">
-                            WHATS
-                        </div>
-                    </a>
-                ''', unsafe_allow_html=True)
-
-            with c3:
-                # Botão Finalizar (Verde quando pressionado)
-                if st.button("✅", key=f"check_{id_ag}", use_container_width=True, help="Finalizar serviço"):
-                    # Coloque aqui sua função de finalizar no banco de dados
-                    st.success(f"{nome} finalizado!")
-                    time.sleep(1)
-                    st.rerun()
-
-            with c4:
-                # Botão Cancelar (Reduzido)
-                if st.button("✖", key=f"del_{id_ag}", use_container_width=True, help="Remover agendamento"):
-                    # Coloque aqui sua função de deletar no banco de dados
-                    st.warning(f"Removido!")
-                    time.sleep(1)
-                    st.rerun()
-
-
-# ================= 7. GESTÃO AVANÇADA, EXCEL E PERFORMANCE =================
-
+st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 
 st.write("---")
 col_perf_l, col_perf_r = st.columns([1, 1])
@@ -635,6 +383,7 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'>Suporte 24h - (11) 989710009</p>", unsafe_allow_html=True)
+
 
 
 
