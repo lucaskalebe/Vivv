@@ -269,7 +269,73 @@ with col_ops_r:
                         user_ref.collection("minha_agenda").document(a['id']).delete()
                         st.cache_data.clear(); st.rerun()
 
+# ================= 7. LISTA DE ATENDIMENTOS (VERSÃO MASTER COMPACTA) =================
+st.write("---")
+st.subheader("📋 Próximos Atendimentos")
+
+# Criamos o container expansível para limpar o visual do Painel
+with st.expander(f"Ver Lista de Hoje", expanded=True):
+    # Filtramos apenas agendamentos de hoje (certifique-se que 'clis_hoje' existe)
+    if not clis_hoje:
+        st.info("Nenhum atendimento agendado para hoje.")
+    else:
+        # Estilo CSS para garantir que a linha seja fina e os botões fiquem alinhados
+        st.markdown("""
+            <style>
+                .compact-row { 
+                    display: flex; align-items: center; justify-content: space-between;
+                    padding: 5px; border-bottom: 1px solid #2e3136;
+                }
+            </style>
+        """, unsafe_allow_html=True)
+
+        for agend in clis_hoje:
+            # Extração segura para evitar NameError
+            id_ag = agend.get('id', '0')
+            nome = agend.get('cliente', 'Cliente')
+            hora = agend.get('horario', '--:--')
+            serv = agend.get('servico', 'Serviço')
+            # Limpeza do telefone para o link do WhatsApp
+            tel_bruto = str(agend.get('telefone', ''))
+            tel_limpo = "".join(filter(str.isdigit, tel_bruto))
+
+            # Layout em Colunas para ficar tudo em uma linha só
+            c1, c2, c3, c4 = st.columns([3, 1, 1, 1])
+            
+            with c1:
+                st.markdown(f"**{hora}** | {nome} <br><small style='color:#888'>{serv}</small>", unsafe_allow_html=True)
+            
+            with c2:
+                # Botão WhatsApp (Link Direto)
+                st.markdown(f'''
+                    <a href="https://wa.me/{tel_limpo}" target="_blank" style="text-decoration:none;">
+                        <div style="background-color:#25D366; color:white; text-align:center; 
+                        padding:6px; border-radius:5px; font-size:10px; font-weight:bold; margin-top:5px;">
+                            WHATS
+                        </div>
+                    </a>
+                ''', unsafe_allow_html=True)
+
+            with c3:
+                # Botão Finalizar (Verde quando pressionado)
+                if st.button("✅", key=f"check_{id_ag}", use_container_width=True, help="Finalizar serviço"):
+                    # Coloque aqui sua função de finalizar no banco de dados
+                    st.success(f"{nome} finalizado!")
+                    time.sleep(1)
+                    st.rerun()
+
+            with c4:
+                # Botão Cancelar (Reduzido)
+                if st.button("✖", key=f"del_{id_ag}", use_container_width=True, help="Remover agendamento"):
+                    # Coloque aqui sua função de deletar no banco de dados
+                    st.warning(f"Removido!")
+                    time.sleep(1)
+                    st.rerun()
+
+
 # ================= 7. GESTÃO AVANÇADA, EXCEL E PERFORMANCE =================
+
+
 st.write("---")
 col_perf_l, col_perf_r = st.columns([1, 1])
 
@@ -369,6 +435,7 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'>Suporte 24h - (11) 989710009</p>", unsafe_allow_html=True)
+
 
 
 
