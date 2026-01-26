@@ -346,9 +346,10 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
                     break
                 
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={api_key}"
+        
                 payload = {
-                    "contents": [{"parts": [{"text": f"Atue como consultor Vivv Pro. Analise: {len(clis)} clientes, faturamento R$ {faturamento:.2f}. Pergunta: {prompt_ia}"}]}]
-                }
+    "contents": [{"parts": [{"text": f"Responda como consultor Vivv Pro. Dados: {len(clis)} clientes, R$ {faturamento:.2f}. Pergunta: {prompt_ia}"}]}]
+}
 
                 # Tentativas para contornar o Erro 429
                 for tentativa in range(2):
@@ -373,6 +374,7 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'>Suporte 24h - (11) 989710009</p>", unsafe_allow_html=True)
+
 
 
 
