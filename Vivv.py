@@ -244,41 +244,92 @@ m4.markdown(f'<div class="neon-card"><small>📅 PENDENTES</small><h2 style="col
 
 # --- DEFINIÇÃO DAS COLUNAS DO LAYOUT ---
 # Aqui criamos as variáveis col_ops_l (esquerda) e col_ops_r (direita)
-col_ops_l, col_ops_r = st.columns([1, 1]) 
+col_ops_l, col_ops_r = st.columns([1.2, 1]) 
 
 with col_ops_l: 
     st.subheader("⚡ Painel de Controle")
-    # Agora as abas ficam dentro da coluna da esquerda
+    # 2. Define as abas
     t1, t2, t3, t4 = st.tabs(["📅 Agenda", "👤 Cliente", "🛠️ Serviço", "📉 Caixa"])
     
     with t1:
-        with st.form("form_agendamento_novo", clear_on_submit=True):
+        # FORMULÁRIO DE AGENDAMENTO (Dentro da Aba 1)
+        with st.form(key="form_main_agenda", clear_on_submit=True):
             st.markdown("### 📅 Novo Agendamento")
-            
             with st.popover("👤 Selecionar Cliente e Serviço", use_container_width=True):
-                c_sel = st.selectbox("Escolha o Cliente", [c['nome'] for c in clis]) if clis else None
-                s_sel = st.selectbox("Escolha o Serviço", [s['nome'] for s in srvs]) if srvs else None
+                c_sel = st.selectbox("Escolha o Cliente", [c['nome'] for c in clis], key="sel_cli_ag") if clis else None
+                s_sel = st.selectbox("Escolha o Serviço", [s['nome'] for s in srvs], key="sel_srv_ag") if srvs else None
             
             col_d, col_h = st.columns(2)
-            with col_d:
-                d_ag = st.date_input("Data do Atendimento", format="DD/MM/YYYY")
-            with col_h:
-                h_ag = st.time_input("Horário")
+            d_ag = col_d.date_input("Data", format="DD/MM/YYYY")
+            h_ag = col_h.time_input("Horário")
 
-            if st.form_submit_button("CONFIRMAR AGENDAMENTO"):
+            if st.form_submit_button("CONFIRMAR AGENDAMENTO", use_container_width=True):
                 if c_sel and s_sel:
                     p_v = next((s['preco'] for s in srvs if s['nome'] == s_sel), 0)
                     user_ref.collection("minha_agenda").add({
-                        "cliente": c_sel,
-                        "servico": s_sel,
-                        "preco": p_v,
-                        "status": "Pendente",
-                        "data": d_ag.strftime('%d/%m/%Y'),
-                        "hora": h_ag.strftime('%H:%M')
+                        "cliente": c_sel, "servico": s_sel, "preco": p_v,
+                        "status": "Pendente", "data": d_ag.strftime('%d/%m/%Y'),
+                        "hora": h_ag.strftime('%H:%M'), "timestamp": datetime.now()
                     })
                     st.cache_data.clear()
-                    st.success("Agendado com sucesso!")
                     st.rerun()
+
+    with t2:
+        with st.form("f_cli"):
+            nome = st.text_input("Nome")
+            tel = st.text_input("WhatsApp")
+            if st.form_submit_button("CADASTRAR CLIENTE"):
+                user_ref.collection("meus_clientes").add({"nome": nome, "telefone": tel})
+                st.cache_data.clear()
+                st.rerun()
+
+    with t3:
+        with st.form("f_srv"):
+            serv = st.text_input("Nome do Serviço")
+            prec = st.number_input("Preço", min_value=0.0)
+            if st.form_submit_button("SALVAR SERVIÇO"):
+                user_ref.collection("meus_servicos").add({"nome": serv, "preco": prec})
+                st.cache_data.clear()
+                st.rerun()
+
+    with t4:
+        with st.form("f_cx"):
+            ds = st.text_input("Descrição")
+            vl = st.number_input("Valor", min_value=0.0)
+            tp = st.selectbox("Tipo", ["Entrada", "Saída"])
+            if st.form_submit_button("LANÇAR NO CAIXA"):
+                user_ref.collection("meu_caixa").add({
+                    "descricao": ds, "valor": vl, "tipo": tp, "data": datetime.now()
+                })
+                st.cache_data.clear()
+                st.rerun()
+
+# 3. Lista de Agendamentos (Coluna da Direita, fora das abas)
+with col_ops_r:
+    st.subheader("📋 Próximos Atendimentos")
+    if not agnd:
+        st.info("Nenhum agendamento pendente. ☕")
+    else:
+        for item in agnd:
+            with st.container(border=True):
+                c1, c2 = st.columns([3, 1])
+                with c1:
+                    st.markdown(f"**{item['hora']} - {item['cliente']}**")
+                    st.caption(f"🛠️ {item['servico']} | {format_brl(item.get('preco',0))}")
+                with c2:
+                    raw_tel = next((c.get('telefone', '') for c in clis if c.get('nome') == item.get('cliente')), "")
+                    clean_tel = "".join(filter(str.isdigit, raw_tel))
+                    msg = urllib.parse.quote(f"Confirmado: {item.get('servico')} às {item.get('hora')}!")
+                    st.markdown(f'[![Whats](https://img.shields.io/badge/Whats-25D366?style=flat&logo=whatsapp&logoColor=white)](https://wa.me/55{clean_tel}?text={msg})')
+                    if st.button("✅", key=f"fin_{item['id']}"):
+                        user_ref.collection("minha_agenda").document(item['id']).update({"status": "Concluido"})
+                        user_ref.collection("meu_caixa").add({
+                            "data": datetime.now().strftime('%d/%m/%Y'),
+                            "descricao": f"Atendimento: {item['cliente']}",
+                            "valor": item.get('preco', 0), "tipo": "Entrada"
+                        })
+                        st.cache_data.clear()
+                        st.rerun()
 
 with t1:
     # ... (seu código do formulário de agendamento que já corrigimos) ...
@@ -584,6 +635,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.error("Tempo esgotado: A IA está demorando muito para responder. Tente uma pergunta mais simples ou clique em Consultar novamente.")
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
+
 
 
 
