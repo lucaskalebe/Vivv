@@ -55,6 +55,51 @@ st.markdown("""
 
     .orange-neon { color: #ff9100 !important; text-shadow: 0 0 15px rgba(255,145,0,0.5); text-align: center; }
 
+
+    /* Efeito de Vidro no Formulário */
+[data-testid="stForm"] {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(0, 212, 255, 0.2) !important;
+    border-radius: 20px !important;
+    padding: 30px !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8) !important;
+}
+
+/* Estilização dos Inputs para ficarem modernos */
+.stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] {
+    background-color: rgba(0, 0, 0, 0.3) !important;
+    border: 1px solid #333 !important;
+    border-radius: 10px !important;
+    color: white !important;
+    transition: all 0.3s ease;
+}
+
+.stTextInput input:focus {
+    border-color: #00d4ff !important;
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.2) !important;
+}
+
+/* Botão de Lançamento Elevado */
+.stButton button {
+    width: 100%;
+    background: linear-gradient(90deg, #0056b3, #00d4ff) !important;
+    border: none !important;
+    color: white !important;
+    font-weight: bold !important;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    height: 45px;
+    transition: 0.4s !important;
+}
+
+.stButton button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 212, 255, 0.4) !important;
+}
+    
+
+
+
     /* ESTILO DO BOTÃO WHATSAPP */
     .whatsapp-button {
         display: inline-flex;
@@ -78,6 +123,9 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
+
+
 
 st.markdown('<div class="vivv-top-left">Vivv</div>', unsafe_allow_html=True)
 
@@ -447,6 +495,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.error("Tempo esgotado: A IA está demorando muito para responder. Tente uma pergunta mais simples ou clique em Consultar novamente.")
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
+
 
 
 
