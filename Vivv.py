@@ -116,7 +116,7 @@ despesas = sum([float(x.get('valor', 0)) for x in cx_list if x.get('tipo') == 'S
 
 # ================= 6. DASHBOARD PRINCIPAL =================
 c_h1, c_h2 = st.columns([4,1])
-c_h1.markdown(f"##### Bem-vindo ao Vivv, : <span style='color:#00d4ff'>{st.session_state.user_email}</span>", unsafe_allow_html=True)
+c_h1.markdown(f"##### Bem-vindo ao Vivv, <span style='color:#00d4ff'>{st.session_state.user_email}</span>", unsafe_allow_html=True)
 if c_h2.button("SAIR"):
     st.session_state.logado = False
     st.rerun()
@@ -346,6 +346,7 @@ if st.button("CONSULTAR IA") and prompt:
                 
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
+
 
 
 
