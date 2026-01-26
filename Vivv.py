@@ -242,12 +242,16 @@ m2.markdown(f'<div class="neon-card"><small>💰 RECEITA</small><h2 style="color
 m3.markdown(f'<div class="neon-card"><small>📈 LUCRO</small><h2 style="color:#00ff88">{format_brl(faturamento-despesas)}</h2></div>', unsafe_allow_html=True)
 m4.markdown(f'<div class="neon-card"><small>📅 PENDENTES</small><h2 style="color:#ff9100">{len(agnd)}</h2></div>', unsafe_allow_html=True)
 
-with col_ops_l: # Verifique o nome da sua coluna de operações
+# --- DEFINIÇÃO DAS COLUNAS DO LAYOUT ---
+# Aqui criamos as variáveis col_ops_l (esquerda) e col_ops_r (direita)
+col_ops_l, col_ops_r = st.columns([1, 1]) 
+
+with col_ops_l: 
     st.subheader("⚡ Painel de Controle")
+    # Agora as abas ficam dentro da coluna da esquerda
     t1, t2, t3, t4 = st.tabs(["📅 Agenda", "👤 Cliente", "🛠️ Serviço", "📉 Caixa"])
     
     with t1:
-        # COLE O CÓDIGO DO FORMULÁRIO AQUI
         with st.form("f_ag", clear_on_submit=True):
             st.markdown("### 📅 Novo Agendamento")
             
@@ -257,19 +261,29 @@ with col_ops_l: # Verifique o nome da sua coluna de operações
             
             col_d, col_h = st.columns(2)
             with col_d:
-                d_ag = st.date_input("Data", format="DD/MM/YYYY")
+                d_ag = st.date_input("Data do Atendimento", format="DD/MM/YYYY")
             with col_h:
                 h_ag = st.time_input("Horário")
 
             if st.form_submit_button("CONFIRMAR AGENDAMENTO"):
                 if c_sel and s_sel:
-                    # Lógica de salvar no Firebase que te enviei antes...
-                    st.success("Agendado!")
+                    p_v = next((s['preco'] for s in srvs if s['nome'] == s_sel), 0)
+                    user_ref.collection("minha_agenda").add({
+                        "cliente": c_sel,
+                        "servico": s_sel,
+                        "preco": p_v,
+                        "status": "Pendente",
+                        "data": d_ag.strftime('%d/%m/%Y'),
+                        "hora": h_ag.strftime('%H:%M')
+                    })
+                    st.cache_data.clear()
+                    st.success("Agendado com sucesso!")
                     st.rerun()
 
-    with t2:
-        # Aqui fica o seu código de Cadastro de Clientes
-        pass
+# Você pode usar a col_ops_r para mostrar a tabela de agendamentos depois!
+with col_ops_r:
+    st.subheader("📋 Próximos Clientes")
+    # Aqui colocaremos a lista de quem vai chegar
 
 # ================= 7. OPERAÇÕES =================
 st.write("---")
@@ -514,6 +528,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.error("Tempo esgotado: A IA está demorando muito para responder. Tente uma pergunta mais simples ou clique em Consultar novamente.")
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
+
 
 
 
