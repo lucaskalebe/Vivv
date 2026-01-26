@@ -294,23 +294,45 @@ with col_ops_l:
     t1, t2, t3, t4 = st.tabs(["📅 Agenda", "👤 Cliente", "🛠️ Serviço", "📉 Caixa"])
     
     with t1:
-        with st.form("form_agendamento_novo"):
-            c_sel = st.selectbox("Cliente", [c['nome'] for c in clis]) if clis else None
-            s_sel = st.selectbox("Serviço", [s['nome'] for s in srvs]) if srvs else None
-            col_d, col_h = st.columns(2)
-            d_ag = col_d.date_input("Data", format="DD/MM/YYYY")
-            h_ag = col_h.time_input("Hora")
-            if st.form_submit_button("AGENDAR"):
-                if c_sel and s_sel:
-                    st.cache_data.clear() # <--- ADICIONE ESTA LINHA
-                    p_v = next((s['preco'] for s in srvs if s['nome'] == s_sel), 0)
-                    user_ref.collection("minha_agenda").add({
-                        "cliente": c_sel, "servico": s_sel, "preco": p_v,
-                        "status": "Pendente", "data": d_ag.strftime('%d/%m/%Y'),
-                        "hora": h_ag.strftime('%H:%M')
-                    })
-                    st.rerun()
+    # Usando uma chave (key) única para evitar o erro de duplicidade
+    with st.form(key="form_main_agenda", clear_on_submit=True):
+        st.markdown("### 📅 Novo Agendamento")
+        
+        # Seleção dentro de um popover para manter o visual limpo
+        with st.popover("👤 Selecionar Cliente e Serviço", use_container_width=True):
+            c_sel = st.selectbox("Escolha o Cliente", [c['nome'] for c in clis], key="sel_cli_ag") if clis else None
+            s_sel = st.selectbox("Escolha o Serviço", [s['nome'] for s in srvs], key="sel_srv_ag") if srvs else None
+        
+        col_d, col_h = st.columns(2)
+        with col_d:
+            d_ag = st.date_input("Data do Atendimento", format="DD/MM/YYYY")
+        with col_h:
+            h_ag = st.time_input("Horário")
 
+        # Botão de submissão
+        enviar = st.form_submit_button("CONFIRMAR AGENDAMENTO", use_container_width=True)
+        
+        if enviar:
+            if c_sel and s_sel:
+                # Busca o preço do serviço selecionado
+                preco_v = next((s['preco'] for s in srvs if s['nome'] == s_sel), 0)
+                
+                # Salva no Firebase
+                user_ref.collection("minha_agenda").add({
+                    "cliente": c_sel,
+                    "servico": s_sel,
+                    "preco": preco_v,
+                    "status": "Pendente",
+                    "data": d_ag.strftime('%d/%m/%Y'),
+                    "hora": h_ag.strftime('%H:%M'),
+                    "timestamp": datetime.now()
+                })
+                
+                st.cache_data.clear() # Limpa o cache para os dados aparecerem na hora
+                st.success(f"✅ Agendado para {c_sel} às {h_ag.strftime('%H:%M')}!")
+                st.rerun()
+            else:
+                st.warning("⚠️ Selecione o Cliente e o Serviço antes de agendar.")
     with t2:
         with st.form("f_cli"):
             nome = st.text_input("Nome")
@@ -528,6 +550,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.error("Tempo esgotado: A IA está demorando muito para responder. Tente uma pergunta mais simples ou clique em Consultar novamente.")
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
+
 
 
 
