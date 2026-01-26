@@ -167,7 +167,7 @@ despesas = sum([float(x.get('valor', 0)) for x in cx_list if x.get('tipo') == 'S
 # ================= 5. DASHBOARD ELITE =================
 c_top1, c_top2 = st.columns([5,1])
 with c_top1:
-    st.markdown(f"##### Seja bem vindo, <span style='color:#00d4ff'>{st.session_state.user_email}</span>", unsafe_allow_html=True)
+    st.markdown(f"##### Seja bem vindo, <span style='color:#00d4ff'>{st.session_state.user_email}</span>"., unsafe_allow_html=True)
 with c_top2:
     if st.button("LOGOUT", use_container_width=True):
         st.session_state.logado = False
@@ -366,6 +366,7 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'>Suporte 24h - (11) 989710009</p>", unsafe_allow_html=True)
+
 
 
 
