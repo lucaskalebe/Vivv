@@ -16,66 +16,6 @@ st.set_page_config(page_title="Vivv Pro", layout="wide", page_icon="🚀") # Con
 def hash_senha(senha): # Define função para gerar hash da senha
     return hashlib.sha256(str.encode(senha)).hexdigest() # Retorna hash SHA256 da senha codificada
 
-st.markdown(""" 
-<style> 
-    header, [data-testid="stHeader"], .stAppDeployButton { display: none !important; }
-
-    .vivv-top-left {
-        position: fixed; top: 20px; left: 25px;
-        color: #ffffff !important; font-size: 28px;
-        font-weight: 900; z-index: 999999;
-    }
-
-    .stApp { background-color: #000205 !important; }
-
-    .block-container { padding-top: 60px !important; max-width: 95% !important; }
-
-    .neon-card {
-        background: linear-gradient(145deg, #000814, #001220);
-        border: 1px solid #0056b3;
-        border-radius: 12px;
-        padding: 12px 20px;
-        transition: all 0.3s ease-in-out;
-        cursor: pointer;
-    }
-
-    .neon-card:hover {
-        border: 1px solid #00d4ff;
-        box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
-        transform: translateY(-3px);
-    }
-
-    .neon-card h2 {
-        margin: 5px 0 0 0 !important;
-        font-size: 1.8rem !important;
-    }
-
-    .orange-neon { color: #ff9100 !important; text-shadow: 0 0 15px rgba(255,145,0,0.5); text-align: center; }
-
-    /* ESTILO DO BOTÃO WHATSAPP */
-    .whatsapp-button {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        background: rgba(0, 212, 255, 0.1);
-        color: #00d4ff !important;
-        border: 1px solid #00d4ff;
-        padding: 6px 15px;
-        border-radius: 8px;
-        text-decoration: none !important;
-        font-weight: bold;
-        transition: all 0.3s ease;
-    }
-
-    .whatsapp-button:hover {
-        background: #00d4ff;
-        color: #000814 !important;
-        box-shadow: 0 0 15px rgba(0, 212, 255, 0.6);
-        transform: scale(1.05);
-    }
-</style>
-""", unsafe_allow_html=True)
-
 st.markdown("""
 <style>
 .vivv-top-left {
@@ -86,11 +26,9 @@ st.markdown("""
     font-weight: 600;
     color: white;
     opacity: 1;
-    transition: opacity 0.4s ease;
+    transition: opacity 0.25s linear;
     z-index: 9999;
-}
-.vivv-dim {
-    opacity: 0.35;
+    pointer-events: none;
 }
 </style>
 
@@ -98,16 +36,21 @@ st.markdown("""
 
 <script>
 const logo = document.getElementById("vivvLogo");
+const mainSection = parent.document.querySelector("section.main");
 
-window.addEventListener("scroll", () => {
-    if (window.scrollY > 40) {
-        logo.classList.add("vivv-dim");
-    } else {
-        logo.classList.remove("vivv-dim");
-    }
+mainSection.addEventListener("scroll", () => {
+    const scrollTop = mainSection.scrollTop;
+    
+    // fade progressivo entre 0px e 120px
+    let opacity = 1 - (scrollTop / 120);
+    opacity = Math.max(0.35, Math.min(1, opacity));
+
+    logo.style.opacity = opacity;
 });
 </script>
 """, unsafe_allow_html=True)
+
+
 @st.cache_resource
 def init_db():
     try:
@@ -461,6 +404,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.error("Tempo esgotado: A IA está demorando muito para responder. Tente uma pergunta mais simples ou clique em Consultar novamente.")
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
+
 
 
 
