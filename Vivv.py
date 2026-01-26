@@ -267,23 +267,6 @@ with col_ops_r:
                         user_ref.collection("minha_agenda").document(id_a).delete()
                         st.cache_data.clear(); st.rerun()
 
-# ================= 9. PERFORMANCE E IA (RESUMO) =================
-st.write("---")
-col_p1, col_p2 = st.columns(2)
-with col_p1:
-    st.subheader("📊 Performance")
-    if cx_list:
-        df_cx = pd.DataFrame(cx_list)
-        fig = px.pie(df_cx, values='valor', names='tipo', hole=.6, color='tipo', color_discrete_map={'Entrada': '#00d4ff', 'Saída': '#ff4b4b'})
-        st.plotly_chart(fig, use_container_width=True)
-
-with col_p2:
-    st.subheader("⚙️ Configurações")
-    if st.button("📥 BAIXAR RELATÓRIO EXCEL", use_container_width=True):
-        st.info("Gerando relatório...")
-
-st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
-
 st.write("---")
 col_perf_l, col_perf_r = st.columns([1, 1])
 
@@ -383,6 +366,7 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'>Suporte 24h - (11) 989710009</p>", unsafe_allow_html=True)
+
 
 
 
