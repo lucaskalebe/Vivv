@@ -252,3 +252,70 @@ try:
 except Exception as e:
     st.error(f"Erro ao gerar Excel: {e}")
 
+
+# ================= 9. PERFORMANCE E INTELIGÊNCIA =================
+st.write("---")
+st.subheader("📊 Performance Financeira")
+
+if cx_list:
+    df_cx = pd.DataFrame(cx_list)
+    df_cx['valor'] = df_cx['valor'].astype(float)
+    
+    # Agrupa por Tipo para o Gráfico
+    resumo_grafico = df_cx.groupby('tipo')['valor'].sum().reset_index()
+    
+    import plotly.express as px
+    
+    fig = px.bar(
+        resumo_grafico, 
+        x='tipo', 
+        y='valor', 
+        color='tipo',
+        color_discrete_map={'Entrada': '#00d4ff', 'Saída': '#ff4b4b'},
+        text_auto='.2s',
+        title="Entradas vs Saídas Totais"
+    )
+    
+    fig.update_layout(
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font_color="white",
+        showlegend=False,
+        margin=dict(l=20, r=20, t=40, b=20),
+        height=300
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+else:
+    st.info("Lance dados no caixa para gerar os gráficos.")
+
+# ================= 10. VIVV AI =================
+st.write("---")
+st.subheader("💬 Vivv AI: Inteligência de Negócio")
+prompt = st.text_input("O que deseja analisar hoje?", placeholder="Ex: Como dobrar meu faturamento?")
+
+if st.button("CONSULTAR IA") and prompt:
+    try:
+        api_key = st.secrets["GOOGLE_API_KEY"]
+        url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key={api_key}"
+        
+        payload = {
+            "contents": [{
+                "parts": [{
+                    "text": f"Atue como consultor Vivv Pro. Analise os dados: {len(clis)} clientes, faturamento R$ {faturamento:.2f}, despesas R$ {despesas:.2f}. Pergunta: {prompt}. Responda em tópicos curtos."
+                }]
+            }]
+        }
+        
+        with st.spinner("Vivv AI analisando seu negócio..."):
+            response = requests.post(url, json=payload, timeout=30)
+            res_json = response.json()
+            
+            if response.status_code == 200:
+                texto_ia = res_json['candidates'][0]['content']['parts'][0]['text']
+                st.info(f"🚀 **Análise Vivv AI:**\n\n{texto_ia}")
+            else:
+                st.error("Erro na comunicação com a IA. Verifique sua chave API nos Secrets.")
+                
+    except Exception as e:
+        st.error(f"Erro de conexão: {e}")
