@@ -252,7 +252,7 @@ with col_ops_l:
     t1, t2, t3, t4 = st.tabs(["📅 Agenda", "👤 Cliente", "🛠️ Serviço", "📉 Caixa"])
     
     with t1:
-        with st.form("f_ag", clear_on_submit=True):
+        with st.form("form_agendamento_novo", clear_on_submit=True):
             st.markdown("### 📅 Novo Agendamento")
             
             with st.popover("👤 Selecionar Cliente e Serviço", use_container_width=True):
@@ -294,7 +294,7 @@ with col_ops_l:
     t1, t2, t3, t4 = st.tabs(["📅 Agenda", "👤 Cliente", "🛠️ Serviço", "📉 Caixa"])
     
     with t1:
-        with st.form("f_ag"):
+        with st.form("form_agendamento_novo"):
             c_sel = st.selectbox("Cliente", [c['nome'] for c in clis]) if clis else None
             s_sel = st.selectbox("Serviço", [s['nome'] for s in srvs]) if srvs else None
             col_d, col_h = st.columns(2)
@@ -528,6 +528,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.error("Tempo esgotado: A IA está demorando muito para responder. Tente uma pergunta mais simples ou clique em Consultar novamente.")
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
+
 
 
 
