@@ -280,6 +280,48 @@ with col_ops_l:
                     st.success("Agendado com sucesso!")
                     st.rerun()
 
+with t1:
+    # ... (seu código do formulário de agendamento que já corrigimos) ...
+
+    st.divider() # Uma linha sutil para separar o formulário da lista
+    st.markdown("### 📋 Seus Próximos Atendimentos")
+
+    if agnd:
+        for item in agnd:
+            # Criamos um "card" usando o componente container do streamlit
+            with st.container(border=True):
+                c1, c2, c3 = st.columns([2, 2, 1])
+                
+                with c1:
+                    st.markdown(f"**👤 {item['cliente']}**")
+                    st.caption(f"🛠️ {item['servico']}")
+                
+                with c2:
+                    st.markdown(f"**📅 {item['data']}**")
+                    st.caption(f"⏰ {item['hora']}")
+                
+                with c3:
+                    # Formatação do preço e botão de conclusão
+                    valor = item.get('preco', 0)
+                    st.markdown(f"**{format_brl(valor)}**")
+                    
+                    if st.button("Finalizar", key=f"btn_{item['id']}"):
+                        # Lógica para concluir e mandar pro financeiro
+                        user_ref.collection("minha_agenda").document(item['id']).update({"status": "Concluido"})
+                        
+                        # Salva automaticamente no CAIXA como Entrada
+                        user_ref.collection("meu_caixa").add({
+                            "data": datetime.now().strftime('%d/%m/%Y'),
+                            "descricao": f"Atendimento: {item['cliente']}",
+                            "valor": valor,
+                            "tipo": "Entrada"
+                        })
+                        st.cache_data.clear()
+                        st.success("✅ Atendimento finalizado e caixa atualizado!")
+                        st.rerun()
+    else:
+        st.info("Nenhum agendamento pendente para hoje. ☕")
+
 # Você pode usar a col_ops_r para mostrar a tabela de agendamentos depois!
 with col_ops_r:
     st.subheader("📋 Próximos Clientes")
@@ -542,6 +584,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.error("Tempo esgotado: A IA está demorando muito para responder. Tente uma pergunta mais simples ou clique em Consultar novamente.")
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
+
 
 
 
