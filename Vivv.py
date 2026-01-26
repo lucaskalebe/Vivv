@@ -243,8 +243,6 @@ with col_ops_l:
                 })
                 st.cache_data.clear(); st.rerun()
                 
-preco_br = f"{ag.get('preco', 0):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-
 with col_ops_r:
     st.markdown("### 📋 Próximos Atendimentos")
     with st.expander(f"Agenda de Hoje ({len(clis_hoje)})", expanded=True):
@@ -373,6 +371,7 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'>Suporte 24h - (11) 989710009</p>", unsafe_allow_html=True)
+
 
 
 
