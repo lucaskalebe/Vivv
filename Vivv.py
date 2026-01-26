@@ -362,7 +362,7 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
                             sucesso = True
                             break
                         elif response.status_code == 429:
-                            time.sleep(2)
+                            time.sleep(5)
                         else:
                             break 
                     except Exception as e:
@@ -374,6 +374,7 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'>Suporte 24h - (11) 989710009</p>", unsafe_allow_html=True)
+
 
 
 
