@@ -242,6 +242,34 @@ m2.markdown(f'<div class="neon-card"><small>💰 RECEITA</small><h2 style="color
 m3.markdown(f'<div class="neon-card"><small>📈 LUCRO</small><h2 style="color:#00ff88">{format_brl(faturamento-despesas)}</h2></div>', unsafe_allow_html=True)
 m4.markdown(f'<div class="neon-card"><small>📅 PENDENTES</small><h2 style="color:#ff9100">{len(agnd)}</h2></div>', unsafe_allow_html=True)
 
+with col_ops_l: # Verifique o nome da sua coluna de operações
+    st.subheader("⚡ Painel de Controle")
+    t1, t2, t3, t4 = st.tabs(["📅 Agenda", "👤 Cliente", "🛠️ Serviço", "📉 Caixa"])
+    
+    with t1:
+        # COLE O CÓDIGO DO FORMULÁRIO AQUI
+        with st.form("f_ag", clear_on_submit=True):
+            st.markdown("### 📅 Novo Agendamento")
+            
+            with st.popover("👤 Selecionar Cliente e Serviço", use_container_width=True):
+                c_sel = st.selectbox("Escolha o Cliente", [c['nome'] for c in clis]) if clis else None
+                s_sel = st.selectbox("Escolha o Serviço", [s['nome'] for s in srvs]) if srvs else None
+            
+            col_d, col_h = st.columns(2)
+            with col_d:
+                d_ag = st.date_input("Data", format="DD/MM/YYYY")
+            with col_h:
+                h_ag = st.time_input("Horário")
+
+            if st.form_submit_button("CONFIRMAR AGENDAMENTO"):
+                if c_sel and s_sel:
+                    # Lógica de salvar no Firebase que te enviei antes...
+                    st.success("Agendado!")
+                    st.rerun()
+
+    with t2:
+        # Aqui fica o seu código de Cadastro de Clientes
+        pass
 
 # ================= 7. OPERAÇÕES =================
 st.write("---")
@@ -486,6 +514,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.error("Tempo esgotado: A IA está demorando muito para responder. Tente uma pergunta mais simples ou clique em Consultar novamente.")
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
+
 
 
 
