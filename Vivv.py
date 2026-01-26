@@ -12,7 +12,7 @@ from google.cloud import firestore
 from google.oauth2 import service_account
 
 # ================= 1. CONFIGURAÇÕES E ESTILO =================
-st.set_page_config(page_title="Vivv Pro", layout="wide", page_icon="🇻")
+st.set_page_config(page_title="Vivv Pro", layout="wide", page_icon="🎯")
 fuso_br = timezone(timedelta(hours=-3))
 
 def hash_senha(senha):
@@ -346,6 +346,7 @@ if st.button("CONSULTAR IA") and prompt:
                 
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
+
 
 
 
