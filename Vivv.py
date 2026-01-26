@@ -1,56 +1,88 @@
+import streamlit as st
+import pandas as pd
+import urllib.parse
+from datetime import datetime, timezone, timedelta
+import google.generativeai as genai
+from google.cloud import firestore
+from google.oauth2 import service_account
+import json
+import hashlib
 
 
-import streamlit as st # Importa Streamlit para criar interfaces web interativas
-import pandas as pd # Importa Pandas para manipular e analisar dados
-import urllib.parse # Importa utilidades para codificar e decodificar URLs
-from datetime import datetime, timezone, timedelta # Importa classes para datas, fuso horário, intervalos
-import google.generativeai as genai # Importa IA generativa do Google para textos
-from google.cloud import firestore # Importa Firestore para banco de dados NoSQL
-from google.oauth2 import service_account # Importa credenciais de serviço para autenticação Google
-import json # Importa JSON para leitura e escrita de dados
-import hashlib # Importa hash criptográfico para senhas e segurança
+fuso_br = timezone(timedelta(hours=-3))
 
-fuso_br = timezone(timedelta(hours=-3)) # Define fuso horário brasileiro UTC menos três
+# CSS Refinado para remover GitHub, Menu e Header de forma estável
 # ================= 1. CONFIGURAÇÃO E DESIGN VIVV =================
-st.set_page_config(page_title="Vivv Pro", layout="wide", page_icon="🚀") # Configura título, layout amplo e ícone página
-def hash_senha(senha): # Define função para gerar hash da senha
-    return hashlib.sha256(str.encode(senha)).hexdigest() # Retorna hash SHA256 da senha codificada
+st.set_page_config(page_title="Vivv Pro", layout="wide", page_icon="🚀")
 
+def hash_senha(senha):
+    return hashlib.sha256(str.encode(senha)).hexdigest()
+
+# CSS Único e Corrigido (Sem duplicidade de tags)
 st.markdown("""
 <style>
-.vivv-top-left {
-    position: fixed;
-    top: 16px;
-    left: 20px;
-    font-size: 22px;
-    font-weight: 600;
-    color: white;
-    opacity: 1;
-    transition: opacity 0.4s ease;
-    z-index: 9999;
-}
-.vivv-dim {
-    opacity: 0.35;
-}
-</style>
+    header, [data-testid="stHeader"], .stAppDeployButton { display: none !important; }
 
-<div class="vivv-top-left" id="vivvLogo">Vivv</div>
-
-<script>
-const logo = document.getElementById("vivvLogo");
-
-window.addEventListener("scroll", () => {
-    if (window.scrollY > 40) {
-        logo.classList.add("vivv-dim");
-    } else {
-        logo.classList.remove("vivv-dim");
+    .vivv-top-left {
+        position: fixed; top: 20px; left: 25px;
+        color: #ffffff !important; font-size: 28px;
+        font-weight: 900; z-index: 999999;
     }
-});
-</script>
+
+    .stApp { background-color: #000205 !important; }
+
+    .block-container { padding-top: 60px !important; max-width: 95% !important; }
+
+    .neon-card {
+        background: linear-gradient(145deg, #000814, #001220);
+        border: 1px solid #0056b3;
+        border-radius: 12px;
+        padding: 12px 20px;
+        transition: all 0.3s ease-in-out;
+        cursor: pointer;
+    }
+
+    .neon-card:hover {
+        border: 1px solid #00d4ff;
+        box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+        transform: translateY(-3px);
+    }
+
+    .neon-card h2 {
+        margin: 5px 0 0 0 !important;
+        font-size: 1.8rem !important;
+    }
+
+    .orange-neon { color: #ff9100 !important; text-shadow: 0 0 15px rgba(255,145,0,0.5); text-align: center; }
+
+    /* ESTILO DO BOTÃO WHATSAPP */
+    .whatsapp-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 212, 255, 0.1);
+        color: #00d4ff !important;
+        border: 1px solid #00d4ff;
+        padding: 6px 15px;
+        border-radius: 8px;
+        text-decoration: none !important;
+        font-weight: bold;
+        transition: all 0.3s ease;
+    }
+
+    .whatsapp-button:hover {
+        background: #00d4ff;
+        color: #000814 !important;
+        box-shadow: 0 0 15px rgba(0, 212, 255, 0.6);
+        transform: scale(1.05);
+    }
+</style>
 """, unsafe_allow_html=True)
 
+st.markdown('<div class="vivv-top-left">Vivv</div>', unsafe_allow_html=True)
 
-
+# ================= 2. CONEXÃO FIREBASE =================
+# ================= 2. CONEXÃO FIREBASE =================
 
 @st.cache_resource
 def init_db():
@@ -70,6 +102,8 @@ def init_db():
 db = init_db()
 if db is None:
     st.stop()
+
+
 # ================= 3. LOGIN / CADASTRO =================
 if "logado" not in st.session_state:
     st.session_state.logado = False
@@ -405,9 +439,6 @@ if st.button("CONSULTAR IA") and prompt:
         st.error("Tempo esgotado: A IA está demorando muito para responder. Tente uma pergunta mais simples ou clique em Consultar novamente.")
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
-
-
-
 
 
 
