@@ -227,20 +227,28 @@ with st.expander("⚙️ Gerenciar Cadastros (Editar/Excluir)"):
                 st.cache_data.clear(); st.rerun()
 
 # Relatório Excel
+# --- RELATÓRIO EXCEL (CORRIGIDO) ---
 output = io.BytesIO()
-with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-    if clis: pd.DataFrame(clis).drop(columns=['id'], errors='ignore').to_excel(writer, sheet_name='Clientes', index=False)
-    if cx_list: pd.DataFrame(cx_list).to_excel(writer, sheet_name='Caixa', index=False)
-st.download_button("📊 BAIXAR RELATÓRIO EXCEL", output.getvalue(), "Relatorio.xlsx", "application/vnd.ms-excel")
+try:
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        if clis:
+            df_export_c = pd.DataFrame(clis).drop(columns=['id'], errors='ignore')
+            # Converte qualquer coluna de data/objeto para texto para evitar o ValueError
+            df_export_c = df_export_c.astype(str) 
+            df_export_c.to_excel(writer, sheet_name='Clientes', index=False)
+            
+        if cx_list:
+            df_export_cx = pd.DataFrame(cx_list)
+            # Converte datas e objetos complexos para texto antes de salvar
+            df_export_cx = df_export_cx.astype(str)
+            df_export_cx.to_excel(writer, sheet_name='Caixa', index=False)
 
-# Vivv AI
-st.write("---")
-st.subheader("💬 Vivv AI")
-p_ai = st.text_input("Pergunta para a IA", placeholder="Ex: Como aumentar meu lucro?")
-if st.button("CONSULTAR IA") and p_ai:
-    try:
-        url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key={st.secrets['GOOGLE_API_KEY']}"
-        payload = {"contents": [{"parts": [{"text": f"Analise: {len(clis)} clientes, R$ {faturamento} fat. Pergunta: {p_ai}"}]}]}
-        res = requests.post(url, json=payload, timeout=30).json()
-        st.info(res['candidates'][0]['content']['parts'][0]['text'])
-    except: st.error("Erro na IA. Verifique a chave API.")
+    st.download_button(
+        label="📊 BAIXAR RELATÓRIO EXCEL",
+        data=output.getvalue(),
+        file_name=f"Relatorio_Vivv_{datetime.now().strftime('%d_%m_%Y')}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+except Exception as e:
+    st.error(f"Erro ao gerar Excel: {e}")
+
