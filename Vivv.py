@@ -133,8 +133,8 @@ st.write("---")
 col_ops_l, col_ops_r = st.columns([1.2, 1]) 
 
 with col_ops_l: 
-    st.subheader("⚡ Painel de Controle")
-    t1, t2, t3, t4 = st.tabs(["📅 Agenda", "👤 Cliente", "🛠️ Serviço", "📉 Caixa"])
+    st.subheader("Painel de Controle")
+    t1, t2, t3, t4 = st.tabs(["📅 Agenda", "👤 Cliente", "🛠️ Serviço", "💵 Caixa"])
     
     with t1:
         with st.form(key="form_agenda", clear_on_submit=True):
@@ -182,7 +182,7 @@ with col_ops_l:
 
     with t4:
         with st.form("form_caixa", clear_on_submit=True):
-            st.markdown("### 📉 Lançamento Manual")
+            st.markdown("### 💸 Lançamento Manual")
             desc_cx = st.text_input("Descrição")
             val_cx = st.number_input("Valor", min_value=0.0)
             tipo_cx = st.selectbox("Tipo", ["Entrada", "Saída"])
@@ -346,6 +346,7 @@ if st.button("CONSULTAR IA") and prompt:
                 
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
+
 
 
 
