@@ -196,13 +196,16 @@ with col_ops_l:
     t1, t2, t3, t4 = st.tabs(["📅 Agendar", "👤 Clientes", "🛠️ Serviços", "💸 Caixa"])
     
     with t1:
-        with st.form("form_ag_vFINAL", clear_on_submit=True):
-            cli_n = st.selectbox("Cliente", [c['nome'] for c in clis], key="cli_vF") if clis else None
-            srv_n = st.selectbox("Serviço", [s['nome'] for s in srvs], key="srv_vF") if srvs else None
+        with st.form("form_ag_v10", clear_on_submit=True):
+            cli_n = st.selectbox("Cliente", [c['nome'] for c in clis], key="cli_v10") if clis else None
+            srv_n = st.selectbox("Serviço", [s['nome'] for s in srvs], key="srv_v10") if srvs else None
             c_d, c_h = st.columns(2)
-            d_val = c_d.date_input("Data", key="dat_vF")
-            d_val = c_d.date_input("Data", key="dat_vF", format="DD/MM/YYYY")
-        if st.form_submit_button("CONFIRMAR AGENDAMENTO", use_container_width=True):
+            # AQUI ESTÁ A DATA FORMATADA DD/MM/YYYY
+            d_val = c_d.date_input("Data", key="dat_v10", format="DD/MM/YYYY")
+            h_val = c_h.time_input("Horário", key="hor_v10")
+            
+            # O BOTÃO DE SUBMIT (OBRIGATÓRIO DENTRO DO FORM)
+            if st.form_submit_button("CONFIRMAR AGENDAMENTO", use_container_width=True):
                 if cli_n and srv_n:
                     p_s = next((s['preco'] for s in srvs if s['nome'] == srv_n), 0)
                     user_ref.collection("minha_agenda").add({
@@ -211,6 +214,7 @@ with col_ops_l:
                         "hora": h_val.strftime('%H:%M'), "timestamp": datetime.now()
                     })
                     st.cache_data.clear(); st.rerun()
+                    
 
     with t2:
         with st.form("form_cli_vFINAL", clear_on_submit=True):
@@ -369,6 +373,7 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'>Suporte 24h - (11) 989710009</p>", unsafe_allow_html=True)
+
 
 
 
