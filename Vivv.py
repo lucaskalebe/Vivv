@@ -184,25 +184,52 @@ with col_l:
                 st.cache_data.clear()
                 st.rerun()
 
-with col_r:
+with col_ops_r:
     st.subheader("📋 Próximos Atendimentos")
-    if not agnd: st.info("Sem pendências hoje.")
+    if not agnd:
+        st.info("Sem pendências hoje.")
     else:
         for item in agnd:
+            # Container com borda e padding reduzido via markdown lateral se necessário, 
+            # mas o border=True do Streamlit já ajuda.
             with st.container(border=True):
-                c1, c2 = st.columns([3, 1])
+                # Criamos 3 colunas: Info (Larga), Whats (Fina), Ações (Fina)
+                c1, c2, c3 = st.columns([3, 0.8, 1])
+                
                 with c1:
-                    st.markdown(f"**{item['hora']} - {item['cliente']}**")
-                    st.caption(f"🛠️ {item['servico']} | {format_brl(item.get('preco',0))}")
+                    # Texto em uma linha só para ser compacto
+                    st.markdown(f"**{item['hora']}** | {item['cliente']}")
+                    st.caption(f"🛠️ {item['servico']} • {format_brl(item.get('preco',0))}")
+                
                 with c2:
+                    # Botão Whats compacto
                     t_raw = next((c.get('telefone', '') for c in clis if c.get('nome') == item['cliente']), "")
                     t_clean = "".join(filter(str.isdigit, t_raw))
                     msg = urllib.parse.quote(f"Confirmado: {item['servico']} às {item['hora']}!")
-                    st.markdown(f'[![Whats](https://img.shields.io/badge/Whats-25D366?style=flat&logo=whatsapp&logoColor=white)](https://wa.me/55{t_clean}?text={msg})')
-                    if st.button("✅", key=f"f_{item['id']}"):
+                    st.markdown(f'[![Whats](https://img.shields.io/badge/-%20-25D366?style=flat&logo=whatsapp&logoColor=white)](https://wa.me/55{t_clean}?text={msg})')
+
+                with c3:
+                    # Coluna de botões Finalizar e Cancelar um ao lado do outro
+                    btn_col1, btn_col2 = st.columns(2)
+                    
+                    # Finalizar (Check)
+                    if btn_col1.button("✅", key=f"f_{item['id']}", help="Finalizar"):
                         user_ref.collection("minha_agenda").document(item['id']).update({"status": "Concluido"})
-                        user_ref.collection("meu_caixa").add({"data": datetime.now().strftime('%d/%m/%Y'), "descricao": f"Serviço: {item['cliente']}", "valor": item.get('preco', 0), "tipo": "Entrada"})
+                        user_ref.collection("meu_caixa").add({
+                            "data": datetime.now().strftime('%d/%m/%Y'),
+                            "descricao": f"Serviço: {item['cliente']}",
+                            "valor": item.get('preco', 0),
+                            "tipo": "Entrada"
+                        })
                         st.cache_data.clear()
+                        st.rerun()
+                    
+                    # Cancelar (X) - NOVO BOTÃO
+                    if btn_col2.button("❌", key=f"c_{item['id']}", help="Cancelar"):
+                        # Remove o agendamento do banco
+                        user_ref.collection("minha_agenda").document(item['id']).delete()
+                        st.cache_data.clear()
+                        st.warning(f"Agendamento de {item['cliente']} cancelado.")
                         st.rerun()
 
 # ================= 8. GESTÃO E IA =================
@@ -319,3 +346,4 @@ if st.button("CONSULTAR IA") and prompt:
                 
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
+
