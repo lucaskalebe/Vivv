@@ -211,40 +211,10 @@ verificar_acesso()
 
 # ================= 5. DASHBOARD =================
 
-import io # Adicione no topo do código
-
-# ... (dentro do seu bloco de Dashboard)
-
-with c_header2:
-    col_exc, col_sair = st.columns(2)
-    
-    with col_exc:
-        # Criando o arquivo Excel em memória
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            # Planilha 1: Clientes
-            if clis: pd.DataFrame(clis).to_sheet(writer, sheet_name='Clientes', index=False)
-            # Planilha 2: Caixa (Relatório Geral)
-            if cx_list: pd.DataFrame(cx_list).to_sheet(writer, sheet_name='Fluxo de Caixa', index=False)
-            
-        excel_data = output.getvalue()
-
-        st.download_button(
-            label="📊 EXCEL", # Você pode usar o emoji de gráfico ou um 'E'
-            data=excel_data,
-            file_name=f"Relatorio_Vivv_{datetime.now().strftime('%d_%m_%Y')}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            help="Baixar resumo geral da loja"
-        )
-
-    with col_sair:
-        if st.button("SAIR"):
-            st.session_state.logado = False
-            st.rerun()
-
 user_ref = db.collection("usuarios").document(st.session_state.user_email)
 
 @st.cache_data(ttl=60)
+
 def carregar_dados_usuario(email):
     # Use o email para garantir que o cache é único por usuário
     u_ref = db.collection("usuarios").document(email)
@@ -269,6 +239,35 @@ with c_header2:
         st.session_state.logado = False
         st.rerun()
 
+# ================= 6. CABEÇALHO ÚNICO (DASHBOARD) =================
+c_header1, c_header2 = st.columns([3, 2])
+
+with c_header1:
+    st.markdown(f"##### 🚀 adm: <span style='color:#00d4ff'>{st.session_state.user_email}</span>", unsafe_allow_html=True)
+
+with c_header2:
+    col_exc, col_sair = st.columns(2)
+    
+    with col_exc:
+        output = io.BytesIO()
+        # O 'with' do ExcelWriter garante que o arquivo seja fechado e salvo no buffer 'output'
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            if clis:
+                pd.DataFrame(clis).drop(columns=['id'], errors='ignore').to_excel(writer, sheet_name='Clientes', index=False)
+            if cx_list:
+                pd.DataFrame(cx_list).to_excel(writer, sheet_name='Financeiro', index=False)
+        
+        st.download_button(
+            label="📊 EXCEL",
+            data=output.getvalue(),
+            file_name=f"Relatorio_{datetime.now().strftime('%d_%m_%Y')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+    with col_sair:
+        if st.button("SAIR", key="btn_logout_top"):
+            st.session_state.logado = False
+            st.rerun()
 
 
 def format_brl(valor):
@@ -538,6 +537,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.error("Tempo esgotado: A IA está demorando muito para responder. Tente uma pergunta mais simples ou clique em Consultar novamente.")
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
+
 
 
 
