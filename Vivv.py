@@ -26,9 +26,11 @@ st.markdown("""
     font-weight: 600;
     color: white;
     opacity: 1;
-    transition: opacity 0.25s linear;
+    transition: opacity 0.4s ease;
     z-index: 9999;
-    pointer-events: none;
+}
+.vivv-dim {
+    opacity: 0.35;
 }
 </style>
 
@@ -36,19 +38,17 @@ st.markdown("""
 
 <script>
 const logo = document.getElementById("vivvLogo");
-const mainSection = parent.document.querySelector("section.main");
 
-mainSection.addEventListener("scroll", () => {
-    const scrollTop = mainSection.scrollTop;
-    
-    // fade progressivo entre 0px e 120px
-    let opacity = 1 - (scrollTop / 120);
-    opacity = Math.max(0.35, Math.min(1, opacity));
-
-    logo.style.opacity = opacity;
+window.addEventListener("scroll", () => {
+    if (window.scrollY > 40) {
+        logo.classList.add("vivv-dim");
+    } else {
+        logo.classList.remove("vivv-dim");
+    }
 });
 </script>
 """, unsafe_allow_html=True)
+
 
 
 @st.cache_resource
