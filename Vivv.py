@@ -130,106 +130,73 @@ m4.markdown(f'<div class="neon-card"><small>📅 PENDENTES</small><h2 style="col
 st.write("---")
 
 # ================= 7. PAINEL OPERACIONAL =================
-col_l, col_r = st.columns([1.2, 1])
+col_ops_l, col_ops_r = st.columns([1.2, 1]) 
 
-with col_l:
-    st.subheader("⚡ Controle")
+with col_ops_l: 
+    st.subheader("⚡ Painel de Controle")
     t1, t2, t3, t4 = st.tabs(["📅 Agenda", "👤 Cliente", "🛠️ Serviço", "📉 Caixa"])
     
     with t1:
-        with st.form(key="form_ag", clear_on_submit=True):
+        # Formulário de Agendamento
+        with st.form(key="form_main_agenda", clear_on_submit=True):
             st.markdown("### 📅 Novo Agendamento")
             with st.popover("👤 Selecionar Cliente e Serviço", use_container_width=True):
-                c_sel = st.selectbox("Cliente", [c['nome'] for c in clis]) if clis else None
-                s_sel = st.selectbox("Serviço", [s['nome'] for s in srvs]) if srvs else None
-            cd, ch = st.columns(2)
-            d_ag = cd.date_input("Data", format="DD/MM/YYYY")
-            h_ag = ch.time_input("Horário")
+                c_sel = st.selectbox("Escolha o Cliente", [c['nome'] for c in clis], key="sel_cli_ag") if clis else None
+                s_sel = st.selectbox("Escolha o Serviço", [s['nome'] for s in srvs], key="sel_srv_ag") if srvs else None
+            
+            col_d, col_h = st.columns(2)
+            d_ag = col_d.date_input("Data", format="DD/MM/YYYY")
+            h_ag = col_h.time_input("Horário")
+
             if st.form_submit_button("CONFIRMAR AGENDAMENTO", use_container_width=True):
                 if c_sel and s_sel:
-                    p = next((s['preco'] for s in srvs if s['nome'] == s_sel), 0)
+                    p_v = next((s['preco'] for s in srvs if s['nome'] == s_sel), 0)
                     user_ref.collection("minha_agenda").add({
-                        "cliente": c_sel, "servico": s_sel, "preco": p,
+                        "cliente": c_sel, "servico": s_sel, "preco": p_v,
                         "status": "Pendente", "data": d_ag.strftime('%d/%m/%Y'),
                         "hora": h_ag.strftime('%H:%M'), "timestamp": datetime.now()
                     })
                     st.cache_data.clear()
                     st.rerun()
+    # ... (mantenha aqui os conteúdos de t2, t3 e t4 que você já tem)
 
-    with t2:
-        with st.form("f_cli"):
-            nome = st.text_input("Nome")
-            tel = st.text_input("WhatsApp")
-            if st.form_submit_button("CADASTRAR CLIENTE"):
-                user_ref.collection("meus_clientes").add({"nome": nome, "telefone": tel})
-                st.cache_data.clear()
-                st.rerun()
-
-    with t3:
-        with st.form("f_srv"):
-            serv = st.text_input("Nome do Serviço")
-            prec = st.number_input("Preço", min_value=0.0)
-            if st.form_submit_button("SALVAR SERVIÇO"):
-                user_ref.collection("meus_servicos").add({"nome": serv, "preco": prec})
-                st.cache_data.clear()
-                st.rerun()
-
-    with t4:
-        with st.form("f_cx"):
-            ds = st.text_input("Descrição")
-            vl = st.number_input("Valor", min_value=0.0)
-            tp = st.selectbox("Tipo", ["Entrada", "Saída"])
-            if st.form_submit_button("LANÇAR"):
-                user_ref.collection("meu_caixa").add({"descricao": ds, "valor": vl, "tipo": tp, "data": datetime.now()})
-                st.cache_data.clear()
-                st.rerun()
-
+# --- COLUNA DA DIREITA: LISTA COMPACTA ---
 with col_ops_r:
     st.subheader("📋 Próximos Atendimentos")
     if not agnd:
-        st.info("Sem pendências hoje.")
+        st.info("Agenda livre hoje.")
     else:
         for item in agnd:
-            # Container com borda e padding reduzido via markdown lateral se necessário, 
-            # mas o border=True do Streamlit já ajuda.
             with st.container(border=True):
-                # Criamos 3 colunas: Info (Larga), Whats (Fina), Ações (Fina)
-                c1, c2, c3 = st.columns([3, 0.8, 1])
+                # Layout compacto: Info | Whats | Ações
+                c1, c2, c3 = st.columns([2.5, 0.7, 1.2])
                 
                 with c1:
-                    # Texto em uma linha só para ser compacto
                     st.markdown(f"**{item['hora']}** | {item['cliente']}")
-                    st.caption(f"🛠️ {item['servico']} • {format_brl(item.get('preco',0))}")
+                    st.caption(f"{item['servico']} • {format_brl(item.get('preco',0))}")
                 
                 with c2:
-                    # Botão Whats compacto
                     t_raw = next((c.get('telefone', '') for c in clis if c.get('nome') == item['cliente']), "")
                     t_clean = "".join(filter(str.isdigit, t_raw))
                     msg = urllib.parse.quote(f"Confirmado: {item['servico']} às {item['hora']}!")
                     st.markdown(f'[![Whats](https://img.shields.io/badge/-%20-25D366?style=flat&logo=whatsapp&logoColor=white)](https://wa.me/55{t_clean}?text={msg})')
 
                 with c3:
-                    # Coluna de botões Finalizar e Cancelar um ao lado do outro
-                    btn_col1, btn_col2 = st.columns(2)
-                    
-                    # Finalizar (Check)
-                    if btn_col1.button("✅", key=f"f_{item['id']}", help="Finalizar"):
+                    b1, b2 = st.columns(2)
+                    # Finalizar
+                    if b1.button("✅", key=f"f_{item['id']}", help="Concluir"):
                         user_ref.collection("minha_agenda").document(item['id']).update({"status": "Concluido"})
                         user_ref.collection("meu_caixa").add({
                             "data": datetime.now().strftime('%d/%m/%Y'),
                             "descricao": f"Serviço: {item['cliente']}",
-                            "valor": item.get('preco', 0),
-                            "tipo": "Entrada"
+                            "valor": item.get('preco', 0), "tipo": "Entrada"
                         })
                         st.cache_data.clear()
                         st.rerun()
-                    
-                    # Cancelar (X) - NOVO BOTÃO
-                    if btn_col2.button("❌", key=f"c_{item['id']}", help="Cancelar"):
-                        # Remove o agendamento do banco
+                    # Cancelar (X)
+                    if b2.button("❌", key=f"c_{item['id']}", help="Excluir"):
                         user_ref.collection("minha_agenda").document(item['id']).delete()
                         st.cache_data.clear()
-                        st.warning(f"Agendamento de {item['cliente']} cancelado.")
                         st.rerun()
 
 # ================= 8. GESTÃO E IA =================
@@ -346,4 +313,5 @@ if st.button("CONSULTAR IA") and prompt:
                 
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
+
 
