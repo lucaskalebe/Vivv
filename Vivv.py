@@ -7,7 +7,7 @@ from google.cloud import firestore
 from google.oauth2 import service_account
 import json
 import hashlib
-
+import xlsxwriter
 
 fuso_br = timezone(timedelta(hours=-3))
 
@@ -210,6 +210,38 @@ def verificar_acesso():
 verificar_acesso()
 
 # ================= 5. DASHBOARD =================
+
+import io # Adicione no topo do código
+
+# ... (dentro do seu bloco de Dashboard)
+
+with c_header2:
+    col_exc, col_sair = st.columns(2)
+    
+    with col_exc:
+        # Criando o arquivo Excel em memória
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            # Planilha 1: Clientes
+            if clis: pd.DataFrame(clis).to_sheet(writer, sheet_name='Clientes', index=False)
+            # Planilha 2: Caixa (Relatório Geral)
+            if cx_list: pd.DataFrame(cx_list).to_sheet(writer, sheet_name='Fluxo de Caixa', index=False)
+            
+        excel_data = output.getvalue()
+
+        st.download_button(
+            label="📊 EXCEL", # Você pode usar o emoji de gráfico ou um 'E'
+            data=excel_data,
+            file_name=f"Relatorio_Vivv_{datetime.now().strftime('%d_%m_%Y')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            help="Baixar resumo geral da loja"
+        )
+
+    with col_sair:
+        if st.button("SAIR"):
+            st.session_state.logado = False
+            st.rerun()
+
 user_ref = db.collection("usuarios").document(st.session_state.user_email)
 
 @st.cache_data(ttl=60)
@@ -236,6 +268,8 @@ with c_header2:
     if st.button("SAIR"):
         st.session_state.logado = False
         st.rerun()
+
+
 
 def format_brl(valor):
     # Transforma 1234.56 em "1,234.56", depois inverte os sinais para o padrão BR
@@ -504,6 +538,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.error("Tempo esgotado: A IA está demorando muito para responder. Tente uma pergunta mais simples ou clique em Consultar novamente.")
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
+
 
 
 
