@@ -1,28 +1,23 @@
 
 
-import streamlit as st
-import pandas as pd
-import urllib.parse
-from datetime import datetime, timezone, timedelta
-import google.generativeai as genai
-from google.cloud import firestore
-from google.oauth2 import service_account
-import json
-import hashlib
+import streamlit as st # Importa Streamlit para criar interfaces web interativas
+import pandas as pd # Importa Pandas para manipular e analisar dados
+import urllib.parse # Importa utilidades para codificar e decodificar URLs
+from datetime import datetime, timezone, timedelta # Importa classes para datas, fuso horário, intervalos
+import google.generativeai as genai # Importa IA generativa do Google para textos
+from google.cloud import firestore # Importa Firestore para banco de dados NoSQL
+from google.oauth2 import service_account # Importa credenciais de serviço para autenticação Google
+import json # Importa JSON para leitura e escrita de dados
+import hashlib # Importa hash criptográfico para senhas e segurança
 
-
-fuso_br = timezone(timedelta(hours=-3))
-
-# CSS Refinado para remover GitHub, Menu e Header de forma estável
+fuso_br = timezone(timedelta(hours=-3)) # Define fuso horário brasileiro UTC menos três
 # ================= 1. CONFIGURAÇÃO E DESIGN VIVV =================
-st.set_page_config(page_title="Vivv Pro", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="Vivv Pro", layout="wide", page_icon="🚀") # Configura título, layout amplo e ícone página
+def hash_senha(senha): # Define função para gerar hash da senha
+    return hashlib.sha256(str.encode(senha)).hexdigest() # Retorna hash SHA256 da senha codificada
 
-def hash_senha(senha):
-    return hashlib.sha256(str.encode(senha)).hexdigest()
-
-# CSS Único e Corrigido (Sem duplicidade de tags)
-st.markdown("""
-<style>
+st.markdown(""" 
+<style> 
     header, [data-testid="stHeader"], .stAppDeployButton { display: none !important; }
 
     .vivv-top-left {
@@ -81,11 +76,38 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="vivv-top-left">Vivv</div>', unsafe_allow_html=True)
+st.markdown("""
+<style>
+.vivv-top-left {
+    position: fixed;
+    top: 16px;
+    left: 20px;
+    font-size: 22px;
+    font-weight: 600;
+    color: white;
+    opacity: 1;
+    transition: opacity 0.4s ease;
+    z-index: 9999;
+}
+.vivv-dim {
+    opacity: 0.35;
+}
+</style>
 
-# ================= 2. CONEXÃO FIREBASE =================
-# ================= 2. CONEXÃO FIREBASE =================
+<div class="vivv-top-left" id="vivvLogo">Vivv</div>
 
+<script>
+const logo = document.getElementById("vivvLogo");
+
+window.addEventListener("scroll", () => {
+    if (window.scrollY > 40) {
+        logo.classList.add("vivv-dim");
+    } else {
+        logo.classList.remove("vivv-dim");
+    }
+});
+</script>
+""", unsafe_allow_html=True)
 @st.cache_resource
 def init_db():
     try:
@@ -104,8 +126,6 @@ def init_db():
 db = init_db()
 if db is None:
     st.stop()
-
-
 # ================= 3. LOGIN / CADASTRO =================
 if "logado" not in st.session_state:
     st.session_state.logado = False
@@ -441,6 +461,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.error("Tempo esgotado: A IA está demorando muito para responder. Tente uma pergunta mais simples ou clique em Consultar novamente.")
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
+
 
 
 
