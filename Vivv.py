@@ -320,54 +320,48 @@ import time
 # ================= 8. VIVV AI: RESILIÊNCIA TOTAL (ANTI-429) =================
 st.write("---")
 st.subheader("💬 Vivv AI: Consultoria Estratégica")
-prompt = st.text_input("Analise seu negócio ou peça dicas:", placeholder="Ex: Como posso atrair mais clientes este mês?", key="ia_input")
+prompt = st.text_input("Analise seu negócio ou peça dicas:", placeholder="Ex: Como posso atrair mais clientes?", key="ia_input")
 
 if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt:
     if "GOOGLE_API_KEY" not in st.secrets:
         st.error("Chave API não configurada nos Secrets.")
     else:
+        import time
         api_key = st.secrets["GOOGLE_API_KEY"]
-        # Lista de modelos para fallback (se um falhar, tenta o outro)
         modelos = ["gemini-2.0-flash", "gemini-1.5-flash"]
         sucesso = False
         
-        with st.spinner("Vivv AI está pensando... (Pode levar alguns segundos se o tráfego estiver alto)"):
+        with st.spinner("Vivv AI analisando dados..."):
             for modelo in modelos:
-                if sucesso: break
+                if sucesso:
+                    break
                 
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={api_key}"
                 payload = {
-                    "contents": [{"parts": [{"text": f"Atue como consultor de negócios Vivv Pro. Dados: {len(clis)} clientes, Receita {format_brl(faturamento)}. Pergunta: {prompt}"}]}],
-                    "generationConfig": {"temperature": 0.7}
+                    "contents": [{"parts": [{"text": f"Atue como consultor Vivv Pro. Analise: {len(clis)} clientes, faturamento R$ {faturamento:.2f}. Pergunta: {prompt}"}]}]
                 }
 
-                for tentativa in range(3): # Tenta 3 vezes se der erro de limite
+                # Tenta lidar com o erro 429 (muitas requisições)
+                for tentativa in range(2):
                     try:
-                        response = requests.post(url, json=payload, timeout=30)
-                        
+                        response = requests.post(url, json=payload, timeout=25)
                         if response.status_code == 200:
-                            res = response.json()
-                            texto_ia = res['candidates'][0]['content']['parts'][0]['text']
-                            st.markdown(f'<div class="ia-box"><b>Análise ({modelo}):</b><br>{texto_ia}</div>', unsafe_allow_html=True)
+                            res_json = response.json()
+                            texto_ia = res_json['candidates'][0]['content']['parts'][0]['text']
+                            st.markdown(f'<div class="ia-box"><b>Vivv AI Insights ({modelo}):</b><br><br>{texto_ia}</div>', unsafe_allow_html=True)
                             sucesso = True
                             break
-                        
                         elif response.status_code == 429:
-                            # Se for limite de requisição, espera 2 segundos e tenta de novo
-                            time.sleep(2)
-                            continue 
-                        
+                            time.sleep(2) # Espera o servidor respirar
                         else:
-                            # Outros erros (400, 404, 500) - pula pro próximo modelo
-                            break
-                            
+                            break # Pula para o próximo modelo se for erro 400/500
                     except Exception:
-                        continue
+                        break # Erro de conexão, tenta o próximo modelo
 
         if not sucesso:
-            st.error("O servidor do Google está muito ocupado agora (Erro 429). Aguarde 30 segundos e tente novamente.")
+            st.error("O sistema da Google está instável agora. Tente novamente em 1 minuto.")
 
-
+st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 
 
 
@@ -376,4 +370,5 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt:
     
     except Exception as e:
         st.error(f"Erro inesperado: {str(e)}")
+
 
