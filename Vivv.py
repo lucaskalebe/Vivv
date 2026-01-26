@@ -261,22 +261,28 @@ with col_ops_l:
     t1, t2, t3, t4 = st.tabs(["📅 Agenda", "👤 Cliente", "🛠️ Serviço", "📉 Caixa"])
     
     with t1:
-        with st.form("f_ag"):
+    with st.form("f_ag"):
+        # 1. Seleção elegante via Popover (Fecha ao clicar fora)
+        with st.popover("👤 Selecionar Cliente e Serviço", use_container_width=True):
             c_sel = st.selectbox("Cliente", [c['nome'] for c in clis]) if clis else None
             s_sel = st.selectbox("Serviço", [s['nome'] for s in srvs]) if srvs else None
-            col_d, col_h = st.columns(2)
-            d_ag = col_d.date_input("Data", format="DD/MM/YYYY")
-            h_ag = col_h.time_input("Hora")
-            if st.form_submit_button("AGENDAR"):
-                if c_sel and s_sel:
-                    st.cache_data.clear() # <--- ADICIONE ESTA LINHA
-                    p_v = next((s['preco'] for s in srvs if s['nome'] == s_sel), 0)
-                    user_ref.collection("minha_agenda").add({
-                        "cliente": c_sel, "servico": s_sel, "preco": p_v,
-                        "status": "Pendente", "data": d_ag.strftime('%d/%m/%Y'),
-                        "hora": h_ag.strftime('%H:%M')
-                    })
-                    st.rerun()
+        
+        # 2. Dados visíveis de data e hora (UX mais clara)
+        col_d, col_h = st.columns(2)
+        d_ag = col_d.date_input("Data", format="DD/MM/YYYY")
+        h_ag = col_h.time_input("Hora")
+        
+        # 3. O Botão SEMPRE fora do popover, mas dentro do form
+        if st.form_submit_button("AGENDAR"):
+            if c_sel and s_sel:
+                st.cache_data.clear()
+                p_v = next((s['preco'] for s in srvs if s['nome'] == s_sel), 0)
+                user_ref.collection("minha_agenda").add({
+                    "cliente": c_sel, "servico": s_sel, "preco": p_v,
+                    "status": "Pendente", "data": d_ag.strftime('%d/%m/%Y'),
+                    "hora": h_ag.strftime('%H:%M')
+                })
+                st.rerun()
 
     with t2:
         with st.form("f_cli"):
@@ -495,6 +501,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.error("Tempo esgotado: A IA está demorando muito para responder. Tente uma pergunta mais simples ou clique em Consultar novamente.")
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
+
 
 
 
