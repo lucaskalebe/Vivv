@@ -186,6 +186,7 @@ st.write("<br>", unsafe_allow_html=True)
 # ================= 6, 7 e 8. PAINEL UNIFICADO (ANTI-ERRO) =================
 st.write("---")
 col_ops_l, col_ops_r = st.columns([1.3, 1])
+
 preco_s = st.number_input("Preço", min_value=0.0, step=1.0, format="%.2f", key="p_s_br")
 
 # Filtro de hoje para a agenda
@@ -258,7 +259,9 @@ with col_ops_r:
                 c1, c2, c3, c4 = st.columns([2.5, 1, 1, 1])
                 with c1:
                     # No loop da agenda, dentro da c1:
-                    st.markdown(f"**{ag['hora']}** | {ag['cliente']}<br><small style='color:#888'>{ag['servico']} • R$ {ag.get('preco', 0):,.2f}'.replace(',', 'X').replace('.', ',').replace('X', '.')}</small>", unsafe_allow_html=True)
+                    # 1. Primeiro, criamos o texto do preço formatado (Padrão BR)
+                    preco_formatado = f"{ag.get('preco', 0):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                    st.markdown(f"**{ag['hora']}** | {ag['cliente']}<br><small style='color:#888'>{ag['servico']} • R$ {preco_formatado}</small>", unsafe_allow_html=True)
                 with c2:
                     st.markdown(f'<a href="https://wa.me/55{t_clean}" target="_blank" style="text-decoration:none;"><div style="background-color:#25D366; color:white; text-align:center; padding:5px; border-radius:5px; font-size:10px; font-weight:bold; margin-top:5px;">WHATS</div></a>', unsafe_allow_html=True)
                 with c3:
@@ -370,6 +373,7 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'>Suporte 24h - (11) 989710009</p>", unsafe_allow_html=True)
+
 
 
 
