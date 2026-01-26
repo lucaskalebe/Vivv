@@ -242,17 +242,16 @@ m2.markdown(f'<div class="neon-card"><small>💰 RECEITA</small><h2 style="color
 m3.markdown(f'<div class="neon-card"><small>📈 LUCRO</small><h2 style="color:#00ff88">{format_brl(faturamento-despesas)}</h2></div>', unsafe_allow_html=True)
 m4.markdown(f'<div class="neon-card"><small>📅 PENDENTES</small><h2 style="color:#ff9100">{len(agnd)}</h2></div>', unsafe_allow_html=True)
 
-# --- DEFINIÇÃO DAS COLUNAS DO LAYOUT ---
-# Aqui criamos as variáveis col_ops_l (esquerda) e col_ops_r (direita)
+# --- 1. DEFINIÇÃO ÚNICA DAS COLUNAS DO LAYOUT ---
 col_ops_l, col_ops_r = st.columns([1.2, 1]) 
 
 with col_ops_l: 
     st.subheader("⚡ Painel de Controle")
-    # 2. Define as abas
+    # As abas são criadas APENAS UMA VEZ aqui
     t1, t2, t3, t4 = st.tabs(["📅 Agenda", "👤 Cliente", "🛠️ Serviço", "📉 Caixa"])
     
     with t1:
-        # FORMULÁRIO DE AGENDAMENTO (Dentro da Aba 1)
+        # Formulário Único de Agendamento
         with st.form(key="form_main_agenda", clear_on_submit=True):
             st.markdown("### 📅 Novo Agendamento")
             with st.popover("👤 Selecionar Cliente e Serviço", use_container_width=True):
@@ -304,7 +303,7 @@ with col_ops_l:
                 st.cache_data.clear()
                 st.rerun()
 
-# 3. Lista de Agendamentos (Coluna da Direita, fora das abas)
+# --- 2. LISTA DE AGENDAMENTOS NA COLUNA DA DIREITA ---
 with col_ops_r:
     st.subheader("📋 Próximos Atendimentos")
     if not agnd:
@@ -322,7 +321,7 @@ with col_ops_r:
                     msg = urllib.parse.quote(f"Confirmado: {item.get('servico')} às {item.get('hora')}!")
                     st.markdown(f'[![Whats](https://img.shields.io/badge/Whats-25D366?style=flat&logo=whatsapp&logoColor=white)](https://wa.me/55{clean_tel}?text={msg})')
                     if st.button("✅", key=f"fin_{item['id']}"):
-                        user_ref.collection("minha_agenda").document(item['id']).update({"status": "Concluido"})
+                        user_ref.collection("minha_agenda").document(item['id']).update({"status": "Concluído"})
                         user_ref.collection("meu_caixa").add({
                             "data": datetime.now().strftime('%d/%m/%Y'),
                             "descricao": f"Atendimento: {item['cliente']}",
@@ -331,131 +330,8 @@ with col_ops_r:
                         st.cache_data.clear()
                         st.rerun()
 
-with t1:
-    # ... (seu código do formulário de agendamento que já corrigimos) ...
 
-    st.divider() # Uma linha sutil para separar o formulário da lista
-    st.markdown("### 📋 Seus Próximos Atendimentos")
-
-    if agnd:
-        for item in agnd:
-            # Criamos um "card" usando o componente container do streamlit
-            with st.container(border=True):
-                c1, c2, c3 = st.columns([2, 2, 1])
                 
-                with c1:
-                    st.markdown(f"**👤 {item['cliente']}**")
-                    st.caption(f"🛠️ {item['servico']}")
-                
-                with c2:
-                    st.markdown(f"**📅 {item['data']}**")
-                    st.caption(f"⏰ {item['hora']}")
-                
-                with c3:
-                    # Formatação do preço e botão de conclusão
-                    valor = item.get('preco', 0)
-                    st.markdown(f"**{format_brl(valor)}**")
-                    
-                    if st.button("Finalizar", key=f"btn_{item['id']}"):
-                        # Lógica para concluir e mandar pro financeiro
-                        user_ref.collection("minha_agenda").document(item['id']).update({"status": "Concluido"})
-                        
-                        # Salva automaticamente no CAIXA como Entrada
-                        user_ref.collection("meu_caixa").add({
-                            "data": datetime.now().strftime('%d/%m/%Y'),
-                            "descricao": f"Atendimento: {item['cliente']}",
-                            "valor": valor,
-                            "tipo": "Entrada"
-                        })
-                        st.cache_data.clear()
-                        st.success("✅ Atendimento finalizado e caixa atualizado!")
-                        st.rerun()
-    else:
-        st.info("Nenhum agendamento pendente para hoje. ☕")
-
-# Você pode usar a col_ops_r para mostrar a tabela de agendamentos depois!
-with col_ops_r:
-    st.subheader("📋 Próximos Clientes")
-    # Aqui colocaremos a lista de quem vai chegar
-
-# ================= 7. OPERAÇÕES =================
-st.write("---")
-col_ops_l, col_ops_r = st.columns([1.5, 2])
-
-with t1:
-    # Esta linha abaixo PRECISA ter 4 espaços (ou 1 Tab) de recuo em relação ao 'with t1'
-    with st.form(key="form_main_agenda", clear_on_submit=True):
-        st.markdown("### 📅 Novo Agendamento")
-        
-        # O popover tem 8 espaços de recuo (2 Tabs)
-        with st.popover("👤 Selecionar Cliente e Serviço", use_container_width=True):
-            c_sel = st.selectbox("Escolha o Cliente", [c['nome'] for c in clis], key="sel_cli_ag") if clis else None
-            s_sel = st.selectbox("Escolha o Serviço", [s['nome'] for s in srvs], key="sel_srv_ag") if srvs else None
-        
-        col_d, col_h = st.columns(2)
-        with col_d:
-            d_ag = st.date_input("Data do Atendimento", format="DD/MM/YYYY")
-        with col_h:
-            h_ag = st.time_input("Horário")
-
-        # Botão de submissão
-        if st.form_submit_button("CONFIRMAR AGENDAMENTO", use_container_width=True):
-            if c_sel and s_sel:
-                # Busca o preço do serviço selecionado
-                preco_v = next((s['preco'] for s in srvs if s['nome'] == s_sel), 0)
-                
-                # Salva no Firebase
-                user_ref.collection("minha_agenda").add({
-                    "cliente": c_sel,
-                    "servico": s_sel,
-                    "preco": preco_v,
-                    "status": "Pendente",
-                    "data": d_ag.strftime('%d/%m/%Y'),
-                    "hora": h_ag.strftime('%H:%M'),
-                    "timestamp": datetime.now()
-                })
-                
-                st.cache_data.clear()
-                st.success(f"✅ Agendado para {c_sel}!")
-                st.rerun()
-    with t2:
-        with st.form("f_cli"):
-            nome = st.text_input("Nome")
-            tel = st.text_input("WhatsApp")
-            if st.form_submit_button("CADASTRAR"):
-                user_ref.collection("meus_clientes").add({"nome": nome, "telefone": tel})
-                st.cache_data.clear()  # <--- Adicione isso para limpar o cache e ler o novo cliente
-                st.rerun()
-
-    with t3:
-        with st.form("f_srv"):
-            serv = st.text_input("Nome do Serviço")
-            prec = st.number_input("Preço", min_value=0.0)
-            if st.form_submit_button("SALVAR"):
-                user_ref.collection("meus_servicos").add({"nome": serv, "preco": prec})
-                st.cache_data.clear() # <--- ADICIONE ESTA LINHA
-                st.rerun()
-
-    with t4:
-        with st.form("f_cx"):
-            ds = st.text_input("Descrição")
-            vl = st.number_input("Valor", min_value=0.0)
-            tp = st.selectbox("Tipo", ["Entrada", "Saída"])
-            if st.form_submit_button("LANÇAR"):
-                st.cache_data.clear() # <--- ADICIONE ESTA LINHA
-                user_ref.collection("meu_caixa").add({
-                    "descricao": ds, "valor": vl, "tipo": tp, "data": firestore.SERVER_TIMESTAMP
-                })
-                st.rerun()
-
-with col_ops_r:
-    st.subheader("📋 Agendamentos:")
-    if not agnd:
-        st.info("Agenda livre para hoje.")
-    else:
-        for i, a in enumerate(agnd):
-            with st.expander(f"📍 {a.get('hora')} - {a.get('cliente')}"):
-                st.write(f"**Serviço:** {a.get('servico')} | **R$ {a.get('preco',0):.2f}**")
                 c1, c2, c3 = st.columns(3)
                 
                 # WhatsApp Link
@@ -635,6 +511,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.error("Tempo esgotado: A IA está demorando muito para responder. Tente uma pergunta mais simples ou clique em Consultar novamente.")
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
+
 
 
 
