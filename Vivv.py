@@ -318,11 +318,12 @@ with col_perf_r:
 import time
 
 # ================= 8. VIVV AI: RESILIÊNCIA TOTAL (ANTI-429) =================
+# ================= 8. VIVV AI: RESILIÊNCIA TOTAL (ANTI-429) =================
 st.write("---")
 st.subheader("💬 Vivv AI: Consultoria Estratégica")
-prompt = st.text_input("Analise seu negócio ou peça dicas:", placeholder="Ex: Como posso atrair mais clientes?", key="ia_input")
+prompt_ia = st.text_input("Analise seu negócio ou peça dicas:", placeholder="Ex: Como posso atrair mais clientes?", key="ia_input_master")
 
-if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt:
+if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
     if "GOOGLE_API_KEY" not in st.secrets:
         st.error("Chave API não configurada nos Secrets.")
     else:
@@ -338,10 +339,10 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt:
                 
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={api_key}"
                 payload = {
-                    "contents": [{"parts": [{"text": f"Atue como consultor Vivv Pro. Analise: {len(clis)} clientes, faturamento R$ {faturamento:.2f}. Pergunta: {prompt}"}]}]
+                    "contents": [{"parts": [{"text": f"Atue como consultor Vivv Pro. Analise: {len(clis)} clientes, faturamento R$ {faturamento:.2f}. Pergunta: {prompt_ia}"}]}]
                 }
 
-                # Tenta lidar com o erro 429 (muitas requisições)
+                # Tentativas para contornar o Erro 429
                 for tentativa in range(2):
                     try:
                         response = requests.post(url, json=payload, timeout=25)
@@ -352,23 +353,17 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt:
                             sucesso = True
                             break
                         elif response.status_code == 429:
-                            time.sleep(2) # Espera o servidor respirar
+                            time.sleep(2)
                         else:
-                            break # Pula para o próximo modelo se for erro 400/500
-                    except Exception:
-                        break # Erro de conexão, tenta o próximo modelo
+                            break 
+                    except Exception as e:
+                        # Se houver erro de conexão, tentamos o próximo modelo
+                        continue
 
         if not sucesso:
-            st.error("O sistema da Google está instável agora. Tente novamente em 1 minuto.")
+            st.error("O sistema da Google está instável agora (Erro 429). Tente novamente em 1 minuto.")
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 
-
-
-
-
-    
-    except Exception as e:
-        st.error(f"Erro inesperado: {str(e)}")
 
 
