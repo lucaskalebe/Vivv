@@ -187,8 +187,6 @@ st.write("<br>", unsafe_allow_html=True)
 st.write("---")
 col_ops_l, col_ops_r = st.columns([1.3, 1])
 
-preco_s = st.number_input("Preço", min_value=0.0, step=1.0, format="%.2f", key="p_s_br")
-
 # Filtro de hoje para a agenda
 hoje_str = datetime.now(fuso_br).strftime('%d/%m/%Y')
 clis_hoje = [a for a in agnd if a.get('data') == hoje_str]
@@ -203,8 +201,8 @@ with col_ops_l:
             srv_n = st.selectbox("Serviço", [s['nome'] for s in srvs], key="srv_vF") if srvs else None
             c_d, c_h = st.columns(2)
             d_val = c_d.date_input("Data", key="dat_vF")
-            h_val = c_h.time_input("Horário", key="hor_vF")
-            if st.form_submit_button("CONFIRMAR AGENDAMENTO", use_container_width=True):
+            d_val = c_d.date_input("Data", key="dat_vF", format="DD/MM/YYYY")
+        if st.form_submit_button("CONFIRMAR AGENDAMENTO", use_container_width=True):
                 if cli_n and srv_n:
                     p_s = next((s['preco'] for s in srvs if s['nome'] == srv_n), 0)
                     user_ref.collection("minha_agenda").add({
@@ -371,6 +369,7 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'>Suporte 24h - (11) 989710009</p>", unsafe_allow_html=True)
+
 
 
 
