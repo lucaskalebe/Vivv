@@ -250,20 +250,28 @@ with c_header2:
     col_exc, col_sair = st.columns(2)
     
     with col_exc:
-        output = io.BytesIO()
-        # O 'with' do ExcelWriter garante que o arquivo seja fechado e salvo no buffer 'output'
-        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            if clis:
-                pd.DataFrame(clis).drop(columns=['id'], errors='ignore').to_excel(writer, sheet_name='Clientes', index=False)
-            if cx_list:
-                pd.DataFrame(cx_list).to_excel(writer, sheet_name='Financeiro', index=False)
-        
-        st.download_button(
-            label="📊 EXCEL",
-            data=output.getvalue(),
-            file_name=f"Relatorio_{datetime.now().strftime('%d_%m_%Y')}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        if clis:
+            df_c = pd.DataFrame(clis).drop(columns=['id'], errors='ignore')
+            # Remove fuso horário de qualquer coluna de data para o Excel aceitar
+            for col in df_c.select_dtypes(include=['datetime64[ns, UTC]', 'datetimetz']).columns:
+                df_c[col] = df_c[col].dt.tz_localize(None)
+            df_c.to_excel(writer, sheet_name='Clientes', index=False)
+            
+        if cx_list:
+            df_cx = pd.DataFrame(cx_list)
+            # Mesma limpeza para a planilha de financeiro
+            for col in df_cx.select_dtypes(include=['datetime64[ns, UTC]', 'datetimetz']).columns:
+                df_cx[col] = df_cx[col].dt.tz_localize(None)
+            df_cx.to_excel(writer, sheet_name='Financeiro', index=False)
+    
+    st.download_button(
+        label="📊 EXCEL",
+        data=output.getvalue(),
+        file_name=f"Relatorio_{datetime.now().strftime('%d_%m_%Y')}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
     with col_sair:
         if st.button("SAIR", key="btn_logout_top"):
@@ -536,6 +544,7 @@ if st.button("CONSULTAR IA") and prompt:
         st.error("Tempo esgotado: A IA está demorando muito para responder. Tente uma pergunta mais simples ou clique em Consultar novamente.")
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
+
 
 
 
