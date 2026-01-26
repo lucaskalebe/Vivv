@@ -1,5 +1,9 @@
 
 
+
+
+
+
 import streamlit as st
 import pandas as pd
 import urllib.parse
@@ -81,23 +85,6 @@ st.markdown("""
         padding: 20px; border-radius: 10px;
     }
 </style>
-""", unsafe_allow_html=True)
-
-# Exemplo de como estruturar a linha de botões no Card
-st.markdown(f"""
-    <div style="display: flex; justify-content: flex-end; gap: 10px;">
-        <a href="https://wa.me/{telefone}" style="text-decoration: none;">
-            <button style="background-color: #25D366; color: white; border: none; padding: 5px 10px; border-radius: 5px;">
-                💬 Contatar
-            </button>
-        </a>
-        <button style="background-color: #2e3136; border: 1px solid #4e5058; padding: 5px 10px; border-radius: 5px;">
-            ✅ Finalizar
-        </button>
-        <button style="background-color: #2e3136; border: 1px solid #ff4b4b; padding: 5px 10px; border-radius: 5px; color: #ff4b4b;">
-            ✖
-        </button>
-    </div>
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="vivv-logo">Vivv<span style="color:#00d4ff">.</span></div>', unsafe_allow_html=True)
@@ -382,8 +369,6 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'>Suporte 24h - (11) 989710009</p>", unsafe_allow_html=True)
-
-
 
 
 
