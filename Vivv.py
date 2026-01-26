@@ -181,28 +181,28 @@ m4.markdown(f'<div class="metric-card"><small>⏳ Pendentes</small><h2 style="co
 
 st.write("<br>", unsafe_allow_html=True)
 
-# ================= 6. OPERAÇÕES INTEGRADAS (PAINEL + AGENDA) =================
-# ================= 6. OPERAÇÕES E AGENDA (CORRIGIDO) =================
+# ================= 6. OPERAÇÕES E AGENDA (VERSÃO FINAL SEM ERROS) =================
 col_ops_l, col_ops_r = st.columns([1.3, 1])
 
-# Definição dos dados de hoje para a Agenda
+# Definição dos dados de hoje
 hoje_str = datetime.now(fuso_br).strftime('%d/%m/%Y')
 clis_hoje = [a for a in agnd if a.get('data') == hoje_str]
 
 with col_ops_l:
     st.markdown("### ⚡ Gestão Operacional")
+    # Alteramos o nome das abas para evitar qualquer conflito de estado anterior
     t1, t2, t3, t4 = st.tabs(["📅 Agendar", "👤 Clientes", "🛠️ Serviços", "💸 Caixa"])
     
     with t1:
-        with st.form("form_ag_master", clear_on_submit=True):
-            cli_n = st.selectbox("Selecionar Cliente", [c['nome'] for c in clis]) if clis else None
-            srv_n = st.selectbox("Serviço", [s['nome'] for s in srvs]) if srvs else None
+        # Chave única: form_ag_v3
+        with st.form("form_ag_v3", clear_on_submit=True):
+            cli_n = st.selectbox("Selecionar Cliente", [c['nome'] for c in clis], key="sel_cli_ag") if clis else None
+            srv_n = st.selectbox("Serviço", [s['nome'] for s in srvs], key="sel_srv_ag") if srvs else None
             c_d, c_h = st.columns(2)
             d_val = c_d.date_input("Data")
             h_val = c_h.time_input("Horário")
             if st.form_submit_button("CONFIRMAR AGENDAMENTO", use_container_width=True):
                 if cli_n and srv_n:
-                    # Busca o preço real do serviço selecionado
                     p_s = next((s['preco'] for s in srvs if s['nome'] == srv_n), 0)
                     user_ref.collection("minha_agenda").add({
                         "cliente": cli_n, "servico": srv_n, "preco": p_s,
@@ -211,6 +211,63 @@ with col_ops_l:
                     })
                     st.cache_data.clear()
                     st.rerun()
+
+    with t2:
+        # Chave única: form_cli_v3 (Aqui estava o seu erro!)
+        with st.form("form_cli_v3", clear_on_submit=True):
+            nome_c = st.text_input("Nome do Cliente", key="input_nome_c")
+            tel_c = st.text_input("WhatsApp (ex: 11999999999)", key="input_tel_c")
+            if st.form_submit_button("CADASTRAR CLIENTE", use_container_width=True):
+                if nome_c:
+                    user_ref.collection("meus_clientes").add({"nome": nome_c, "telefone": tel_c})
+                    st.cache_data.clear(); st.rerun()
+
+    with t3:
+        with st.form("form_srv_v3", clear_on_submit=True):
+            nome_s = st.text_input("Nome do Serviço", key="input_nome_s")
+            preco_s = st.number_input("Preço", min_value=0.0, step=10.0, key="input_preco_s")
+            if st.form_submit_button("SALVAR SERVIÇO", use_container_width=True):
+                user_ref.collection("meus_servicos").add({"nome": nome_s, "preco": preco_s})
+                st.cache_data.clear(); st.rerun()
+
+    with t4:
+        with st.form("form_cx_v3", clear_on_submit=True):
+            desc_cx = st.text_input("Descrição", key="input_desc_cx")
+            valor_cx = st.number_input("Valor", min_value=0.0, key="input_val_cx")
+            tipo_cx = st.selectbox("Tipo", ["Entrada", "Saída"], key="sel_tipo_cx")
+            if st.form_submit_button("LANÇAR", use_container_width=True):
+                user_ref.collection("meu_caixa").add({
+                    "descricao": desc_cx, "valor": valor_cx, "tipo": tipo_cx, 
+                    "data": hoje_str, "timestamp": datetime.now()
+                })
+                st.cache_data.clear(); st.rerun()
+
+with col_ops_r:
+    st.markdown("### 📋 Próximos Atendimentos")
+    # Removido qualquer formulário daqui para evitar conflitos
+    with st.expander(f"Agenda de Hoje ({len(clis_hoje)})", expanded=True):
+        if not clis_hoje:
+            st.info("Agenda limpa para hoje.")
+        else:
+            for ag in clis_hoje:
+                id_a = ag.get('id')
+                t_raw = next((c.get('telefone', '') for c in clis if c.get('nome') == ag['cliente']), "")
+                t_clean = "".join(filter(str.isdigit, str(t_raw)))
+                
+                c1, c2, c3, c4 = st.columns([2.5, 1, 1, 1])
+                with c1:
+                    st.markdown(f"**{ag['hora']}** | {ag['cliente']}<br><small style='color:#888'>{ag['servico']}</small>", unsafe_allow_html=True)
+                with c2:
+                    st.markdown(f'<a href="https://wa.me/55{t_clean}" target="_blank" style="text-decoration:none;"><div style="background-color:#25D366; color:white; text-align:center; padding:5px; border-radius:5px; font-size:10px; font-weight:bold; margin-top:5px;">WHATS</div></a>', unsafe_allow_html=True)
+                with c3:
+                    if st.button("✅", key=f"btn_f_{id_a}", use_container_width=True):
+                        user_ref.collection("minha_agenda").document(id_a).update({"status": "Concluido"})
+                        user_ref.collection("meu_caixa").add({"data": hoje_str, "descricao": f"Serviço: {ag['cliente']}", "valor": ag.get('preco', 0), "tipo": "Entrada", "timestamp": datetime.now()})
+                        st.cache_data.clear(); st.rerun()
+                with c4:
+                    if st.button("✖", key=f"btn_x_{id_a}", use_container_width=True):
+                        user_ref.collection("minha_agenda").document(id_a).delete()
+                        st.cache_data.clear(); st.rerun()
 
     with t2:
         with st.form("form_cli_master", clear_on_submit=True):
@@ -496,6 +553,7 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'>Suporte 24h - (11) 989710009</p>", unsafe_allow_html=True)
+
 
 
 
