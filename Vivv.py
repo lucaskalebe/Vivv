@@ -157,6 +157,9 @@ def load_vivv_data(email):
 
 clis, srvs, agnd, cx_list = load_vivv_data(st.session_state.user_email)
 
+hoje_str = datetime.now(fuso_br).strftime('%d/%m/%Y')
+clis_hoje = [a for a in agnd if a.get('data') == hoje_str]
+
 # Cálculos Rápidos
 faturamento = sum([float(x.get('valor', 0)) for x in cx_list if x.get('tipo') == 'Entrada'])
 despesas = sum([float(x.get('valor', 0)) for x in cx_list if x.get('tipo') == 'Saída'])
@@ -179,33 +182,56 @@ m4.markdown(f'<div class="metric-card"><small>⏳ Pendentes</small><h2 style="co
 st.write("<br>", unsafe_allow_html=True)
 
 # ================= 6. OPERAÇÕES INTEGRADAS (PAINEL + AGENDA) =================
-col_ops_l, col_ops_r = st.columns([1.3, 1])
-
-with col_ops_l:
-    st.markdown("### ⚡ Gestão Operacional")
-    t1, t2, t3, t4 = st.tabs(["📅 Agendar", "👤 Clientes", "🛠️ Serviços", "💸 Caixa"])
+with col_ops_r:
+    st.markdown("### 📋 Próximos Atendimentos")
     
-    with t1:
-        with st.form("form_ag_master", clear_on_submit=True):
-            cli_n = st.selectbox("Selecionar Cliente", [c['nome'] for c in clis]) if clis else None
-            srv_n = st.selectbox("Serviço", [s['nome'] for s in srvs]) if srvs else None
-            c_d, c_h = st.columns(2)
-            d_val = c_d.date_input("Data do Atendimento")
-            h_val = c_h.time_input("Horário")
-            if st.form_submit_button("CONFIRMAR AGENDAMENTO", use_container_width=True):
-                if cli_n and srv_n:
-                    preco_s = next((s['preco'] for s in srvs if s['nome'] == s_sel), 0) if 's_sel' in locals() else 0
-                    # Fallback preco
-                    if preco_s == 0:
-                        for s in srvs:
-                            if s['nome'] == srv_n: preco_s = s['preco']
-                    
-                    user_ref.collection("minha_agenda").add({
-                        "cliente": cli_n, "servico": srv_n, "preco": preco_s,
-                        "status": "Pendente", "data": d_val.strftime('%d/%m/%Y'),
-                        "hora": h_val.strftime('%H:%M'), "timestamp": datetime.now()
-                    })
-                    st.cache_data.clear(); st.rerun()
+    # Criamos o container expansível Master
+    with st.expander(f"Ver Agenda de Hoje ({len(clis_hoje)})", expanded=True):
+        if not clis_hoje:
+            st.info("Nenhum atendimento para hoje.")
+        else:
+            for agend in clis_hoje:
+                # Dados Seguros
+                id_ag = agend.get('id', '0')
+                nome = agend.get('cliente', 'Cliente')
+                hora = agend.get('horario') or agend.get('hora', '--:--')
+                serv = agend.get('servico', 'Serviço')
+                valor = agend.get('preco') or agend.get('valor', 0)
+                
+                # Busca telefone do cliente para o WhatsApp
+                tel_raw = next((c.get('telefone', '') for c in clis if c.get('nome') == nome), "")
+                tel_limpo = "".join(filter(str.isdigit, str(tel_raw)))
+
+                # Layout Compacto em uma linha
+                c1, c2, c3, c4 = st.columns([2.5, 1, 1, 1])
+                
+                with c1:
+                    st.markdown(f"**{hora}** | {nome}<br><small style='color:#888'>{serv} • {format_brl(valor)}</small>", unsafe_allow_html=True)
+                
+                with c2:
+                    # Botão WhatsApp Link
+                    st.markdown(f'''
+                        <a href="https://wa.me/55{tel_limpo}" target="_blank" style="text-decoration:none;">
+                            <div style="background-color:#25D366; color:white; text-align:center; padding:5px; border-radius:5px; font-size:10px; font-weight:bold; margin-top:5px;">WHATS</div>
+                        </a>
+                    ''', unsafe_allow_html=True)
+
+                with c3:
+                    if st.button("✅", key=f"fin_{id_ag}", help="Finalizar"):
+                        user_ref.collection("minha_agenda").document(id_ag).update({"status": "Concluido"})
+                        user_ref.collection("meu_caixa").add({
+                            "data": hoje_str, "descricao": f"Serviço: {nome}",
+                            "valor": valor, "tipo": "Entrada", "timestamp": datetime.now()
+                        })
+                        st.cache_data.clear()
+                        st.rerun()
+
+                with c4:
+                    if st.button("✖", key=f"del_{id_ag}", help="Cancelar"):
+                        user_ref.collection("minha_agenda").document(id_ag).delete()
+                        st.cache_data.clear()
+                        st.rerun()
+            st.markdown("---")
 
     with t2:
         with st.form("form_cli_master", clear_on_submit=True):
@@ -435,6 +461,7 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'>Suporte 24h - (11) 989710009</p>", unsafe_allow_html=True)
+
 
 
 
