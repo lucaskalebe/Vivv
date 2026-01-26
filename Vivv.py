@@ -315,55 +315,65 @@ with col_perf_r:
         use_container_width=True
     )
 
-# ================= 8. VIVV AI: INTELIGÊNCIA ARTIFICIAL (CORRIGIDO) =================
+import time
+
+# ================= 8. VIVV AI: RESILIÊNCIA TOTAL (ANTI-429) =================
 st.write("---")
 st.subheader("💬 Vivv AI: Consultoria Estratégica")
-prompt = st.text_input("Analise seu negócio ou peça dicas:", placeholder="Ex: Como posso atrair mais clientes este mês?")
+prompt = st.text_input("Analise seu negócio ou peça dicas:", placeholder="Ex: Como posso atrair mais clientes este mês?", key="ia_input")
 
 if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt:
-    try:
-        # 1. Verifica se a chave existe nos Secrets
-        if "GOOGLE_API_KEY" not in st.secrets:
-            st.error("Chave 'GOOGLE_API_KEY' não encontrada nos Secrets do Streamlit.")
-            st.stop()
-            
+    if "GOOGLE_API_KEY" not in st.secrets:
+        st.error("Chave API não configurada nos Secrets.")
+    else:
         api_key = st.secrets["GOOGLE_API_KEY"]
-        # Endpoint v1beta para garantir compatibilidade com o modelo 2.0
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+        # Lista de modelos para fallback (se um falhar, tenta o outro)
+        modelos = ["gemini-2.0-flash", "gemini-1.5-flash"]
+        sucesso = False
         
-        ctx = f"Dados: {len(clis)} clientes, Receita {format_brl(faturamento)}, Despesas {format_brl(despesas)}."
-        
-        payload = {
-            "contents": [{
-                "parts": [{
-                    "text": f"Atue como consultor Vivv Pro. Analise: {ctx}. Pergunta: {prompt}. Responda em tópicos curtos e práticos."
-                }]
-            }],
-            "generationConfig": {
-                "temperature": 0.7,
-                "maxOutputTokens": 800,
-            }
-        }
-        
-        with st.spinner("Vivv AI processando inteligência..."):
-            response = requests.post(url, json=payload, timeout=30)
-            res = response.json()
-            
-            # 2. Tratamento de Erros da Resposta
-            if response.status_code == 200:
-                if 'candidates' in res and len(res['candidates']) > 0:
-                    texto_ia = res['candidates'][0]['content']['parts'][0]['text']
-                    st.markdown(f'<div class="ia-box">{texto_ia}</div>', unsafe_allow_html=True)
-                else:
-                    st.warning("A IA não gerou uma resposta. Tente refazer a pergunta.")
-            elif response.status_code == 403:
-                st.error("Erro 403: Sua chave API pode estar errada ou sem permissão para o Gemini 2.0.")
-            elif response.status_code == 429:
-                st.error("Erro 429: Limite de requisições excedido. Aguarde um momento.")
-            else:
-                st.error(f"Erro {response.status_code}: {res.get('error', {}).get('message', 'Erro desconhecido na API')}")
+        with st.spinner("Vivv AI está pensando... (Pode levar alguns segundos se o tráfego estiver alto)"):
+            for modelo in modelos:
+                if sucesso: break
+                
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={api_key}"
+                payload = {
+                    "contents": [{"parts": [{"text": f"Atue como consultor de negócios Vivv Pro. Dados: {len(clis)} clientes, Receita {format_brl(faturamento)}. Pergunta: {prompt}"}]}],
+                    "generationConfig": {"temperature": 0.7}
+                }
 
-    except requests.exceptions.Timeout:
-        st.error("A conexão com a IA demorou muito. Tente novamente.")
+                for tentativa in range(3): # Tenta 3 vezes se der erro de limite
+                    try:
+                        response = requests.post(url, json=payload, timeout=30)
+                        
+                        if response.status_code == 200:
+                            res = response.json()
+                            texto_ia = res['candidates'][0]['content']['parts'][0]['text']
+                            st.markdown(f'<div class="ia-box"><b>Análise ({modelo}):</b><br>{texto_ia}</div>', unsafe_allow_html=True)
+                            sucesso = True
+                            break
+                        
+                        elif response.status_code == 429:
+                            # Se for limite de requisição, espera 2 segundos e tenta de novo
+                            time.sleep(2)
+                            continue 
+                        
+                        else:
+                            # Outros erros (400, 404, 500) - pula pro próximo modelo
+                            break
+                            
+                    except Exception:
+                        continue
+
+        if not sucesso:
+            st.error("O servidor do Google está muito ocupado agora (Erro 429). Aguarde 30 segundos e tente novamente.")
+
+
+
+
+
+
+
+    
     except Exception as e:
         st.error(f"Erro inesperado: {str(e)}")
+
