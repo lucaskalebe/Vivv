@@ -211,7 +211,7 @@ with col_ops_r:
                 with c2:
                     t_raw = next((c.get('telefone', '') for c in clis if c.get('nome') == item['cliente']), "")
                     t_clean = "".join(filter(str.isdigit, t_raw))
-                    msg = urllib.parse.quote(f"Opa, e aí, beleza? Passando aqui pra informar que está confirmado seu {item['servico']} às {item['hora']}! Agradecemos sua preferência. Até mais 🤝🚀")
+                    msg = urllib.parse.quote(f"Opa, e aí, beleza? Passando aqui pra informar que está confirmado o/a {item['servico']} às {item['hora']}! Agradecemos sua preferência. Até mais 🤝🚀")
                     st.markdown(f'[![Whats](https://img.shields.io/badge/-%20-25D366?style=flat&logo=whatsapp&logoColor=white)](https://wa.me/55{t_clean}?text={msg})')
 
                 with c3:
@@ -346,6 +346,7 @@ if st.button("CONSULTAR IA") and prompt:
                 
     except Exception as e:
         st.error(f"Erro de conexão: {e}")
+
 
 
 
