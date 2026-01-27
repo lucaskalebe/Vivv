@@ -114,25 +114,43 @@ def init_db():
 db = init_db()
 if not db: st.stop()
 
-# ... (após carregar os dados do usuário)
-dados_usuario = user_ref.get().to_dict()
+# 1. Primeiro garantimos que o estado de login existe
+if "logado" not in st.session_state: 
+    st.session_state.logado = False
 
-# TRAVA DE PAGAMENTO
-if not dados_usuario.get("pago", False):
-    st.warning("⚠️ Sua conta ainda não foi ativada ou o pagamento está pendente.")
-    st.markdown(f"""
-        <a href="https://buy.stripe.com/test_6oU4gB7Q4glM1JZ2Z06J200" target="_blank">
-            <button style="width:100%; height:50px; border-radius:10px; background:#635bff; color:white; border:none; font-weight:bold; cursor:pointer;">
-                CLIQUE AQUI PARA PAGAR E LIBERAR ACESSO
-            </button>
-        </a>
-    """, unsafe_allow_html=True)
+# 2. SE NÃO ESTIVER LOGADO: Mostra apenas a tela de login e PARA o código aqui
+if not st.session_state.logado:
+    # ... (AQUI VAI TODO O SEU BLOCO DE LOGIN/CADASTRO QUE VOCÊ JÁ TEM) ...
+    # Quando o login funcionar, você deve definir:
+    # st.session_state.logado = True
+    # st.session_state.user_email = le
+    # st.rerun()
+    st.stop() 
+
+# 3. SE CHEGOU AQUI, É PORQUE ESTÁ LOGADO. Agora sim definimos as variáveis:
+user_ref = db.collection("usuarios").document(st.session_state.user_email)
+doc = user_ref.get()
+
+if doc.exists:
+    dados_usuario = doc.to_dict()
     
-    # Botão para o usuário conferir se já pagou (atualiza a página)
-    if st.button("JÁ PAGUEI, ATUALIZAR STATUS"):
-        st.rerun()
+    # TRAVA DE PAGAMENTO (Agora com dados reais)
+    if not dados_usuario.get("pago", False):
+        st.warning("⚠️ Sua conta ainda não foi ativada ou o pagamento está pendente.")
+        st.markdown("""
+            <a href="https://buy.stripe.com/test_6oU4gB7Q4glM1JZ2Z06J200" target="_blank">
+                <button style="width:100%; height:50px; border-radius:10px; background:#635bff; color:white; border:none; font-weight:bold; cursor:pointer;">
+                    CLIQUE AQUI PARA PAGAR E LIBERAR ACESSO
+                </button>
+            </a>
+        """, unsafe_allow_html=True)
         
-    st.stop() # Interrompe o script aqui, não mostra o dashboard
+        if st.button("JÁ PAGUEI, ATUALIZAR STATUS"):
+            st.rerun()
+        st.stop() 
+else:
+    st.error("Erro ao recuperar dados do perfil.")
+    st.stop()
 
 # ================= 3. AUTENTICAÇÃO E SEGURANÇA =================
 if "logado" not in st.session_state: st.session_state.logado = False
@@ -524,6 +542,7 @@ A Vivv AI já identificou o problema automaticamente.
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'>Contato Suporte 4002-8922</p>", unsafe_allow_html=True)
+
 
 
 
