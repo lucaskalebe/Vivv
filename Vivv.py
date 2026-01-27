@@ -325,19 +325,6 @@ with col_ops_r:
                         })
                         st.cache_data.clear()
                         st.rerun()                        
-    for ag in clis_hoje:
-    id_a = ag.get("id")
-
-    c1, c2, c3, c4 = st.columns([2.5, 1, 1, 1])
-
-    with c1:
-        # conteúdo do atendimento
-        pass
-
-    with c2:
-        # botão whatsapp
-        pass
-
     
 st.write("---")
 col_perf_l, col_perf_r = st.columns([1, 1])
@@ -454,6 +441,7 @@ if not sucesso and prompt_ia:
     """)
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
+
 
 
 
