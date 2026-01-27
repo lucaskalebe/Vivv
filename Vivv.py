@@ -273,7 +273,13 @@ with col_ops_r:
                 with c3:
                     if st.button("✅", key=f"btn_ok_vF_{id_a}", use_container_width=True):
                         user_ref.collection("minha_agenda").document(id_a).update({"status": "Concluido"})
-                        user_ref.collection("meu_caixa").add({"data": hoje_str, "descricao": f"Serviço: {ag['cliente']}", "valor": ag.get('preco', 0), "tipo": "Entrada", "timestamp": datetime.now()})
+                        user_ref.collection("meu_caixa").add({
+                            "data": hoje_str, 
+                            "descricao": f"Serviço: {ag['cliente']}", 
+                            "valor": float(ag.get('preco', 0)), # <--- Adicionado float() aqui
+                            "tipo": "Entrada", 
+                            "timestamp": datetime.now()})
+                        
                         st.cache_data.clear(); st.rerun()
                 with c4:
                     if st.button("✖", key=f"btn_del_vF_{id_a}", use_container_width=True):
@@ -380,6 +386,7 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'> Contato Suporte 4002-8922 </p>", unsafe_allow_html=True)
+
 
 
 
