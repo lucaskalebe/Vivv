@@ -326,24 +326,58 @@ with col_ops_r:
                         
                         st.cache_data.clear(); st.rerun()
                         
-                with c4:
-    if st.button("🗑️", key=f"btn_del_vF_{id_a}", use_container_width=True, help="Excluir agendamento"):
-        st.session_state[f"confirma_del_{id_a}"] = True
+    for ag in clis_hoje:
+    id_a = ag.get("id")
 
-    if st.session_state.get(f"confirma_del_{id_a}"):
-        st.warning("Confirmar exclusão?")
-        col_y, col_n = st.columns(2)
+    c1, c2, c3, c4 = st.columns([2.5, 1, 1, 1])
 
-        with col_y:
-            if st.button("SIM", key=f"yes_{id_a}"):
-                user_ref.collection("minha_agenda").document(id_a).delete()
-                st.cache_data.clear()
-                st.success("Agendamento excluído")
-                st.rerun()
+    with c1:
+        # conteúdo do atendimento
+        pass
 
-        with col_n:
-            if st.button("NÃO", key=f"no_{id_a}"):
-                st.session_state[f"confirma_del_{id_a}"] = False
+    with c2:
+        # botão whatsapp
+        pass
+
+    with c3:
+        if st.button("✅", key=f"btn_ok_{id_a}", use_container_width=True):
+            user_ref.collection("minha_agenda").document(id_a).update({"status": "Concluido"})
+            user_ref.collection("meu_caixa").add({
+                "data": hoje_str,
+                "descricao": f"Serviço: {ag['cliente']}",
+                "valor": float(ag.get("preco", 0)),
+                "tipo": "Entrada",
+                "timestamp": datetime.now()
+            })
+            st.cache_data.clear()
+            st.rerun()
+
+    # ✅ BLOCO CORRETO DO DELETE
+    with c4:
+        if st.button(
+            "🗑️",
+            key=f"btn_del_vF_{id_a}",
+            use_container_width=True,
+            help="Excluir agendamento"
+        ):
+            st.session_state[f"confirma_del_{id_a}"] = True
+
+        if st.session_state.get(f"confirma_del_{id_a}", False):
+            st.warning("Confirmar exclusão?")
+
+            col_y, col_n = st.columns(2)
+
+            with col_y:
+                if st.button("SIM", key=f"yes_del_{id_a}", use_container_width=True):
+                    user_ref.collection("minha_agenda").document(id_a).delete()
+                    st.session_state[f"confirma_del_{id_a}"] = False
+                    st.cache_data.clear()
+                    st.success("Agendamento excluído com sucesso")
+                    st.rerun()
+
+            with col_n:
+                if st.button("NÃO", key=f"no_del_{id_a}", use_container_width=True):
+                    st.session_state[f"confirma_del_{id_a}"] = False
 
 
 st.write("---")
@@ -463,6 +497,7 @@ A Vivv AI já identificou o problema automaticamente.
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'>Contato Suporte 4002-8922</p>", unsafe_allow_html=True)
+
 
 
 
