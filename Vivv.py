@@ -34,15 +34,37 @@ st.markdown("""
     /* Reset e Fundo Deep Black */
     header, [data-testid="stHeader"], .stAppDeployButton { display: none !important; }
     .stApp { background-color: #000205 !important; }
-    .block-container { padding-top: 50px !important; max-width: 95% !important; }
+    .block-container { padding-top: 50px !important; max-width: 95% !important; 
 
-    /* Logo Vivv Flutuante */
-    .vivv-logo {
-        position: fixed; top: 15px; left: 25px;
-        color: #ffffff; font-size: 32px; font-weight: 900;
-        z-index: 999999; letter-spacing: -1px;
-        text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
     }
+    
+    /* Logo Vivv Flutuante com Scroll Inteligente */
+.vivv-logo {
+    position: fixed;
+    top: 15px;
+    left: 25px;
+
+    color: #ffffff;
+    font-size: 32px;
+    font-weight: 900;
+    letter-spacing: -1px;
+    z-index: 999999;
+
+    opacity: 1;
+    text-shadow: 0 0 14px rgba(0, 212, 255, 0.65);
+
+    transition:
+        opacity 0.35s ease,
+        text-shadow 0.35s ease,
+        transform 0.35s ease;
+}
+
+/* Estado ao rolar */
+.vivv-logo.scrolled {
+    opacity: 0.55;
+    text-shadow: 0 0 6px rgba(0, 212, 255, 0.25);
+    transform: scale(0.96);
+}
 
     /* Cards de Métricas Neon */
     .metric-card {
@@ -98,7 +120,23 @@ button[kind="secondary"]:active {
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="vivv-logo">Vivv<span style="color:#00d4ff">.</span></div>', unsafe_allow_html=True)
+st.markdown("""
+<div class="vivv-logo" id="vivvLogo">
+    Vivv<span style="color:#00d4ff">.</span>
+</div>
+
+<script>
+const logo = document.getElementById("vivvLogo");
+
+window.addEventListener("scroll", () => {
+    if (window.scrollY > 40) {
+        logo.classList.add("scrolled");
+    } else {
+        logo.classList.remove("scrolled");
+    }
+});
+</script>
+""", unsafe_allow_html=True)
 
 # ================= 2 e 3. ACESSO INTEGRADO =================
 @st.cache_resource
@@ -410,6 +448,7 @@ if not sucesso and prompt_ia:
     """)
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
+
 
 
 
