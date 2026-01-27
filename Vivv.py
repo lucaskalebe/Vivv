@@ -268,8 +268,28 @@ with col_ops_r:
                     # 1. Primeiro, criamos o texto do preço formatado (Padrão BR)
                     preco_formatado = f"{ag.get('preco', 0):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                     st.markdown(f"**{ag['hora']}** | {ag['cliente']}<br><small style='color:#888'>{ag['servico']} • R$ {preco_formatado}</small>", unsafe_allow_html=True)
+                
                 with c2:
-                    st.markdown(f'<a href="https://wa.me/55{t_clean}" target="_blank" style="text-decoration:none;"><div style="background-color:#25D366; color:white; text-align:center; padding:5px; border-radius:5px; font-size:10px; font-weight:bold; margin-top:5px;">WHATS</div></a>', unsafe_allow_html=True)
+                    # Estilização melhorada: Texto branco, fonte maior e centralizada
+                    st.markdown(f'''
+                        <a href="https://wa.me/55{t_clean}" target="_blank" style="text-decoration:none;">
+                            <div style="
+                                background-color: #25D366; 
+                                color: white; 
+                                text-align: center; 
+                                padding: 8px 0px; 
+                                border-radius: 8px; 
+                                font-size: 12px; 
+                                font-weight: bold; 
+                                text-transform: uppercase;
+                                letter-spacing: 1px;
+                                margin-top: 5px;
+                                border: 1px solid rgba(255,255,255,0.2);
+                            ">
+                                📱 WhatsApp
+                            </div>
+                        </a>
+                    ''', unsafe_allow_html=True)
                 with c3:
                     if st.button("✅", key=f"btn_ok_vF_{id_a}", use_container_width=True):
                         user_ref.collection("minha_agenda").document(id_a).update({"status": "Concluido"})
@@ -386,6 +406,7 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'> Contato Suporte 4002-8922 </p>", unsafe_allow_html=True)
+
 
 
 
