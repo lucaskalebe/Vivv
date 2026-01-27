@@ -261,55 +261,70 @@ with col_ops_l:
                 
 with col_ops_r:
     st.markdown("### 📋 Próximos Atendimentos")
+
     with st.expander(f"Agenda de Hoje ({len(clis_hoje)})", expanded=True):
         if not clis_hoje:
             st.info("Agenda limpa para hoje.")
         else:
             for ag in clis_hoje:
-                id_a = ag.get('id')
-                t_raw = next((c.get('telefone', '') for c in clis if c.get('nome') == ag['cliente']), "")
+                id_a = ag.get("id")
+
+                t_raw = next(
+                    (c.get("telefone", "") for c in clis if c.get("nome") == ag.get("cliente")),
+                    ""
+                )
                 t_clean = "".join(filter(str.isdigit, str(t_raw)))
-                
+
                 c1, c2, c3, c4 = st.columns([2.5, 1, 1, 1])
+
                 with c1:
-                    # No loop da agenda, dentro da c1:
-                    # 1. Primeiro, criamos o texto do preço formatado (Padrão BR)
-                    preco_formatado = f"{ag.get('preco', 0):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                    st.markdown(f"**{ag['hora']}** | {ag['cliente']}<br><small style='color:#888'>{ag['servico']} • R$ {preco_formatado}</small>", unsafe_allow_html=True)
-                
+                    preco_formatado = (
+                        f"{ag.get('preco', 0):,.2f}"
+                        .replace(",", "X")
+                        .replace(".", ",")
+                        .replace("X", ".")
+                    )
+                    st.markdown(
+                        f"**{ag.get('hora','--:--')}** | {ag.get('cliente','')}<br>"
+                        f"<small style='color:#888'>{ag.get('servico','')} • R$ {preco_formatado}</small>",
+                        unsafe_allow_html=True
+                    )
+
                 with c2:
-                    # Estilização melhorada: Texto branco, fonte maior e centralizada
-                    st.markdown(f'''
+                    st.markdown(
+                        f"""
                         <a href="https://wa.me/55{t_clean}" target="_blank" style="text-decoration:none;">
                             <div style="
-                                background-color: #25D366; 
-                                color: white; 
-                                text-align: center; 
-                                padding: 8px 0px; 
-                                border-radius: 8px; 
-                                font-size: 12px; 
-                                font-weight: bold; 
-                                text-transform: uppercase;
-                                letter-spacing: 1px;
-                                margin-top: 5px;
-                                border: 1px solid rgba(255,255,255,0.2);
+                                background:#25D366;
+                                color:white;
+                                text-align:center;
+                                padding:8px 0;
+                                border-radius:8px;
+                                font-size:12px;
+                                font-weight:700;
+                                margin-top:5px;
                             ">
                                 📱 WhatsApp
                             </div>
                         </a>
-                    ''', unsafe_allow_html=True)
+                        """,
+                        unsafe_allow_html=True
+                    )
+
                 with c3:
-                    if st.button("✅", key=f"btn_ok_vF_{id_a}", use_container_width=True):
-                        user_ref.collection("minha_agenda").document(id_a).update({"status": "Concluido"})
+                    if st.button("✅", key=f"btn_ok_{id_a}", use_container_width=True):
+                        user_ref.collection("minha_agenda").document(id_a).update({
+                            "status": "Concluido"
+                        })
                         user_ref.collection("meu_caixa").add({
-                            "data": hoje_str, 
-                            "descricao": f"Serviço: {ag['cliente']}", 
-                            "valor": float(ag.get('preco', 0)), # <--- Adicionado float() aqui
-                            "tipo": "Entrada", 
-                            "timestamp": datetime.now()})
-                        
-                        st.cache_data.clear(); st.rerun()
-                        
+                            "data": hoje_str,
+                            "descricao": f"Serviço: {ag.get('cliente','')}",
+                            "valor": float(ag.get("preco", 0)),
+                            "tipo": "Entrada",
+                            "timestamp": datetime.now()
+                        })
+                        st.cache_data.clear()
+                        st.rerun()                        
     for ag in clis_hoje:
     id_a = ag.get("id")
 
@@ -323,47 +338,7 @@ with col_ops_r:
         # botão whatsapp
         pass
 
-    with c3:
-        if st.button("✅", key=f"btn_ok_{id_a}", use_container_width=True):
-            user_ref.collection("minha_agenda").document(id_a).update({"status": "Concluido"})
-            user_ref.collection("meu_caixa").add({
-                "data": hoje_str,
-                "descricao": f"Serviço: {ag['cliente']}",
-                "valor": float(ag.get("preco", 0)),
-                "tipo": "Entrada",
-                "timestamp": datetime.now()
-            })
-            st.cache_data.clear()
-            st.rerun()
-
-    # ✅ BLOCO CORRETO DO DELETE
-    with c4:
-        if st.button(
-            "🗑️",
-            key=f"btn_del_vF_{id_a}",
-            use_container_width=True,
-            help="Excluir agendamento"
-        ):
-            st.session_state[f"confirma_del_{id_a}"] = True
-
-        if st.session_state.get(f"confirma_del_{id_a}", False):
-            st.warning("Confirmar exclusão?")
-
-            col_y, col_n = st.columns(2)
-
-            with col_y:
-                if st.button("SIM", key=f"yes_del_{id_a}", use_container_width=True):
-                    user_ref.collection("minha_agenda").document(id_a).delete()
-                    st.session_state[f"confirma_del_{id_a}"] = False
-                    st.cache_data.clear()
-                    st.success("Agendamento excluído com sucesso")
-                    st.rerun()
-
-            with col_n:
-                if st.button("NÃO", key=f"no_del_{id_a}", use_container_width=True):
-                    st.session_state[f"confirma_del_{id_a}"] = False
-
-
+    
 st.write("---")
 col_perf_l, col_perf_r = st.columns([1, 1])
 
@@ -479,6 +454,7 @@ if not sucesso and prompt_ia:
     """)
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
+
 
 
 
