@@ -18,6 +18,7 @@ from google.oauth2 import service_account
 import time
 
 # ================= 1. CONFIGURAÇÕES TÉCNICAS E ESTILO MASTER =================
+
 st.set_page_config(page_title="Vivv Pro v2", layout="wide", page_icon="🎯")
 fuso_br = timezone(timedelta(hours=-3))
 
@@ -206,8 +207,6 @@ m4.markdown(f'<div class="metric-card"><small>⏳ Pendentes</small><h2 style="co
 
 st.write("<br>", unsafe_allow_html=True)
 
-
-# ================= 7. GESTÃO AVANÇADA, EXCEL E PERFORMANCE =================
 # ================= 6, 7 e 8. PAINEL UNIFICADO (ANTI-ERRO) =================
 st.write("---")
 col_ops_l, col_ops_r = st.columns([1.3, 1])
@@ -326,15 +325,26 @@ with col_ops_r:
                             "timestamp": datetime.now()})
                         
                         st.cache_data.clear(); st.rerun()
+                        
                 with c4:
-                    # Botão com chave única, ajuda visual e funcionalidade de deleção
-                    if st.button("🗑️", key=f"btn_del_vF_{id_a}", use_container_width=True, help="Excluir agendamento"):
-                        # Comando que remove o registro do banco de dados permanentemente
-                        user_ref.collection("minha_agenda").document(id_a).delete()
-                        # Limpa o cache para garantir que a lista atualize na hora
-                        st.cache_data.clear()
-                        # Recarrega a página para refletir a exclusão
-                        st.rerun()
+    if st.button("🗑️", key=f"btn_del_vF_{id_a}", use_container_width=True, help="Excluir agendamento"):
+        st.session_state[f"confirma_del_{id_a}"] = True
+
+    if st.session_state.get(f"confirma_del_{id_a}"):
+        st.warning("Confirmar exclusão?")
+        col_y, col_n = st.columns(2)
+
+        with col_y:
+            if st.button("SIM", key=f"yes_{id_a}"):
+                user_ref.collection("minha_agenda").document(id_a).delete()
+                st.cache_data.clear()
+                st.success("Agendamento excluído")
+                st.rerun()
+
+        with col_n:
+            if st.button("NÃO", key=f"no_{id_a}"):
+                st.session_state[f"confirma_del_{id_a}"] = False
+
 
 st.write("---")
 col_perf_l, col_perf_r = st.columns([1, 1])
@@ -453,6 +463,7 @@ A Vivv AI já identificou o problema automaticamente.
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'>Contato Suporte 4002-8922</p>", unsafe_allow_html=True)
+
 
 
 
