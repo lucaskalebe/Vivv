@@ -100,7 +100,7 @@ button[kind="secondary"]:active {
 
 st.markdown('<div class="vivv-logo">Vivv<span style="color:#00d4ff">.</span></div>', unsafe_allow_html=True)
 
-# ================= 2. BANCO DE DADOS (FIRESTORE) =================
+# ================= 2 e 3. ACESSO INTEGRADO =================
 @st.cache_resource
 def init_db():
     try:
@@ -108,101 +108,40 @@ def init_db():
         creds = service_account.Credentials.from_service_account_info(secrets_dict)
         return firestore.Client(credentials=creds)
     except Exception as e:
-        st.error(f"Erro Crítico de Conexão: {e}")
-        return None
+        st.error(f"Erro Firebase: {e}"); st.stop()
 
 db = init_db()
-if not db: st.stop()
 
-# 1. Primeiro garantimos que o estado de login existe
-if "logado" not in st.session_state: 
-    st.session_state.logado = False
-
-# 2. SE NÃO ESTIVER LOGADO: Mostra apenas a tela de login e PARA o código aqui
-if not st.session_state.logado:
-    # ... (AQUI VAI TODO O SEU BLOCO DE LOGIN/CADASTRO QUE VOCÊ JÁ TEM) ...
-    # Quando o login funcionar, você deve definir:
-    # st.session_state.logado = True
-    # st.session_state.user_email = le
-    # st.rerun()
-    st.stop() 
-
-# 3. SE CHEGOU AQUI, É PORQUE ESTÁ LOGADO. Agora sim definimos as variáveis:
-user_ref = db.collection("usuarios").document(st.session_state.user_email)
-doc = user_ref.get()
-
-if doc.exists:
-    dados_usuario = doc.to_dict()
-    
-    # TRAVA DE PAGAMENTO (Agora com dados reais)
-    if not dados_usuario.get("pago", False):
-        st.warning("⚠️ Sua conta ainda não foi ativada ou o pagamento está pendente.")
-        st.markdown("""
-            <a href="https://buy.stripe.com/test_6oU4gB7Q4glM1JZ2Z06J200" target="_blank">
-                <button style="width:100%; height:50px; border-radius:10px; background:#635bff; color:white; border:none; font-weight:bold; cursor:pointer;">
-                    CLIQUE AQUI PARA PAGAR E LIBERAR ACESSO
-                </button>
-            </a>
-        """, unsafe_allow_html=True)
-        
-        if st.button("JÁ PAGUEI, ATUALIZAR STATUS"):
-            st.rerun()
-        st.stop() 
-else:
-    st.error("Erro ao recuperar dados do perfil.")
-    st.stop()
-
-# ================= 3. AUTENTICAÇÃO E SEGURANÇA =================
 if "logado" not in st.session_state: st.session_state.logado = False
 
 if not st.session_state.logado:
-    col_l, col_c, col_r = st.columns([1, 2, 1])
-    with col_c:
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        tab_l, tab_c = st.tabs(["🔑 LOGIN VIVV", "📝 CRIAR CONTA"])
-        
-        with tab_l:
-            # .strip() remove espaços acidentais que o usuário digita no final
-            le = st.text_input("E-mail", placeholder="seu@email.com").lower().strip()
-            ls = st.text_input("Senha", type="password")
-            
-            if st.button("ACESSAR SISTEMA", use_container_width=True):
-                if le and ls:
-                    with st.spinner("Autenticando..."):
-                        u = db.collection("usuarios").document(le).get()
-                        
-                        # Validação direta e segura
-                        if u.exists:
-                            dados_user = u.to_dict()
-                            if dados_user.get("senha") == hash_senha(ls):
-                                st.session_state.logado = True
-                                st.session_state.user_email = le
-                                st.success("Acesso autorizado!")
-                                time.sleep(0.5) # Pequena pausa para o usuário ver o sucesso
-                                st.rerun()
-                            else:
-                                st.error("Senha incorreta.")
-                        else:
-                            st.error("Usuário não encontrado.")
-                else:
-                    st.warning("Preencha todos os campos.")
-
-        with tab_c:
-            with st.form("reg_master"):
-                n = st.text_input("Nome da Empresa/Profissional")
-                e = st.text_input("E-mail de Acesso").lower().strip()
-                s = st.text_input("Senha Master", type="password")
-                if st.form_submit_button("FINALIZAR CADASTRO", use_container_width=True):
-                    if e and s:
-                        if db.collection("usuarios").document(e).get().exists: st.error("E-mail já em uso.")
-                        else:
-                            val = datetime.now(fuso_br) + timedelta(days=7)
-                            db.collection("usuarios").document(e).set({
-                                "nome": n, "senha": hash_senha(s), 
-                                "pago": False, "validade": val, "criado_em": datetime.now()
-                            })
-                            st.success("Conta criada! Vá para aba Login.")
+    tab_l, tab_c = st.tabs(["🔑 LOGIN", "📝 CRIAR CONTA"])
+    with tab_l:
+        le = st.text_input("E-mail").lower().strip()
+        ls = st.text_input("Senha", type="password")
+        if st.button("ACESSAR"):
+            u = db.collection("usuarios").document(le).get()
+            if u.exists and u.to_dict().get("senha") == hash_senha(ls):
+                st.session_state.logado = True
+                st.session_state.user_email = le
+                st.rerun()
+            else: st.error("Dados incorretos.")
+    with tab_c:
+        with st.form("reg_novo"):
+            n = st.text_input("Nome")
+            e = st.text_input("E-mail").lower().strip()
+            s = st.text_input("Senha", type="password")
+            if st.form_submit_button("CADASTRAR"):
+                if e and s:
+                    db.collection("usuarios").document(e).set({
+                        "nome": n, "senha": hash_senha(s), "pago": True, # Pago=True para teste
+                        "criado_em": datetime.now()
+                    })
+                    st.success("Criado! Vá para Login.")
     st.stop()
+
+# Define user_ref apenas após passar pelo login
+user_ref = db.collection("usuarios").document(st.session_state.user_email)
 
 # ================= 4. CORE ENGINE (DATA & ACCESS) =================
 user_ref = db.collection("usuarios").document(st.session_state.user_email)
@@ -483,77 +422,63 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
     if "GOOGLE_API_KEY" not in st.secrets:
         st.error("Chave API não configurada nos Secrets.")
     else:
-        import time
         api_key = st.secrets["GOOGLE_API_KEY"]
         modelos = ["gemini-2.0-flash", "gemini-1.5-flash"]
         sucesso = False
         
         with st.spinner("Vivv AI analisando dados..."):
             for modelo in modelos:
-                if sucesso:
-                    break
+                if sucesso: break
                 
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={api_key}"
-        
+                
+                # Payload montado corretamente em uma única estrutura
                 payload = {
-    "contents": [{"parts": [{"text": f"Responda como consultor Vivv Pro. Dados: {len(clis)} clientes, R$ {faturamento:.2f}. Pergunta: {prompt_ia}"}]}]
-}
+                    "contents": [{
+                        "parts": [{
+                            "text": f"Responda como consultor Vivv Pro. Dados atuais: {len(clis)} clientes ativos, Faturamento Total R$ {faturamento:.2f}. Pergunta do usuário: {prompt_ia}"
+                        }]
+                    }]
+                }
 
-                # Tentativas para contornar o Erro 429
+                # Tentativas para contornar o Erro 429 (Rate Limit)
                 for tentativa in range(2):
-    try:
-        response = requests.post(url, json=payload, timeout=25)
+                    try:
+                        # O segredo está aqui: o código abaixo deve estar alinhado dentro do try
+                        response = requests.post(url, json=payload, timeout=25)
 
-        if response.status_code == 200:
-            res_json = response.json()
-            texto_ia = (
-                res_json.get("candidates", [{}])[0]
-                .get("content", {})
-                .get("parts", [{}])[0]
-                .get("text", "Resposta indisponível no momento.")
-            )
+                        if response.status_code == 200:
+                            res_json = response.json()
+                            texto_ia = (
+                                res_json.get("candidates", [{}])[0]
+                                .get("content", {})
+                                .get("parts", [{}])[0]
+                                .get("text", "Resposta indisponível no momento.")
+                            )
 
-            st.markdown(
-                f'<div class="ia-box"><b>Vivv AI Insights ({modelo}):</b><br><br>{texto_ia}</div>',
-                unsafe_allow_html=True
-            )
-            sucesso = True
-            break
+                            st.markdown(
+                                f'<div class="ia-box"><b>Vivv AI Insights ({modelo}):</b><br><br>{texto_ia}</div>',
+                                unsafe_allow_html=True
+                            )
+                            sucesso = True
+                            break # Sai do loop de tentativas
 
-        elif response.status_code == 429:
-            time.sleep(5)
+                        elif response.status_code == 429:
+                            time.sleep(5) # Espera 5 segundos se o Google estiver ocupado
+                        else:
+                            break # Se for outro erro (400, 500), tenta o próximo modelo
 
-        else:
-            break
+                    except Exception:
+                        continue # Se houver erro de rede, tenta a próxima tentativa
 
-    except requests.exceptions.RequestException:
-        continue
-    except KeyError:
-        break
-
-if not sucesso:
+if not sucesso and prompt_ia:
     st.error("""
-⚠️ Instabilidade temporária detectada  
-Estamos com alta demanda nos serviços da Google neste momento.  
-A Vivv AI já identificou o problema automaticamente.
-
-🔄 Tente novamente em alguns minutos.
-""")
+    ⚠️ Instabilidade temporária detectada.  
+    Estamos com alta demanda nos serviços da Google neste momento.  
+    🔄 Tente novamente em alguns minutos ou mude sua pergunta.
+    """)
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
-st.markdown("<br><p style='text-align:center; color:#555;'>Contato Suporte 4002-8922</p>", unsafe_allow_html=True)
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
