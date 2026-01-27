@@ -114,6 +114,26 @@ def init_db():
 db = init_db()
 if not db: st.stop()
 
+# ... (após carregar os dados do usuário)
+dados_usuario = user_ref.get().to_dict()
+
+# TRAVA DE PAGAMENTO
+if not dados_usuario.get("pago", False):
+    st.warning("⚠️ Sua conta ainda não foi ativada ou o pagamento está pendente.")
+    st.markdown(f"""
+        <a href="https://buy.stripe.com/test_6oU4gB7Q4glM1JZ2Z06J200" target="_blank">
+            <button style="width:100%; height:50px; border-radius:10px; background:#635bff; color:white; border:none; font-weight:bold; cursor:pointer;">
+                CLIQUE AQUI PARA PAGAR E LIBERAR ACESSO
+            </button>
+        </a>
+    """, unsafe_allow_html=True)
+    
+    # Botão para o usuário conferir se já pagou (atualiza a página)
+    if st.button("JÁ PAGUEI, ATUALIZAR STATUS"):
+        st.rerun()
+        
+    st.stop() # Interrompe o script aqui, não mostra o dashboard
+
 # ================= 3. AUTENTICAÇÃO E SEGURANÇA =================
 if "logado" not in st.session_state: st.session_state.logado = False
 
@@ -190,6 +210,9 @@ clis_hoje = [a for a in agnd if a.get('data') == hoje_str]
 faturamento = sum([float(x.get('valor', 0)) for x in cx_list if x.get('tipo') == 'Entrada'])
 despesas = sum([float(x.get('valor', 0)) for x in cx_list if x.get('tipo') == 'Saída'])
 
+lucro = faturamento - despesas
+cor_lucro = "#00ff88" if lucro >= 0 else "#ff4b4b"
+
 # ================= 5. DASHBOARD ELITE =================
 c_top1, c_top2 = st.columns([5,1])
 with c_top1:
@@ -202,7 +225,11 @@ with c_top2:
 m1, m2, m3, m4 = st.columns(4)
 m1.markdown(f'<div class="metric-card"><small>👥 Clientes Ativos</small><h2>{len(clis)}</h2></div>', unsafe_allow_html=True)
 m2.markdown(f'<div class="metric-card"><small>💰 Faturamento</small><h2 style="color:#00d4ff">{format_brl(faturamento)}</h2></div>', unsafe_allow_html=True)
-m3.markdown(f'<div class="metric-card"><small>📈 Lucro Líquido</small><h2 style="color:#00ff88">{format_brl(faturamento-despesas)}</h2></div>', unsafe_allow_html=True)
+m3.markdown(
+    f'<div class="metric-card"><small>📈 Lucro Líquido</small>'
+    f'<h2 style="color:{cor_lucro}">{format_brl(lucro)}</h2></div>',
+    unsafe_allow_html=True
+)
 m4.markdown(f'<div class="metric-card"><small>⏳ Pendentes</small><h2 style="color:#ff9100">{len(agnd)}</h2></div>', unsafe_allow_html=True)
 
 st.write("<br>", unsafe_allow_html=True)
@@ -497,6 +524,7 @@ A Vivv AI já identificou o problema automaticamente.
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'>Contato Suporte 4002-8922</p>", unsafe_allow_html=True)
+
 
 
 
