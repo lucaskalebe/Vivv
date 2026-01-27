@@ -385,9 +385,6 @@ with col_perf_r:
         use_container_width=True
     )
 
-import time
-
-# ================= 8. VIVV AI: RESILIÊNCIA TOTAL (ANTI-429) =================
 # ================= 8. VIVV AI: RESILIÊNCIA TOTAL (ANTI-429) =================
 st.write("---")
 st.subheader("💬 Vivv AI: Consultoria Estratégica")
@@ -415,35 +412,47 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
 
                 # Tentativas para contornar o Erro 429
                 for tentativa in range(2):
-                    try:
-                        response = requests.post(url, json=payload, timeout=25)
-                        if response.status_code == 200:
-                            res_json = response.json()
-                            texto_ia = res_json['candidates'][0]['content']['parts'][0]['text']
-                            st.markdown(f'<div class="ia-box"><b>Vivv AI Insights ({modelo}):</b><br><br>{texto_ia}</div>', unsafe_allow_html=True)
-                            sucesso = True
-                            break
-                        elif response.status_code == 429:
-                            time.sleep(5)
-                        else:
-                            break 
-                    except Exception as e:
-                        # Se houver erro de conexão, tentamos o próximo modelo
-                        continue
+    try:
+        response = requests.post(url, json=payload, timeout=25)
 
-        if not sucesso:
-            st.error("O sistema da Google está instável agora (Erro 429). Tente novamente em 1 minuto.")
+        if response.status_code == 200:
+            res_json = response.json()
+            texto_ia = (
+                res_json.get("candidates", [{}])[0]
+                .get("content", {})
+                .get("parts", [{}])[0]
+                .get("text", "Resposta indisponível no momento.")
+            )
+
+            st.markdown(
+                f'<div class="ia-box"><b>Vivv AI Insights ({modelo}):</b><br><br>{texto_ia}</div>',
+                unsafe_allow_html=True
+            )
+            sucesso = True
+            break
+
+        elif response.status_code == 429:
+            time.sleep(5)
+
+        else:
+            break
+
+    except requests.exceptions.RequestException:
+        continue
+    except KeyError:
+        break
+
+if not sucesso:
+    st.error("""
+⚠️ Instabilidade temporária detectada  
+Estamos com alta demanda nos serviços da Google neste momento.  
+A Vivv AI já identificou o problema automaticamente.
+
+🔄 Tente novamente em alguns minutos.
+""")
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
-st.markdown("<br><p style='text-align:center; color:#555;'> Contato Suporte 4002-8922 </p>", unsafe_allow_html=True)
-
-
-
-
-
-
-
-
+st.markdown("<br><p style='text-align:center; color:#555;'>Contato Suporte 4002-8922</p>", unsafe_allow_html=True)
 
 
 
