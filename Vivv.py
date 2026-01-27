@@ -122,15 +122,30 @@ if not st.session_state.logado:
         tab_l, tab_c = st.tabs(["🔑 LOGIN VIVV", "📝 CRIAR CONTA"])
         
         with tab_l:
+            # .strip() remove espaços acidentais que o usuário digita no final
             le = st.text_input("E-mail", placeholder="seu@email.com").lower().strip()
             ls = st.text_input("Senha", type="password")
+            
             if st.button("ACESSAR SISTEMA", use_container_width=True):
-                u = db.collection("usuarios").document(le).get()
-                if u.exists and u.to_dict().get("senha") == hash_senha(ls):
-                    st.session_state.logado = True
-                    st.session_state.user_email = le
-                    st.rerun()
-                else: st.error("E-mail ou senha inválidos.")
+                if le and ls:
+                    with st.spinner("Autenticando..."):
+                        u = db.collection("usuarios").document(le).get()
+                        
+                        # Validação direta e segura
+                        if u.exists:
+                            dados_user = u.to_dict()
+                            if dados_user.get("senha") == hash_senha(ls):
+                                st.session_state.logado = True
+                                st.session_state.user_email = le
+                                st.success("Acesso autorizado!")
+                                time.sleep(0.5) # Pequena pausa para o usuário ver o sucesso
+                                st.rerun()
+                            else:
+                                st.error("Senha incorreta.")
+                        else:
+                            st.error("Usuário não encontrado.")
+                else:
+                    st.warning("Preencha todos os campos.")
 
         with tab_c:
             with st.form("reg_master"):
@@ -420,6 +435,7 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'> Contato Suporte 4002-8922 </p>", unsafe_allow_html=True)
+
 
 
 
