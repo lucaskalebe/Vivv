@@ -66,12 +66,13 @@ st.markdown("""
         background: rgba(255, 255, 255, 0.02) !important;
     }
 
-    /* Efeito de Brilho Vermelho ao clicar em botões de exclusão */
+    /* Efeito de Brilho Branco ao clicar */
 button[kind="secondary"]:active {
-    border-color: #ff4b4b !important;
-    color: #ff4b4b !important;
-    box-shadow: 0 0 20px rgba(255, 75, 75, 0.6) !important;
+    border-color: #ffffff !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 25px rgba(255, 255, 255, 0.8) !important;
     transition: 0.1s;
+    transform: scale(0.95); /* Leve efeito de compressão ao clicar */
 }
 
     /* Botões e Inputs Custom */
@@ -419,6 +420,7 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'> Contato Suporte 4002-8922 </p>", unsafe_allow_html=True)
+
 
 
 
