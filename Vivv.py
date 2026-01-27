@@ -66,6 +66,14 @@ st.markdown("""
         background: rgba(255, 255, 255, 0.02) !important;
     }
 
+    /* Efeito de Brilho Vermelho ao clicar em botões de exclusão */
+button[kind="secondary"]:active {
+    border-color: #ff4b4b !important;
+    color: #ff4b4b !important;
+    box-shadow: 0 0 20px rgba(255, 75, 75, 0.6) !important;
+    transition: 0.1s;
+}
+
     /* Botões e Inputs Custom */
     div.stButton > button {
         border-radius: 8px !important;
@@ -302,9 +310,14 @@ with col_ops_r:
                         
                         st.cache_data.clear(); st.rerun()
                 with c4:
-                    if st.button("✖", key=f"btn_del_vF_{id_a}", use_container_width=True):
+                    # Botão com chave única, ajuda visual e funcionalidade de deleção
+                    if st.button("🗑️", key=f"btn_del_vF_{id_a}", use_container_width=True, help="Excluir agendamento"):
+                        # Comando que remove o registro do banco de dados permanentemente
                         user_ref.collection("minha_agenda").document(id_a).delete()
-                        st.cache_data.clear(); st.rerun()
+                        # Limpa o cache para garantir que a lista atualize na hora
+                        st.cache_data.clear()
+                        # Recarrega a página para refletir a exclusão
+                        st.rerun()
 
 st.write("---")
 col_perf_l, col_perf_r = st.columns([1, 1])
@@ -406,6 +419,7 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'> Contato Suporte 4002-8922 </p>", unsafe_allow_html=True)
+
 
 
 
