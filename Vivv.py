@@ -336,7 +336,7 @@ with col_ops_r:
 st.write("---")
 col_perf_l, col_perf_r = st.columns([1, 1])
 
-with col_perf_l:
+with col_perf_l:     
     st.subheader("📊 Performance Financeira")
     if cx_list:
         df_cx = pd.DataFrame(cx_list)
@@ -383,9 +383,13 @@ with col_perf_r:
     )
 
 # ================= 8. VIVV AI: RESILIÊNCIA TOTAL (ANTI-429) =================
+# ================= 8. VIVV AI =================
 st.write("---")
 st.subheader("💬 Vivv AI: Consultoria Estratégica")
-prompt_ia = st.text_input("Analise seu negócio ou peça dicas:", placeholder="Ex: Como posso atrair mais clientes?", key="ia_input_master")
+prompt_ia = st.text_input("Analise seu negócio:", placeholder="Ex: Como atrair clientes?", key="ia_input_master")
+
+# Inicializamos a variável para evitar erro de "variável não definida"
+sucesso = False 
 
 if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
     if "GOOGLE_API_KEY" not in st.secrets:
@@ -393,59 +397,38 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
     else:
         api_key = st.secrets["GOOGLE_API_KEY"]
         modelos = ["gemini-2.0-flash", "gemini-1.5-flash"]
-        sucesso = False
         
         with st.spinner("Vivv AI analisando dados..."):
             for modelo in modelos:
                 if sucesso: break
                 
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={api_key}"
-                
-                # Payload montado corretamente em uma única estrutura
                 payload = {
                     "contents": [{
                         "parts": [{
-                            "text": f"Responda como consultor Vivv Pro. Dados atuais: {len(clis)} clientes ativos, Faturamento Total R$ {faturamento:.2f}. Pergunta do usuário: {prompt_ia}"
+                            "text": f"Responda como consultor Vivv Pro. Dados: {len(clis)} clientes, R$ {faturamento:.2f} fat. Pergunta: {prompt_ia}"
                         }]
                     }]
                 }
 
-                # Tentativas para contornar o Erro 429 (Rate Limit)
                 for tentativa in range(2):
                     try:
-                        # O segredo está aqui: o código abaixo deve estar alinhado dentro do try
                         response = requests.post(url, json=payload, timeout=25)
-
                         if response.status_code == 200:
                             res_json = response.json()
-                            texto_ia = (
-                                res_json.get("candidates", [{}])[0]
-                                .get("content", {})
-                                .get("parts", [{}])[0]
-                                .get("text", "Resposta indisponível no momento.")
-                            )
-
-                            st.markdown(
-                                f'<div class="ia-box"><b>Vivv AI Insights ({modelo}):</b><br><br>{texto_ia}</div>',
-                                unsafe_allow_html=True
-                            )
+                            texto_ia = res_json.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "Erro na resposta.")
+                            st.markdown(f'<div class="ia-box"><b>Vivv AI ({modelo}):</b><br><br>{texto_ia}</div>', unsafe_allow_html=True)
                             sucesso = True
-                            break # Sai do loop de tentativas
-
+                            break 
                         elif response.status_code == 429:
-                            time.sleep(5) # Espera 5 segundos se o Google estiver ocupado
+                            time.sleep(5)
                         else:
-                            break # Se for outro erro (400, 500), tenta o próximo modelo
+                            break
+                    except:
+                        continue
 
-                    except Exception:
-                        continue # Se houver erro de rede, tenta a próxima tentativa
-
-if not sucesso and prompt_ia:
-    st.error("""
-    ⚠️ Instabilidade temporária detectada.  
-    Estamos com alta demanda nos serviços da Google neste momento.  
-    🔄 Tente novamente em alguns minutos ou mude sua pergunta.
-    """)
+        if not sucesso:
+            st.error("⚠️ Instabilidade na IA. Tente novamente em instantes.")
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 
