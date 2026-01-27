@@ -15,6 +15,7 @@ import plotly.express as px
 from datetime import datetime, timezone, timedelta
 from google.cloud import firestore
 from google.oauth2 import service_account
+import time
 
 # ================= 1. CONFIGURAÇÕES TÉCNICAS E ESTILO MASTER =================
 st.set_page_config(page_title="Vivv Pro v2", layout="wide", page_icon="🎯")
@@ -435,6 +436,7 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'> Contato Suporte 4002-8922 </p>", unsafe_allow_html=True)
+
 
 
 
