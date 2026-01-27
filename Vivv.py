@@ -236,14 +236,20 @@ with col_ops_l:
     with t4:
         with st.form("form_cx_vFINAL", clear_on_submit=True):
             desc_cx = st.text_input("Descrição", key="dsc_vF")
-            valor_cx = st.number_input("Valor", min_value=0.0, key="vlr_vF")
+            # Adicionado format="%.2f" para visual profissional
+            valor_cx = st.number_input("Valor", min_value=0.0, format="%.2f", key="vlr_vF")
             tipo_cx = st.selectbox("Tipo", ["Entrada", "Saída"], key="tip_vF")
+            
             if st.form_submit_button("LANÇAR", use_container_width=True):
-                user_ref.collection("meu_caixa").add({
-                    "descricao": desc_cx, "valor": valor_cx, "tipo": tipo_cx, 
-                    "data": hoje_str, "timestamp": datetime.now()
-                })
-                st.cache_data.clear(); st.rerun()
+                if valor_cx > 0:
+                    user_ref.collection("meu_caixa").add({
+                        "descricao": desc_cx, 
+                        "valor": float(valor_cx), # Garante que salve como número
+                        "tipo": tipo_cx, 
+                        "data": hoje_str, 
+                        "timestamp": datetime.now()
+                    })
+                    st.cache_data.clear(); st.rerun()
                 
 with col_ops_r:
     st.markdown("### 📋 Próximos Atendimentos")
