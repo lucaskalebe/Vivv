@@ -99,6 +99,15 @@ button[kind="secondary"]:active {
 st.markdown('<div class="vivv-logo">Vivv<span style="color:#00d4ff">.</span></div>', unsafe_allow_html=True)
 
 # ================= 2. BANCO DE DADOS (FIRESTORE) =================
+
+
+# O código deve ler o segredo como uma STRING e converter para JSON
+if "FIREBASE_DETAILS" in st.secrets:
+    firebase_raw = st.secrets["FIREBASE_DETAILS"]
+    secrets_dict = json.loads(firebase_raw)
+else:
+    st.error("Erro: FIREBASE_DETAILS não encontrado nos Secrets!")
+
 @st.cache_resource
 def init_db():
     try:
@@ -489,6 +498,7 @@ if not sucesso:
     st.error("⚠️ Instabilidade temporária detectada. Tente novamente em instantes.")
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'>Contato Suporte 4002-8922</p>", unsafe_allow_html=True)
+
 
 
 
