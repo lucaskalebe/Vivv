@@ -295,8 +295,7 @@ with st.expander(f"Agenda de Hoje ({len(clis_hoje)})", expanded=True):
         for ag in clis_hoje:
             id_a = ag.get('id')
             t_raw = next((c.get('telefone', '') for c in clis if c.get('nome') == ag['cliente']), "")
-            t_clean = "".join(filter(str.isdigit, str(t_raw)))
-            
+            t_clean = "".join(filter(str.isdigit, str(t_raw))) if t_raw else "00000000000"            
             c1, c2, c3, c4 = st.columns([2.5, 1.2, 0.8, 0.8])
             
             with c1:
@@ -471,4 +470,5 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
         st.error("⚠️ Instabilidade na IA. Tente novamente em instantes.")
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026 | Suporte 4002-8922</p>", unsafe_allow_html=True)
+
 
