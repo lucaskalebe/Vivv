@@ -291,11 +291,16 @@ with st.expander(f"Agenda de Hoje ({len(clis_hoje)})", expanded=True):
     if not clis_hoje:
         st.info("Agenda limpa para hoje.")
     else:
-        # APENAS UM LOOP DAQUI PARA BAIXO
+        # Criamos um conjunto de IDs já exibidos para garantir ZERO duplicação visual
+        exibidos = set()
         for ag in clis_hoje:
             id_a = ag.get('id')
+            if id_a in exibidos: continue
+            exibidos.add(id_a)
+            
             t_raw = next((c.get('telefone', '') for c in clis if c.get('nome') == ag['cliente']), "")
-            t_clean = "".join(filter(str.isdigit, str(t_raw))) if t_raw else "00000000000"            
+            t_clean = "".join(filter(str.isdigit, str(t_raw)))
+            
             c1, c2, c3, c4 = st.columns([2.5, 1.2, 0.8, 0.8])
             
             with c1:
@@ -306,20 +311,17 @@ with st.expander(f"Agenda de Hoje ({len(clis_hoje)})", expanded=True):
                 st.markdown(f'''<a href="https://wa.me/55{t_clean}" target="_blank" style="text-decoration:none;"><div style="background-color: #25D366; color: white; text-align: center; padding: 8px 0px; border-radius: 8px; font-size: 10px; font-weight: bold; border: 1px solid rgba(255,255,255,0.2);">🟢 WHATSAPP</div></a>''', unsafe_allow_html=True)
             
             with c3:
-                if st.button("✅", key=f"ok_fin_{id_a}", use_container_width=True):
+                if st.button("✅", key=f"ok_v_{id_a}", use_container_width=True):
                     user_ref.collection("minha_agenda").document(id_a).update({"status": "Concluido"})
                     user_ref.collection("meu_caixa").add({
                         "data": hoje_str, "descricao": f"Serviço: {ag['cliente']}", 
                         "valor": float(ag.get('preco', 0)), "tipo": "Entrada", "timestamp": datetime.now()})
-                    st.cache_data.clear()
-                    st.rerun()
+                    st.cache_data.clear(); st.rerun()
 
             with c4:
-                # Sistema de deleção simples e direto
-                if st.button("🗑️", key=f"del_fin_{id_a}", use_container_width=True):
+                if st.button("🗑️", key=f"del_v_{id_a}", use_container_width=True):
                     user_ref.collection("minha_agenda").document(id_a).delete()
-                    st.cache_data.clear()
-                    st.rerun()
+                    st.cache_data.clear(); st.rerun()
                         
         else:
             for ag in clis_hoje:
@@ -470,5 +472,6 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
         st.error("⚠️ Instabilidade na IA. Tente novamente em instantes.")
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026 | Suporte 4002-8922</p>", unsafe_allow_html=True)
+
 
 
