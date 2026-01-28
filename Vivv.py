@@ -401,10 +401,13 @@ with col_perf_r:
             if clis:
                 df_c = pd.DataFrame(clis)
                 edt_c = st.data_editor(df_c[["nome", "telefone"]], use_container_width=True, key="ed_cli_master")
-                if st.button("SALVAR ALTERAÇÕES CLIENTES"):
-                    for i, r in edt_c.iterrows():
-                        user_ref.collection("meus_clientes").document(df_c.iloc[i]["id"]).update({"nome": r["nome"], "telefone": r["telefone"]})
+            if st.button("SALVAR ALTERAÇÕES CLIENTES"):
+                for i, r in edt_c.iterrows():
+                    user_ref.collection("meus_clientes").document(df_c.iloc[i]["id"]).update({"nome": r["nome"], "telefone": r["telefone"]})
                     st.cache_data.clear(); st.rerun()
+
+
+        
         with tab_s_ed:
             if srvs:
                 df_s = pd.DataFrame(srvs)
@@ -496,6 +499,7 @@ A Vivv AI já identificou o problema automaticamente.
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'>Contato Suporte 4002-8922</p>", unsafe_allow_html=True)
+
 
 
 
