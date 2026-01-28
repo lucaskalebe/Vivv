@@ -286,56 +286,57 @@ with col_ops_l:
                     })
                     st.cache_data.clear(); st.rerun()
                 
-with col_ops_r:
-    st.markdown("### 📋 Próximos Atendimentos")
-    with st.expander(f"Agenda de Hoje ({len(clis_hoje)})", expanded=True):
-        if not clis_hoje:
-            st.info("Agenda limpa para hoje.")
-        else:
-            for ag in clis_hoje:
-                id_a = ag.get('id')
-                t_raw = next((c.get('telefone', '') for c in clis if c.get('nome') == ag['cliente']), "")
-                t_clean = "".join(filter(str.isdigit, str(t_raw)))
-                
-                c1, c2, c3, c4 = st.columns([2.5, 1, 1, 1])
-                with c1:
-                    # No loop da agenda, dentro da c1:
-                    # 1. Primeiro, criamos o texto do preço formatado (Padrão BR)
-                    preco_formatado = f"{ag.get('preco', 0):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                    st.markdown(f"**{ag['hora']}** | {ag['cliente']}<br><small style='color:#888'>{ag['servico']} • R$ {preco_formatado}</small>", unsafe_allow_html=True)
-                
-                with c2:
-                    # Estilização melhorada: Texto branco, fonte maior e centralizada
-                    st.markdown(f'''
-                        <a href="https://wa.me/55{t_clean}" target="_blank" style="text-decoration:none;">
-                            <div style="
-                                background-color: #25D366; 
-                                color: white; 
-                                text-align: center; 
-                                padding: 8px 0px; 
-                                border-radius: 8px; 
-                                font-size: 12px; 
-                                font-weight: bold; 
-                                text-transform: uppercase;
-                                letter-spacing: 1px;
-                                margin-top: 5px;
-                                border: 1px solid rgba(255,255,255,0.2);
-                            ">
-                                📱 WhatsApp
-                            </div>
-                        </a>
-                    ''', unsafe_allow_html=True)
-                with c3:
-                    if st.button("✅", key=f"btn_ok_vF_{id_a}", use_container_width=True):
-                        user_ref.collection("minha_agenda").document(id_a).update({"status": "Concluido"})
-                        user_ref.collection("meu_caixa").add({
-                            "data": hoje_str, 
-                            "descricao": f"Serviço: {ag['cliente']}", 
-                            "valor": float(ag.get('preco', 0)), # <--- Adicionado float() aqui
-                            "tipo": "Entrada", 
-                            "timestamp": datetime.now()})
-                        
+st.markdown("### 📋 Próximos Atendimentos")
+with st.expander(f"Agenda de Hoje ({len(clis_hoje)})", expanded=True):
+    if not clis_hoje:
+        st.info("Agenda limpa para hoje.")
+    else:
+        for ag in clis_hoje:
+            id_a = ag.get('id')
+            t_raw = next((c.get('telefone', '') for c in clis if c.get('nome') == ag['cliente']), "")
+            t_clean = "".join(filter(str.isdigit, str(t_raw)))
+            
+            # CRIANDO AS COLUNAS UMA ÚNICA VEZ POR ITEM
+            c1, c2, c3, c4 = st.columns([2.5, 1, 1, 1])
+            
+            with c1:
+                preco_formatado = f"{ag.get('preco', 0):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                st.markdown(f"**{ag['hora']}** | {ag['cliente']}<br><small style='color:#888'>{ag['servico']} • R$ {preco_formatado}</small>", unsafe_allow_html=True)
+            
+            with c2:
+                st.markdown(f'''
+                    <a href="https://wa.me/55{t_clean}" target="_blank" style="text-decoration:none;">
+                        <div style="background-color: #25D366; color: white; text-align: center; padding: 8px 0px; border-radius: 8px; font-size: 12px; font-weight: bold; text-transform: uppercase; margin-top: 5px; border: 1px solid rgba(255,255,255,0.2);">
+                            📱 WhatsApp
+                        </div>
+                    </a>
+                ''', unsafe_allow_html=True)
+            
+            with c3:
+                if st.button("✅", key=f"btn_ok_vF_{id_a}", use_container_width=True):
+                    user_ref.collection("minha_agenda").document(id_a).update({"status": "Concluido"})
+                    user_ref.collection("meu_caixa").add({
+                        "data": hoje_str, 
+                        "descricao": f"Serviço: {ag['cliente']}", 
+                        "valor": float(ag.get('preco', 0)),
+                        "tipo": "Entrada", 
+                        "timestamp": datetime.now()})
+                    st.cache_data.clear(); st.rerun()
+
+            with c4:
+                if st.button("🗑️", key=f"btn_del_vF_{id_a}", use_container_width=True):
+                    st.session_state[f"confirma_del_{id_a}"] = True
+
+                if st.session_state.get(f"confirma_del_{id_a}", False):
+                    st.warning("Excluir?")
+                    col_y, col_n = st.columns(2)
+                    if col_y.button("SIM", key=f"y_{id_a}"):
+                        user_ref.collection("minha_agenda").document(id_a).delete()
+                        st.session_state[f"confirma_del_{id_a}"] = False
                         st.cache_data.clear(); st.rerun()
+                    if col_n.button("NÃO", key=f"n_{id_a}"):
+                        st.session_state[f"confirma_del_{id_a}"] = False
+                        st.rerun()
                         
     for ag in clis_hoje:
         id_a = ag.get("id")
@@ -502,6 +503,7 @@ if not sucesso:
     st.error("⚠️ Instabilidade temporária detectada. Tente novamente em instantes.")
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'>Contato Suporte 4002-8922</p>", unsafe_allow_html=True)
+
 
 
 
