@@ -327,9 +327,8 @@ with col_ops_r:
                         st.cache_data.clear(); st.rerun()
                         
     for ag in clis_hoje:
-    id_a = ag.get("id")
-
-    c1, c2, c3, c4 = st.columns([2.5, 1, 1, 1])
+        id_a = ag.get("id")
+        c1, c2, c3, c4 = st.columns([2.5, 1, 1, 1])
 
     with c1:
         # conteúdo do atendimento
@@ -497,6 +496,7 @@ A Vivv AI já identificou o problema automaticamente.
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'>Contato Suporte 4002-8922</p>", unsafe_allow_html=True)
+
 
 
 
