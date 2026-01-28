@@ -338,40 +338,34 @@ with st.expander(f"Agenda de Hoje ({len(clis_hoje)})", expanded=True):
                         st.session_state[f"confirma_del_{id_a}"] = False
                         st.rerun()
                         
-    for ag in clis_hoje:
-        id_a = ag.get("id")
-        c1, c2, c3, c4 = st.columns([2.5, 1, 1, 1])
+        else:
+            for ag in clis_hoje:
+                id_a = ag.get('id')
+                t_raw = next((c.get('telefone', '') for c in clis if c.get('nome') == ag['cliente']), "")
+                t_clean = "".join(filter(str.isdigit, str(t_raw)))
+                
+                # Define as colunas para CADA linha da agenda
+                c1, c2, c3, c4 = st.columns([2.5, 1, 1, 1])
+                
+                with c1:
+                    preco_f = f"{ag.get('preco', 0):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                    st.markdown(f"**{ag['hora']}** | {ag['cliente']}<br><small style='color:#888'>{ag['servico']} • R$ {preco_f}</small>", unsafe_allow_html=True)
+                
+                with c2:
+                    st.markdown(f'''<a href="https://wa.me/55{t_clean}" target="_blank" style="text-decoration:none;"><div style="background-color: #25D366; color: white; text-align: center; padding: 8px 0px; border-radius: 8px; font-size: 10px; font-weight: bold;">📱 WHATS</div></a>''', unsafe_allow_html=True)
+                
+                with c3:
+                    if st.button("✅", key=f"ok_{id_a}", use_container_width=True):
+                        user_ref.collection("minha_agenda").document(id_a).update({"status": "Concluido"})
+                        user_ref.collection("meu_caixa").add({
+                            "data": hoje_str, "descricao": f"Serviço: {ag['cliente']}", 
+                            "valor": float(ag.get('preco', 0)), "tipo": "Entrada", "timestamp": datetime.now()})
+                        st.cache_data.clear(); st.rerun()
 
-    with c1:
-        # conteúdo do atendimento
-        pass
-
-    with c2:
-        # botão whatsapp
-        pass
-
-    with c3:
-        if st.button("✅", key=f"btn_ok_{id_a}", use_container_width=True):
-            user_ref.collection("minha_agenda").document(id_a).update({"status": "Concluido"})
-            user_ref.collection("meu_caixa").add({
-                "data": hoje_str,
-                "descricao": f"Serviço: {ag['cliente']}",
-                "valor": float(ag.get("preco", 0)),
-                "tipo": "Entrada",
-                "timestamp": datetime.now()
-            })
-            st.cache_data.clear()
-            st.rerun()
-
-    # ✅ BLOCO CORRETO DO DELETE
-    with c4:
-        if st.button(
-            "🗑️",
-            key=f"btn_del_vF_{id_a}",
-            use_container_width=True,
-            help="Excluir agendamento"
-        ):
-            st.session_state[f"confirma_del_{id_a}"] = True
+                with c4:
+                    if st.button("🗑️", key=f"del_{id_a}", use_container_width=True):
+                        user_ref.collection("minha_agenda").document(id_a).delete()
+                        st.cache_data.clear(); st.rerun()
 
         if st.session_state.get(f"confirma_del_{id_a}", False):
             st.warning("Confirmar exclusão?")
@@ -503,6 +497,7 @@ if not sucesso:
     st.error("⚠️ Instabilidade temporária detectada. Tente novamente em instantes.")
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'>Contato Suporte 4002-8922</p>", unsafe_allow_html=True)
+
 
 
 
