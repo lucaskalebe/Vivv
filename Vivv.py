@@ -1,9 +1,5 @@
 
 
-
-
-
-
 import streamlit as st
 import pandas as pd
 import urllib.parse
@@ -17,6 +13,7 @@ from google.cloud import firestore
 from google.oauth2 import service_account
 import time
 import google.generativeai as genai
+import os
 
 # ================= 1. CONFIGURAÇÕES TÉCNICAS E ESTILO MASTER =================
 
@@ -433,6 +430,7 @@ with col_perf_r:
     )
 
 # ================= 8. VIVV AI: RESILIÊNCIA TOTAL (ANTI-429) =================
+genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 st.write("---")
 st.subheader("💬 Vivv AI: Consultoria Estratégica")
 prompt_ia = st.text_input("Analise seu negócio ou peça dicas:", placeholder="Ex: Como posso atrair mais clientes?", key="ia_input_master")
@@ -441,7 +439,6 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
     if "GOOGLE_API_KEY" not in st.secrets:
         st.error("Chave API não configurada nos Secrets.")
     else:
-        import time
         api_key = st.secrets["GOOGLE_API_KEY"]
         modelos = ["gemini-2.0-flash", "gemini-1.5-flash"]
         sucesso = False
@@ -492,6 +489,7 @@ if not sucesso:
     st.error("⚠️ Instabilidade temporária detectada. Tente novamente em instantes.")
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'>Contato Suporte 4002-8922</p>", unsafe_allow_html=True)
+
 
 
 
