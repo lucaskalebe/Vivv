@@ -287,7 +287,28 @@ with col_ops_l:
                     st.cache_data.clear(); st.rerun()
                 
                     
-                    st.markdown("### 📋 Próximos Atendimentos")
+with t4:
+        with st.form("form_cx_vFINAL", clear_on_submit=True):
+            desc_cx = st.text_input("Descrição", key="dsc_vF")
+            valor_cx = st.number_input("Valor", min_value=0.0, format="%.2f", key="vlr_vF")
+            tipo_cx = st.selectbox("Tipo", ["Entrada", "Saída"], key="tip_vF")
+            
+            if st.form_submit_button("LANÇAR", use_container_width=True):
+                if valor_cx > 0:
+                    user_ref.collection("meu_caixa").add({
+                        "descricao": desc_cx, 
+                        "valor": float(valor_cx),
+                        "tipo": tipo_cx, 
+                        "data": hoje_str, 
+                        "timestamp": datetime.now()
+                    })
+                    st.cache_data.clear()
+                    st.rerun()
+
+# --- FORA DAS TABS E DO FORMULÁRIO ---
+st.write("---")
+st.markdown("### 📋 Próximos Atendimentos")
+
 with st.expander(f"Agenda de Hoje ({len(clis_hoje)})", expanded=True):
     if not clis_hoje:
         st.info("Agenda limpa para hoje.")
@@ -325,41 +346,14 @@ with st.expander(f"Agenda de Hoje ({len(clis_hoje)})", expanded=True):
                     st.cache_data.clear()
                     st.rerun()
 
-# --- AQUI TERMINA A AGENDA E COMEÇA O FINANCEIRO ---
+st.write("---")
+# A PARTIR DAQUI SEGUE O col_perf_l, col_perf_r...
+
 st.write("---")
 col_perf_l, col_perf_r = st.columns([1, 1])
-# ... restante do código (Performance Financeira)
 
         
-        else:
-            for ag in clis_hoje:
-                id_a = ag.get('id')
-                t_raw = next((c.get('telefone', '') for c in clis if c.get('nome') == ag['cliente']), "")
-                t_clean = "".join(filter(str.isdigit, str(t_raw)))
-                
-                # Define as colunas para CADA linha da agenda
-                c1, c2, c3, c4 = st.columns([2.5, 1, 1, 1])
-                
-                with c1:
-                    preco_f = f"{ag.get('preco', 0):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                    st.markdown(f"**{ag['hora']}** | {ag['cliente']}<br><small style='color:#888'>{ag['servico']} • R$ {preco_f}</small>", unsafe_allow_html=True)
-                
-                with c2:
-                    st.markdown(f'''<a href="https://wa.me/55{t_clean}" target="_blank" style="text-decoration:none;"><div style="background-color: #25D366; color: white; text-align: center; padding: 8px 0px; border-radius: 8px; font-size: 10px; font-weight: bold;">📱 WHATS</div></a>''', unsafe_allow_html=True)
-                
-                with c3:
-                    if st.button("✅", key=f"ok_{id_a}", use_container_width=True):
-                        user_ref.collection("minha_agenda").document(id_a).update({"status": "Concluido"})
-                        user_ref.collection("meu_caixa").add({
-                            "data": hoje_str, "descricao": f"Serviço: {ag['cliente']}", 
-                            "valor": float(ag.get('preco', 0)), "tipo": "Entrada", "timestamp": datetime.now()})
-                        st.cache_data.clear(); st.rerun()
-
-                with c4:
-                    if st.button("🗑️", key=f"del_{id_a}", use_container_width=True):
-                        user_ref.collection("minha_agenda").document(id_a).delete()
-                        st.cache_data.clear(); st.rerun()
-
+        
         if st.session_state.get(f"confirma_del_{id_a}", False):
             st.warning("Confirmar exclusão?")
 
@@ -480,6 +474,7 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
         st.error("⚠️ Instabilidade na IA. Tente novamente em instantes.")
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026 | Suporte 4002-8922</p>", unsafe_allow_html=True)
+
 
 
 
