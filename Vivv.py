@@ -458,8 +458,8 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
 
                 # Tentativas para contornar o Erro 429
                 for tentativa in range(2):
-    try:
-        response = requests.post(url, json=payload, timeout=25)
+                    try:
+                        response = requests.post(url, json=payload, timeout=25)
 
         if response.status_code == 200:
             res_json = response.json()
@@ -499,6 +499,7 @@ A Vivv AI já identificou o problema automaticamente.
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'>Contato Suporte 4002-8922</p>", unsafe_allow_html=True)
+
 
 
 
