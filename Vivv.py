@@ -100,26 +100,30 @@ st.markdown('<div class="vivv-logo">Vivv<span style="color:#00d4ff">.</span></di
 
 # ================= 2. BANCO DE DADOS (FIRESTORE) =================
 
-
-# O código deve ler o segredo como uma STRING e converter para JSON
-if "FIREBASE_DETAILS" in st.secrets:
-    firebase_raw = st.secrets["FIREBASE_DETAILS"]
-    secrets_dict = json.loads(firebase_raw)
-else:
-    st.error("Erro: FIREBASE_DETAILS não encontrado nos Secrets!")
-
 @st.cache_resource
 def init_db():
     try:
-        secrets_dict = json.loads(st.secrets["FIREBASE_DETAILS"])
+        # Verifica se a chave existe antes de tentar carregar
+        if "FIREBASE_DETAILS" not in st.secrets:
+            st.error("Erro: FIREBASE_DETAILS não configurado no painel Secrets.")
+            return None
+        
+        # Carrega a string JSON do segredo e converte em dicionário
+        firebase_raw = st.secrets["FIREBASE_DETAILS"]
+        secrets_dict = json.loads(firebase_raw)
+        
+        # Autentica no Google Cloud
         creds = service_account.Credentials.from_service_account_info(secrets_dict)
         return firestore.Client(credentials=creds)
     except Exception as e:
         st.error(f"Erro Crítico de Conexão: {e}")
         return None
 
+# Inicializa o banco apenas uma vez
 db = init_db()
-if not db: st.stop()
+if not db: 
+    st.warning("Aguardando configuração de conexão...")
+    st.stop()
 
 # ================= 3. AUTENTICAÇÃO E SEGURANÇA =================
 if "logado" not in st.session_state: st.session_state.logado = False
@@ -498,6 +502,7 @@ if not sucesso:
     st.error("⚠️ Instabilidade temporária detectada. Tente novamente em instantes.")
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'>Contato Suporte 4002-8922</p>", unsafe_allow_html=True)
+
 
 
 
