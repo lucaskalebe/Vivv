@@ -16,6 +16,7 @@ from datetime import datetime, timezone, timedelta
 from google.cloud import firestore
 from google.oauth2 import service_account
 import time
+import google.generativeai as genai
 
 # ================= 1. CONFIGURAÇÕES TÉCNICAS E ESTILO MASTER =================
 
@@ -491,6 +492,7 @@ if not sucesso:
     st.error("⚠️ Instabilidade temporária detectada. Tente novamente em instantes.")
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'>Contato Suporte 4002-8922</p>", unsafe_allow_html=True)
+
 
 
 
