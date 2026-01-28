@@ -456,11 +456,13 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
     "contents": [{"parts": [{"text": f"Responda como consultor Vivv Pro. Dados: {len(clis)} clientes, R$ {faturamento:.2f}. Pergunta: {prompt_ia}"}]}]
 }
 
-                # Tentativas para contornar o Erro 429
-                for tentativa in range(2):
-                    try:
-                        response = requests.post(url, json=payload, timeout=25)
+# Tentativas para contornar o Erro 429
+sucesso = False
+for tentativa in range(2):
+    try:
+        response = requests.post(url, json=payload, timeout=25)
 
+        # O código abaixo precisa estar recuado (dentro do try)
         if response.status_code == 200:
             res_json = response.json()
             texto_ia = (
@@ -479,26 +481,17 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
 
         elif response.status_code == 429:
             time.sleep(5)
-
         else:
             break
 
-    except requests.exceptions.RequestException:
+    except (requests.exceptions.RequestException, KeyError):
         continue
-    except KeyError:
-        break
 
 if not sucesso:
-    st.error("""
-⚠️ Instabilidade temporária detectada  
-Estamos com alta demanda nos serviços da Google neste momento.  
-A Vivv AI já identificou o problema automaticamente.
-
-🔄 Tente novamente em alguns minutos.
-""")
-
+    st.error("⚠️ Instabilidade temporária detectada. Tente novamente em instantes.")
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
 st.markdown("<br><p style='text-align:center; color:#555;'>Contato Suporte 4002-8922</p>", unsafe_allow_html=True)
+
 
 
 
