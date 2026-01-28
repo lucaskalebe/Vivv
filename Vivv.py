@@ -1,5 +1,3 @@
-
-
 import streamlit as st
 import pandas as pd
 import urllib.parse
@@ -29,20 +27,15 @@ def format_brl(valor):
 # Interface de Alto Nível (CSS Customizado)
 st.markdown("""
 <style>
-    /* Reset e Fundo Deep Black */
     header, [data-testid="stHeader"], .stAppDeployButton { display: none !important; }
     .stApp { background-color: #000205 !important; }
     .block-container { padding-top: 50px !important; max-width: 95% !important; }
-
-    /* Logo Vivv Flutuante */
     .vivv-logo {
         position: fixed; top: 15px; left: 25px;
         color: #ffffff; font-size: 32px; font-weight: 900;
         z-index: 999999; letter-spacing: -1px;
         text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
     }
-
-    /* Cards de Métricas Neon */
     .metric-card {
         background: linear-gradient(145deg, #000814, #001a2c);
         border: 1px solid rgba(0, 86, 179, 0.4);
@@ -56,26 +49,13 @@ st.markdown("""
     }
     .metric-card small { color: #8899A6; font-weight: 600; text-transform: uppercase; }
     .metric-card h2 { margin: 0; font-size: 2.2rem !important; font-weight: 800; }
-
-    /* Cards de Agendamento Ultra Compactos */
-    .compact-container {
-        border-radius: 10px !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        padding: 10px !important;
-        margin-bottom: 8px !important;
-        background: rgba(255, 255, 255, 0.02) !important;
+    button[kind="secondary"]:active {
+        border-color: #ffffff !important;
+        color: #ffffff !important;
+        box-shadow: 0 0 25px rgba(255, 255, 255, 0.8) !important;
+        transition: 0.1s;
+        transform: scale(0.95);
     }
-
-    /* Efeito de Brilho Branco ao clicar */
-button[kind="secondary"]:active {
-    border-color: #ffffff !important;
-    color: #ffffff !important;
-    box-shadow: 0 0 25px rgba(255, 255, 255, 0.8) !important;
-    transition: 0.1s;
-    transform: scale(0.95); /* Leve efeito de compressão ao clicar */
-}
-
-    /* Botões e Inputs Custom */
     div.stButton > button {
         border-radius: 8px !important;
         font-weight: 700 !important;
@@ -86,8 +66,6 @@ button[kind="secondary"]:active {
         border: 1px solid rgba(0, 212, 255, 0.1) !important;
         border-radius: 15px !important;
     }
-
-    /* Estilo Especial para IA */
     .ia-box {
         background: linear-gradient(90deg, rgba(0,212,255,0.1) 0%, rgba(121,40,202,0.1) 100%);
         border-left: 4px solid #00d4ff;
@@ -103,27 +81,19 @@ st.markdown('<div class="vivv-logo">Vivv<span style="color:#00d4ff">.</span></di
 @st.cache_resource
 def init_db():
     try:
-        # Verifica se a chave existe antes de tentar carregar
         if "FIREBASE_DETAILS" not in st.secrets:
-            st.error("Erro: FIREBASE_DETAILS não configurado no painel Secrets.")
+            st.error("Erro: FIREBASE_DETAILS não configurado.")
             return None
-        
-        # Carrega a string JSON do segredo e converte em dicionário
         firebase_raw = st.secrets["FIREBASE_DETAILS"]
         secrets_dict = json.loads(firebase_raw)
-        
-        # Autentica no Google Cloud
         creds = service_account.Credentials.from_service_account_info(secrets_dict)
         return firestore.Client(credentials=creds)
     except Exception as e:
-        st.error(f"Erro Crítico de Conexão: {e}")
+        st.error(f"Erro Crítico: {e}")
         return None
 
-# Inicializa o banco apenas uma vez
 db = init_db()
-if not db: 
-    st.warning("Aguardando configuração de conexão...")
-    st.stop()
+if not db: st.stop()
 
 # ================= 3. AUTENTICAÇÃO E SEGURANÇA =================
 if "logado" not in st.session_state: st.session_state.logado = False
@@ -135,30 +105,20 @@ if not st.session_state.logado:
         tab_l, tab_c = st.tabs(["🔑 LOGIN VIVV", "📝 CRIAR CONTA"])
         
         with tab_l:
-            # .strip() remove espaços acidentais que o usuário digita no final
-            le = st.text_input("E-mail", placeholder="seu@email.com").lower().strip()
-            ls = st.text_input("Senha", type="password")
-            
+            le = st.text_input("E-mail", key="login_email").lower().strip()
+            ls = st.text_input("Senha", type="password", key="login_pass")
             if st.button("ACESSAR SISTEMA", use_container_width=True):
                 if le and ls:
-                    with st.spinner("Autenticando..."):
-                        u = db.collection("usuarios").document(le).get()
-                        
-                        # Validação direta e segura
-                        if u.exists:
-                            dados_user = u.to_dict()
-                            if dados_user.get("senha") == hash_senha(ls):
-                                st.session_state.logado = True
-                                st.session_state.user_email = le
-                                st.success("Acesso autorizado!")
-                                time.sleep(0.5) # Pequena pausa para o usuário ver o sucesso
-                                st.rerun()
-                            else:
-                                st.error("Senha incorreta.")
-                        else:
-                            st.error("Usuário não encontrado.")
-                else:
-                    st.warning("Preencha todos os campos.")
+                    u = db.collection("usuarios").document(le).get()
+                    if u.exists:
+                        if u.to_dict().get("senha") == hash_senha(ls):
+                            st.session_state.logado = True
+                            st.session_state.user_email = le
+                            st.success("Acesso autorizado!")
+                            time.sleep(0.5)
+                            st.rerun()
+                        else: st.error("Senha incorreta.")
+                    else: st.error("Usuário não encontrado.")
 
         with tab_c:
             with st.form("reg_master"):
@@ -185,9 +145,7 @@ def load_vivv_data(email):
     u = db.collection("usuarios").document(email)
     c = [{"id": d.id, **d.to_dict()} for d in u.collection("meus_clientes").stream()]
     s = [{"id": d.id, **d.to_dict()} for d in u.collection("meus_servicos").stream()]
-    # Apenas pendentes para a lista de trabalho
     a = [{"id": d.id, **d.to_dict()} for d in u.collection("minha_agenda").where("status", "==", "Pendente").stream()]
-    # Ordenar agenda por hora
     a = sorted(a, key=lambda x: x.get('hora', '00:00'))
     cx = [d.to_dict() for d in u.collection("meu_caixa").stream()]
     return c, s, a, cx
@@ -197,7 +155,6 @@ clis, srvs, agnd, cx_list = load_vivv_data(st.session_state.user_email)
 hoje_str = datetime.now(fuso_br).strftime('%d/%m/%Y')
 clis_hoje = [a for a in agnd if a.get('data') == hoje_str]
 
-# Cálculos Rápidos
 faturamento = sum([float(x.get('valor', 0)) for x in cx_list if x.get('tipo') == 'Entrada'])
 despesas = sum([float(x.get('valor', 0)) for x in cx_list if x.get('tipo') == 'Saída'])
 
@@ -216,15 +173,9 @@ m2.markdown(f'<div class="metric-card"><small>💰 Faturamento</small><h2 style=
 m3.markdown(f'<div class="metric-card"><small>📈 Lucro Líquido</small><h2 style="color:#00ff88">{format_brl(faturamento-despesas)}</h2></div>', unsafe_allow_html=True)
 m4.markdown(f'<div class="metric-card"><small>⏳ Pendentes</small><h2 style="color:#ff9100">{len(agnd)}</h2></div>', unsafe_allow_html=True)
 
-st.write("<br>", unsafe_allow_html=True)
-
-# ================= 6, 7 e 8. PAINEL UNIFICADO (ANTI-ERRO) =================
+# ================= 6. PAINEL UNIFICADO =================
 st.write("---")
 col_ops_l, col_ops_r = st.columns([1.3, 1])
-
-# Filtro de hoje para a agenda
-hoje_str = datetime.now(fuso_br).strftime('%d/%m/%Y')
-clis_hoje = [a for a in agnd if a.get('data') == hoje_str]
 
 with col_ops_l:
     st.markdown("### ⚡ Gestão Operacional")
@@ -235,11 +186,8 @@ with col_ops_l:
             cli_n = st.selectbox("Cliente", [c['nome'] for c in clis], key="cli_v10") if clis else None
             srv_n = st.selectbox("Serviço", [s['nome'] for s in srvs], key="srv_v10") if srvs else None
             c_d, c_h = st.columns(2)
-            # AQUI ESTÁ A DATA FORMATADA DD/MM/YYYY
             d_val = c_d.date_input("Data", key="dat_v10", format="DD/MM/YYYY")
             h_val = c_h.time_input("Horário", key="hor_v10")
-            
-            # O BOTÃO DE SUBMIT (OBRIGATÓRIO DENTRO DO FORM)
             if st.form_submit_button("CONFIRMAR AGENDAMENTO", use_container_width=True):
                 if cli_n and srv_n:
                     p_s = next((s['preco'] for s in srvs if s['nome'] == srv_n), 0)
@@ -249,7 +197,6 @@ with col_ops_l:
                         "hora": h_val.strftime('%H:%M'), "timestamp": datetime.now()
                     })
                     st.cache_data.clear(); st.rerun()
-                    
 
     with t2:
         with st.form("form_cli_vFINAL", clear_on_submit=True):
@@ -271,41 +218,17 @@ with col_ops_l:
     with t4:
         with st.form("form_cx_vFINAL", clear_on_submit=True):
             desc_cx = st.text_input("Descrição", key="dsc_vF")
-            # Adicionado format="%.2f" para visual profissional
             valor_cx = st.number_input("Valor", min_value=0.0, format="%.2f", key="vlr_vF")
             tipo_cx = st.selectbox("Tipo", ["Entrada", "Saída"], key="tip_vF")
-            
             if st.form_submit_button("LANÇAR", use_container_width=True):
                 if valor_cx > 0:
                     user_ref.collection("meu_caixa").add({
-                        "descricao": desc_cx, 
-                        "valor": float(valor_cx), # Garante que salve como número
-                        "tipo": tipo_cx, 
-                        "data": hoje_str, 
-                        "timestamp": datetime.now()
+                        "descricao": desc_cx, "valor": float(valor_cx), "tipo": tipo_cx, 
+                        "data": hoje_str, "timestamp": datetime.now()
                     })
                     st.cache_data.clear(); st.rerun()
-                
-                    
-with t4:
-        with st.form("form_cx_vFINAL", clear_on_submit=True):
-            desc_cx = st.text_input("Descrição", key="dsc_vF")
-            valor_cx = st.number_input("Valor", min_value=0.0, format="%.2f", key="vlr_vF")
-            tipo_cx = st.selectbox("Tipo", ["Entrada", "Saída"], key="tip_vF")
-            
-            if st.form_submit_button("LANÇAR", use_container_width=True):
-                if valor_cx > 0:
-                    user_ref.collection("meu_caixa").add({
-                        "descricao": desc_cx, 
-                        "valor": float(valor_cx),
-                        "tipo": tipo_cx, 
-                        "data": hoje_str, 
-                        "timestamp": datetime.now()
-                    })
-                    st.cache_data.clear()
-                    st.rerun()
 
-# --- FORA DAS TABS E DO FORMULÁRIO ---
+# ================= 7. PRÓXIMOS ATENDIMENTOS =================
 st.write("---")
 st.markdown("### 📋 Próximos Atendimentos")
 
@@ -318,60 +241,27 @@ with st.expander(f"Agenda de Hoje ({len(clis_hoje)})", expanded=True):
             id_a = ag.get('id')
             if id_a in exibidos: continue
             exibidos.add(id_a)
-            
             t_raw = next((c.get('telefone', '') for c in clis if c.get('nome') == ag['cliente']), "")
             t_clean = "".join(filter(str.isdigit, str(t_raw))) if t_raw else "00000000000"
-            
             c1, c2, c3, c4 = st.columns([2.5, 1.2, 0.8, 0.8])
-            
             with c1:
                 preco_f = f"{ag.get('preco', 0):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                 st.markdown(f"**{ag['hora']}** | {ag['cliente']}<br><small style='color:#888'>{ag['servico']} • R$ {preco_f}</small>", unsafe_allow_html=True)
-            
             with c2:
                 st.markdown(f'''<a href="https://wa.me/55{t_clean}" target="_blank" style="text-decoration:none;"><div style="background-color: #25D366; color: white; text-align: center; padding: 8px 0px; border-radius: 8px; font-size: 10px; font-weight: bold; border: 1px solid rgba(255,255,255,0.2);">🟢 WHATSAPP</div></a>''', unsafe_allow_html=True)
-            
             with c3:
                 if st.button("✅", key=f"ok_v_{id_a}", use_container_width=True):
                     user_ref.collection("minha_agenda").document(id_a).update({"status": "Concluido"})
                     user_ref.collection("meu_caixa").add({
                         "data": hoje_str, "descricao": f"Serviço: {ag['cliente']}", 
                         "valor": float(ag.get('preco', 0)), "tipo": "Entrada", "timestamp": datetime.now()})
-                    st.cache_data.clear()
-                    st.rerun()
-
+                    st.cache_data.clear(); st.rerun()
             with c4:
                 if st.button("🗑️", key=f"del_v_{id_a}", use_container_width=True):
                     user_ref.collection("minha_agenda").document(id_a).delete()
-                    st.cache_data.clear()
-                    st.rerun()
+                    st.cache_data.clear(); st.rerun()
 
-st.write("---")
-# A PARTIR DAQUI SEGUE O col_perf_l, col_perf_r...
-
-st.write("---")
-col_perf_l, col_perf_r = st.columns([1, 1])
-
-        
-        
-        if st.session_state.get(f"confirma_del_{id_a}", False):
-            st.warning("Confirmar exclusão?")
-
-            col_y, col_n = st.columns(2)
-
-            with col_y:
-                if st.button("SIM", key=f"yes_del_{id_a}", use_container_width=True):
-                    user_ref.collection("minha_agenda").document(id_a).delete()
-                    st.session_state[f"confirma_del_{id_a}"] = False
-                    st.cache_data.clear()
-                    st.success("Agendamento excluído com sucesso")
-                    st.rerun()
-
-            with col_n:
-                if st.button("NÃO", key=f"no_del_{id_a}", use_container_width=True):
-                    st.session_state[f"confirma_del_{id_a}"] = False
-
-
+# ================= 8. PERFORMANCE E CONFIGS =================
 st.write("---")
 col_perf_l, col_perf_r = st.columns([1, 1])
 
@@ -381,8 +271,7 @@ with col_perf_l:
         df_cx = pd.DataFrame(cx_list)
         df_cx['valor'] = df_cx['valor'].astype(float)
         resumo = df_cx.groupby('tipo')['valor'].sum().reset_index()
-        fig = px.pie(resumo, values='valor', names='tipo', hole=.6,
-                     color='tipo', color_discrete_map={'Entrada': '#00d4ff', 'Saída': '#ff4b4b'})
+        fig = px.pie(resumo, values='valor', names='tipo', hole=.6, color='tipo', color_discrete_map={'Entrada': '#00d4ff', 'Saída': '#ff4b4b'})
         fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', font_color="white", height=300, margin=dict(t=0, b=0, l=0, r=0))
         st.plotly_chart(fig, use_container_width=True)
 
@@ -394,13 +283,10 @@ with col_perf_r:
             if clis:
                 df_c = pd.DataFrame(clis)
                 edt_c = st.data_editor(df_c[["nome", "telefone"]], use_container_width=True, key="ed_cli_master")
-            if st.button("SALVAR ALTERAÇÕES CLIENTES"):
-                for i, r in edt_c.iterrows():
-                    user_ref.collection("meus_clientes").document(df_c.iloc[i]["id"]).update({"nome": r["nome"], "telefone": r["telefone"]})
+                if st.button("SALVAR ALTERAÇÕES CLIENTES"):
+                    for i, r in edt_c.iterrows():
+                        user_ref.collection("meus_clientes").document(df_c.iloc[i]["id"]).update({"nome": r["nome"], "telefone": r["telefone"]})
                     st.cache_data.clear(); st.rerun()
-
-
-        
         with tab_s_ed:
             if srvs:
                 df_s = pd.DataFrame(srvs)
@@ -410,73 +296,39 @@ with col_perf_r:
                         user_ref.collection("meus_servicos").document(df_s.iloc[i]["id"]).update({"nome": r["nome"], "preco": r["preco"]})
                     st.cache_data.clear(); st.rerun()
 
-    # Botão Excel Master
     buf = io.BytesIO()
     with pd.ExcelWriter(buf, engine='xlsxwriter') as writer:
         if clis: pd.DataFrame(clis).astype(str).to_excel(writer, sheet_name='Clientes', index=False)
         if cx_list: pd.DataFrame(cx_list).astype(str).to_excel(writer, sheet_name='Caixa', index=False)
-    
-    st.download_button(
-        label="📥 BAIXAR RELATÓRIO EXCEL COMPLETO",
-        data=buf.getvalue(),
-        file_name=f"VIVV_PRO_DATA_{datetime.now().strftime('%d_%m')}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True
-    )
+    st.download_button(label="📥 BAIXAR RELATÓRIO EXCEL", data=buf.getvalue(), file_name=f"VIVV_PRO_{datetime.now().strftime('%d_%m')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
 
-# ================= 8. VIVV AI: RESILIÊNCIA TOTAL (ANTI-429) =================
-# ================= 8. VIVV AI: RESILIÊNCIA TOTAL =================
+# ================= 9. VIVV AI: RESILIÊNCIA TOTAL =================
+st.write("---")
 if "GOOGLE_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
     api_key = st.secrets["GOOGLE_API_KEY"]
-else:
-    st.error("Chave API não configurada.")
-    st.stop()
+    st.subheader("💬 Vivv AI: Consultoria Estratégica")
+    prompt_ia = st.text_input("Analise seu negócio ou peça dicas:", placeholder="Ex: Como atrair clientes?", key="ia_input_master")
+    if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
+        modelos = ["gemini-2.0-flash", "gemini-1.5-flash"]
+        sucesso = False
+        with st.spinner("Vivv AI analisando dados..."):
+            for modelo in modelos:
+                if sucesso: break
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={api_key}"
+                payload = {"contents": [{"parts": [{"text": f"Responda como consultor Vivv Pro para um negócio com {len(clis)} clientes e faturamento de R$ {faturamento:.2f}. Pergunta: {prompt_ia}"}]}]}
+                for tentativa in range(2):
+                    try:
+                        response = requests.post(url, json=payload, timeout=25)
+                        if response.status_code == 200:
+                            res_json = response.json()
+                            texto_ia = res_json.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "Sem resposta.")
+                            st.markdown(f'<div class="ia-box"><b>Vivv AI Insights ({modelo}):</b><br><br>{texto_ia}</div>', unsafe_allow_html=True)
+                            sucesso = True
+                            break
+                        elif response.status_code == 429: time.sleep(5)
+                        else: break
+                    except: continue
+        if not sucesso: st.error("⚠️ Instabilidade na IA. Tente novamente.")
 
-st.write("---")
-st.subheader("💬 Vivv AI: Consultoria Estratégica")
-prompt_ia = st.text_input("Analise seu negócio ou peça dicas:", placeholder="Ex: Como posso atrair mais clientes?", key="ia_input_master")
-
-if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
-    modelos = ["gemini-2.0-flash", "gemini-1.5-flash"]
-    sucesso = False
-    
-    with st.spinner("Vivv AI analisando dados..."):
-        for modelo in modelos:
-            if sucesso: break
-            
-            # A URL e o PAYLOAD precisam estar DENTRO do loop do modelo
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={api_key}"
-            payload = {
-                "contents": [{
-                    "parts": [{"text": f"Responda como consultor Vivv Pro para um negócio com {len(clis)} clientes e faturamento de R$ {faturamento:.2f}. Pergunta: {prompt_ia}"}]
-                }]
-            }
-
-            for tentativa in range(2):
-                try:
-                    response = requests.post(url, json=payload, timeout=25)
-                    if response.status_code == 200:
-                        res_json = response.json()
-                        texto_ia = res_json.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "Sem resposta.")
-                        
-                        st.markdown(f'<div class="ia-box"><b>Vivv AI Insights ({modelo}):</b><br><br>{texto_ia}</div>', unsafe_allow_html=True)
-                        sucesso = True
-                        break
-                    elif response.status_code == 429:
-                        time.sleep(5) # Rate limit
-                    else:
-                        break # Tenta o próximo modelo
-                except:
-                    continue
-
-    if not sucesso:
-        st.error("⚠️ Instabilidade na IA. Tente novamente em instantes.")
-
-st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026 | Suporte 4002-8922</p>", unsafe_allow_html=True)
-
-
-
-
-
-
+st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
