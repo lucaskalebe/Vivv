@@ -438,77 +438,52 @@ with col_perf_r:
     )
 
 # ================= 8. VIVV AI: RESILIÊNCIA TOTAL (ANTI-429) =================
-genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+# ================= 8. VIVV AI: RESILIÊNCIA TOTAL =================
+if "GOOGLE_API_KEY" in st.secrets:
+    genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+    api_key = st.secrets["GOOGLE_API_KEY"]
+else:
+    st.error("Chave API não configurada.")
+    st.stop()
+
 st.write("---")
 st.subheader("💬 Vivv AI: Consultoria Estratégica")
 prompt_ia = st.text_input("Analise seu negócio ou peça dicas:", placeholder="Ex: Como posso atrair mais clientes?", key="ia_input_master")
 
 if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
-    if "GOOGLE_API_KEY" not in st.secrets:
-        st.error("Chave API não configurada nos Secrets.")
-    else:
-        api_key = st.secrets["GOOGLE_API_KEY"]
-        modelos = ["gemini-2.0-flash", "gemini-1.5-flash"]
-        sucesso = False
-        
-        with st.spinner("Vivv AI analisando dados..."):
-            for modelo in modelos:
-                if sucesso:
-                    break
-                
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={api_key}"
-        
-                payload = {
-    "contents": [{"parts": [{"text": f"Responda como consultor Vivv Pro. Dados: {len(clis)} clientes, R$ {faturamento:.2f}. Pergunta: {prompt_ia}"}]}]
-}
+    modelos = ["gemini-2.0-flash", "gemini-1.5-flash"]
+    sucesso = False
+    
+    with st.spinner("Vivv AI analisando dados..."):
+        for modelo in modelos:
+            if sucesso: break
+            
+            # A URL e o PAYLOAD precisam estar DENTRO do loop do modelo
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={api_key}"
+            payload = {
+                "contents": [{
+                    "parts": [{"text": f"Responda como consultor Vivv Pro para um negócio com {len(clis)} clientes e faturamento de R$ {faturamento:.2f}. Pergunta: {prompt_ia}"}]
+                }]
+            }
 
-# Tentativas para contornar o Erro 429
-sucesso = False
-for tentativa in range(2):
-    try:
-        response = requests.post(url, json=payload, timeout=25)
+            for tentativa in range(2):
+                try:
+                    response = requests.post(url, json=payload, timeout=25)
+                    if response.status_code == 200:
+                        res_json = response.json()
+                        texto_ia = res_json.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "Sem resposta.")
+                        
+                        st.markdown(f'<div class="ia-box"><b>Vivv AI Insights ({modelo}):</b><br><br>{texto_ia}</div>', unsafe_allow_html=True)
+                        sucesso = True
+                        break
+                    elif response.status_code == 429:
+                        time.sleep(5) # Rate limit
+                    else:
+                        break # Tenta o próximo modelo
+                except:
+                    continue
 
-        # O código abaixo precisa estar recuado (dentro do try)
-        if response.status_code == 200:
-            res_json = response.json()
-            texto_ia = (
-                res_json.get("candidates", [{}])[0]
-                .get("content", {})
-                .get("parts", [{}])[0]
-                .get("text", "Resposta indisponível no momento.")
-            )
+    if not sucesso:
+        st.error("⚠️ Instabilidade na IA. Tente novamente em instantes.")
 
-            st.markdown(
-                f'<div class="ia-box"><b>Vivv AI Insights ({modelo}):</b><br><br>{texto_ia}</div>',
-                unsafe_allow_html=True
-            )
-            sucesso = True
-            break
-
-        elif response.status_code == 429:
-            time.sleep(5)
-        else:
-            break
-
-    except (requests.exceptions.RequestException, KeyError):
-        continue
-
-if not sucesso:
-    st.error("⚠️ Instabilidade temporária detectada. Tente novamente em instantes.")
-st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
-st.markdown("<br><p style='text-align:center; color:#555;'>Contato Suporte 4002-8922</p>", unsafe_allow_html=True)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026 | Suporte 4002-8922</p>", unsafe_allow_html=True)
