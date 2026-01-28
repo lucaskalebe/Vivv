@@ -286,19 +286,18 @@ with col_ops_l:
                     })
                     st.cache_data.clear(); st.rerun()
                 
-st.markdown("### 📋 Próximos Atendimentos")
+                    
+                    st.markdown("### 📋 Próximos Atendimentos")
 with st.expander(f"Agenda de Hoje ({len(clis_hoje)})", expanded=True):
     if not clis_hoje:
         st.info("Agenda limpa para hoje.")
     else:
-        # CONJUNTO PARA EVITAR QUALQUER DUPLICATA NA RENDERIZAÇÃO
         exibidos = set()
         for ag in clis_hoje:
             id_a = ag.get('id')
             if id_a in exibidos: continue
             exibidos.add(id_a)
             
-            # Busca telefone do cliente
             t_raw = next((c.get('telefone', '') for c in clis if c.get('nome') == ag['cliente']), "")
             t_clean = "".join(filter(str.isdigit, str(t_raw))) if t_raw else "00000000000"
             
@@ -309,7 +308,6 @@ with st.expander(f"Agenda de Hoje ({len(clis_hoje)})", expanded=True):
                 st.markdown(f"**{ag['hora']}** | {ag['cliente']}<br><small style='color:#888'>{ag['servico']} • R$ {preco_f}</small>", unsafe_allow_html=True)
             
             with c2:
-                # Link WhatsApp
                 st.markdown(f'''<a href="https://wa.me/55{t_clean}" target="_blank" style="text-decoration:none;"><div style="background-color: #25D366; color: white; text-align: center; padding: 8px 0px; border-radius: 8px; font-size: 10px; font-weight: bold; border: 1px solid rgba(255,255,255,0.2);">🟢 WHATSAPP</div></a>''', unsafe_allow_html=True)
             
             with c3:
@@ -327,9 +325,12 @@ with st.expander(f"Agenda de Hoje ({len(clis_hoje)})", expanded=True):
                     st.cache_data.clear()
                     st.rerun()
 
-# APÓS O WITH DO EXPANDER, O PRÓXIMO COMANDO JÁ É O SEPARADOR
+# --- AQUI TERMINA A AGENDA E COMEÇA O FINANCEIRO ---
 st.write("---")
-                        
+col_perf_l, col_perf_r = st.columns([1, 1])
+# ... restante do código (Performance Financeira)
+
+        
         else:
             for ag in clis_hoje:
                 id_a = ag.get('id')
@@ -479,6 +480,7 @@ if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
         st.error("⚠️ Instabilidade na IA. Tente novamente em instantes.")
 
 st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026 | Suporte 4002-8922</p>", unsafe_allow_html=True)
+
 
 
 
