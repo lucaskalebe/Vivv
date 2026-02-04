@@ -325,4 +325,7 @@ if "GOOGLE_API_KEY" in st.secrets:
                 st.markdown(f'<div class="ia-box"><b>Vivv AI Insights (v2.0):</b><br><br>{response.text}</div>', unsafe_allow_html=True)
                 
             except Exception as e:
-                st.error(f"Erro na conexão: {e}. Tente novamente em instantes.")
+                if "429" in str(e):
+                    st.error("🚀 A Vivv AI está processando muitas consultas no momento. Por favor, aguarde 1 minutinho e tente novamente!")
+                else:
+                    st.error("Ops! Tivemos um pequeno soluço técnico. Tente novamente em instantes.")
