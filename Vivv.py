@@ -302,33 +302,23 @@ with col_perf_r:
         if cx_list: pd.DataFrame(cx_list).astype(str).to_excel(writer, sheet_name='Caixa', index=False)
     st.download_button(label="📥 BAIXAR RELATÓRIO EXCEL", data=buf.getvalue(), file_name=f"VIVV_PRO_{datetime.now().strftime('%d_%m')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
 
-# ================= 9. VIVV AI: RESILIÊNCIA TOTAL =================
+# ================= 9. VIVV AI: SDK OFICIAL =================
 st.write("---")
 if "GOOGLE_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-    api_key = st.secrets["GOOGLE_API_KEY"]
     st.subheader("💬 Vivv AI: Consultoria Estratégica")
+    
     prompt_ia = st.text_input("Analise seu negócio ou peça dicas:", placeholder="Ex: Como atrair clientes?", key="ia_input_master")
+    
     if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
-        modelos = ["gemini-2.0-flash", "gemini-1.5-flash"]
-        sucesso = False
         with st.spinner("Vivv AI analisando dados..."):
-            for modelo in modelos:
-                if sucesso: break
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={api_key}"
-                payload = {"contents": [{"parts": [{"text": f"Responda como consultor Vivv Pro para um negócio com {len(clis)} clientes e faturamento de R$ {faturamento:.2f}. Pergunta: {prompt_ia}"}]}]}
-                for tentativa in range(2):
-                    try:
-                        response = requests.post(url, json=payload, timeout=25)
-                        if response.status_code == 200:
-                            res_json = response.json()
-                            texto_ia = res_json.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "Sem resposta.")
-                            st.markdown(f'<div class="ia-box"><b>Vivv AI Insights ({modelo}):</b><br><br>{texto_ia}</div>', unsafe_allow_html=True)
-                            sucesso = True
-                            break
-                        elif response.status_code == 429: time.sleep(5)
-                        else: break
-                    except: continue
-        if not sucesso: st.error("⚠️ Instabilidade na IA. Tente novamente.")
-
-st.markdown("<br><p style='text-align:center; color:#555;'>Vivv Pro © 2026</p>", unsafe_allow_html=True)
+            try:
+                model = genai.GenerativeModel('gemini-1.5-flash')
+                contexto = f"""Você é o consultor do Vivv Pro. 
+                Dados atuais: {len(clis)} clientes, Faturamento R$ {faturamento:.2f}.
+                Pergunta do usuário: {prompt_ia}"""
+                
+                response = model.generate_content(contexto)
+                st.markdown(f'<div class="ia-box"><b>Vivv AI Insights:</b><br><br>{response.text}</div>', unsafe_allow_html=True)
+            except Exception as e:
+                st.error(f"Erro ao contatar IA: {e}")
