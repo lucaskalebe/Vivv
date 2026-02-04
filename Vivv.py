@@ -302,7 +302,7 @@ with col_perf_r:
         if cx_list: pd.DataFrame(cx_list).astype(str).to_excel(writer, sheet_name='Caixa', index=False)
     st.download_button(label="📥 BAIXAR RELATÓRIO EXCEL", data=buf.getvalue(), file_name=f"VIVV_PRO_{datetime.now().strftime('%d_%m')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
 
-# ================= 9. VIVV AI: SDK OFICIAL =================
+# ================= 9. VIVV AI: UPGRADE PARA GEMINI 2.0 =================
 st.write("---")
 if "GOOGLE_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
@@ -311,14 +311,18 @@ if "GOOGLE_API_KEY" in st.secrets:
     prompt_ia = st.text_input("Analise seu negócio ou peça dicas:", placeholder="Ex: Como atrair clientes?", key="ia_input_master")
     
     if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
-        with st.spinner("Vivv AI analisando dados..."):
+        with st.spinner("Vivv AI gerando insights com Gemini 2.0..."):
             try:
-                model = genai.GenerativeModel('gemini-1.5-flash')
-                contexto = f"""Você é o consultor do Vivv Pro. 
-                Dados atuais: {len(clis)} clientes, Faturamento R$ {faturamento:.2f}.
-                Pergunta do usuário: {prompt_ia}"""
+                # Atualizado para a versão 2.0 Flash, que é mais rápida e precisa
+                model = genai.GenerativeModel('gemini-2.0-flash')
+                
+                contexto = f"""Você é o consultor estratégico do Vivv Pro.
+                Dados do usuário: {len(clis)} clientes, Faturamento R$ {faturamento:.2f}.
+                Pergunta: {prompt_ia}
+                Dê conselhos práticos para escalar o negócio."""
                 
                 response = model.generate_content(contexto)
-                st.markdown(f'<div class="ia-box"><b>Vivv AI Insights:</b><br><br>{response.text}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="ia-box"><b>Vivv AI Insights (v2.0):</b><br><br>{response.text}</div>', unsafe_allow_html=True)
+                
             except Exception as e:
-                st.error(f"Erro ao contatar IA: {e}")
+                st.error(f"Erro na conexão: {e}. Tente novamente em instantes.")
