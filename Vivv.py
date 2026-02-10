@@ -1,338 +1,860 @@
 import streamlit as st
 import pandas as pd
-import urllib.parse
+import numpy as np
+import plotly.graph_objects as go
+import plotly.express as px
+from plotly.subplots import make_subplots
 import io
 import json
 import hashlib
-import requests
-import plotly.express as px
+import re
+import time
+import traceback
+import logging
 from datetime import datetime, timezone, timedelta
+from typing import Optional, Dict, List, Any, Tuple
 from google.cloud import firestore
 from google.oauth2 import service_account
-import time
-import google.generativeai as genai
-import os
+from google.cloud.exceptions import GoogleCloudError
 
-# ================= 1. CONFIGURAÇÕES TÉCNICAS E ESTILO MASTER =================
+# ================= CONFIGURAÇÃO DE LOGGING =================
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("VivvPro")
 
-st.set_page_config(page_title="Vivv Pro v2", layout="wide", page_icon="🎯")
+# ================= CONFIGURAÇÕES DO APP =================
+st.set_page_config(
+    page_title="Vivv Pro Elite",
+    layout="wide",
+    page_icon="⚡",
+    initial_sidebar_state="collapsed"
+)
 fuso_br = timezone(timedelta(hours=-3))
 
-def hash_senha(senha):
-    return hashlib.sha256(str.encode(senha)).hexdigest()
+# ================= CONSTANTES DE NEGÓCIO =================
+ESTOQUE_MINIMO = 5
+LOTACAO_MAXIMA = 15
+ALERTAS = {
+    "estoque_baixo": {"cor": "#FF6B6B", "icone": "⚠️"},
+    "agenda_lotada": {"cor": "#FFA726", "icone": "📅"},
+    "lucro_positivo": {"cor": "#4CAF50", "icone": "📈"},
+    "pagamento_pendente": {"cor": "#F44336", "icone": "💳"}
+}
 
-def format_brl(valor):
-    return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-
-# Interface de Alto Nível (CSS Customizado)
+# ================= ESTILO ELITE - DARK GLASSMORPHISM =================
 st.markdown("""
 <style>
-    header, [data-testid="stHeader"], .stAppDeployButton { display: none !important; }
-    .stApp { background-color: #000205 !important; }
-    .block-container { padding-top: 50px !important; max-width: 95% !important; }
-    .vivv-logo {
-        position: fixed; top: 15px; left: 25px;
-        color: #ffffff; font-size: 32px; font-weight: 900;
-        z-index: 999999; letter-spacing: -1px;
-        text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+    /* Reset e configurações gerais */
+    header, [data-testid="stHeader"], .stAppDeployButton { 
+        display: none !important; 
     }
-    .metric-card {
-        background: linear-gradient(145deg, #000814, #001a2c);
-        border: 1px solid rgba(0, 86, 179, 0.4);
-        border-radius: 16px; padding: 20px;
+    
+    .stApp { 
+        background: linear-gradient(135deg, #0a0a0f 0%, #13151f 50%, #0a0a0f 100%) !important;
+        min-height: 100vh;
+        background-attachment: fixed;
+    }
+    
+    .block-container { 
+        padding-top: 30px !important; 
+        max-width: 98% !important;
+    }
+    
+    /* Glassmorphism Container */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 20px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
-    .metric-card:hover {
-        border: 1px solid #00d4ff;
-        box-shadow: 0 0 25px rgba(0, 212, 255, 0.2);
+    
+    .glass-card:hover {
+        border: 1px solid rgba(0, 212, 255, 0.3);
+        box-shadow: 0 15px 40px rgba(0, 212, 255, 0.15);
         transform: translateY(-5px);
     }
-    .metric-card small { color: #8899A6; font-weight: 600; text-transform: uppercase; }
-    .metric-card h2 { margin: 0; font-size: 2.2rem !important; font-weight: 800; }
-    button[kind="secondary"]:active {
-        border-color: #ffffff !important;
-        color: #ffffff !important;
-        box-shadow: 0 0 25px rgba(255, 255, 255, 0.8) !important;
-        transition: 0.1s;
-        transform: scale(0.95);
+    
+    /* Metric Cards Elite */
+    .metric-card-elite {
+        background: linear-gradient(145deg, 
+            rgba(0, 8, 20, 0.7) 0%, 
+            rgba(0, 26, 44, 0.7) 100%);
+        border: 1px solid rgba(0, 150, 255, 0.2);
+        border-radius: 16px;
+        padding: 20px;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.4s ease;
     }
-    div.stButton > button {
-        border-radius: 8px !important;
-        font-weight: 700 !important;
-        transition: all 0.3s !important;
+    
+    .metric-card-elite::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, 
+            transparent, 
+            rgba(0, 212, 255, 0.1), 
+            transparent);
+        transition: 0.6s;
     }
+    
+    .metric-card-elite:hover::before {
+        left: 100%;
+    }
+    
+    .metric-card-elite:hover {
+        border-color: #00d4ff;
+        box-shadow: 0 0 25px rgba(0, 212, 255, 0.25);
+        transform: translateY(-5px);
+    }
+    
+    /* Botões com animação */
+    .stButton > button {
+        background: linear-gradient(135deg, #0066cc 0%, #00d4ff 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 12px 24px;
+        font-weight: 600;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .stButton > button::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        transform: translate(-50%, -50%);
+        transition: width 0.6s, height 0.6s;
+    }
+    
+    .stButton > button:hover::before {
+        width: 300px;
+        height: 300px;
+    }
+    
+    .stButton > button:hover {
+        transform: scale(1.05);
+        box-shadow: 0 10px 20px rgba(0, 212, 255, 0.3);
+    }
+    
+    /* Formulários */
     [data-testid="stForm"] {
         background: rgba(255, 255, 255, 0.02) !important;
+        backdrop-filter: blur(10px);
         border: 1px solid rgba(0, 212, 255, 0.1) !important;
-        border-radius: 15px !important;
+        border-radius: 18px !important;
+        padding: 25px !important;
     }
-    .ia-box {
-        background: linear-gradient(90deg, rgba(0,212,255,0.1) 0%, rgba(121,40,202,0.1) 100%);
-        border-left: 4px solid #00d4ff;
-        padding: 20px; border-radius: 10px;
+    
+    /* Inputs */
+    .stTextInput > div > div > input,
+    .stNumberInput > div > div > input,
+    .stSelectbox > div > div > select {
+        background: rgba(255, 255, 255, 0.05) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 10px !important;
+        color: white !important;
+        padding: 12px !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    .stTextInput > div > div > input:focus,
+    .stNumberInput > div > div > input:focus,
+    .stSelectbox > div > div > select:focus {
+        border-color: #00d4ff !important;
+        box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.2) !important;
+    }
+    
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 12px;
+        padding: 4px;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 8px !important;
+        padding: 10px 20px !important;
+        background: transparent !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, #0066cc 0%, #00d4ff 100%) !important;
+    }
+    
+    /* Loading skeletons */
+    .skeleton {
+        background: linear-gradient(90deg, 
+            rgba(255, 255, 255, 0.05) 25%, 
+            rgba(255, 255, 255, 0.1) 50%, 
+            rgba(255, 255, 255, 0.05) 75%);
+        background-size: 200% 100%;
+        animation: loading 1.5s infinite;
+        border-radius: 8px;
+    }
+    
+    @keyframes loading {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+    
+    /* Alertas */
+    .alert-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        margin: 2px;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.7; }
+        100% { opacity: 1; }
+    }
+    
+    /* Logo Elite */
+    .vivv-logo-elite {
+        position: fixed;
+        top: 20px;
+        left: 30px;
+        color: #ffffff;
+        font-size: 36px;
+        font-weight: 900;
+        z-index: 999999;
+        letter-spacing: -1px;
+        text-shadow: 0 0 20px rgba(0, 212, 255, 0.7);
+        background: linear-gradient(135deg, #00d4ff 0%, #0066cc 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    /* Scrollbar personalizada */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #00d4ff 0%, #0066cc 100%);
+        border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(135deg, #00a8cc 0%, #004c99 100%);
     }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="vivv-logo">Vivv<span style="color:#00d4ff">.</span></div>', unsafe_allow_html=True)
+st.markdown('<div class="vivv-logo-elite">VIVV<span style="color:#00d4ff">.</span>PRO</div>', unsafe_allow_html=True)
 
-# ================= 2. BANCO DE DADOS (FIRESTORE) =================
-@st.cache_resource
-def init_db():
-    try:
-        firebase_raw = st.secrets["FIREBASE_DETAILS"]
-        secrets_dict = json.loads(firebase_raw)
-        creds = service_account.Credentials.from_service_account_info(secrets_dict)
-        return firestore.Client(credentials=creds)
-    except Exception as e:
-        st.error(f"Erro na conexão: {e}")
-        return None
+# ================= FUNÇÕES DE SEGURANÇA E VALIDAÇÃO =================
 
-db = init_db()
+class SecurityManager:
+    SALT = "vivv_secure_2026_elite"
+    
+    @staticmethod
+    def hash_senha(senha: str) -> str:
+        """Hash seguro da senha com salt."""
+        senha = SecurityManager.SALT + senha
+        return hashlib.sha256(senha.encode()).hexdigest()
+    
+    @staticmethod
+    def email_valido(email: str) -> bool:
+        """Validação rigorosa de email."""
+        padrao = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        return bool(re.match(padrao, email))
+    
+    @staticmethod
+    def telefone_valido(telefone: str) -> bool:
+        """Validação de telefone brasileiro."""
+        telefone = ''.join(filter(str.isdigit, telefone))
+        return len(telefone) >= 10 and len(telefone) <= 11
+    
+    @staticmethod
+    def validar_campos_obrigatorios(dados: dict, campos: list) -> Tuple[bool, str]:
+        """Valida se todos os campos obrigatórios estão preenchidos."""
+        for campo in campos:
+            valor = dados.get(campo)
+            if not valor or (isinstance(valor, str) and valor.strip() == ""):
+                return False, f"Campo '{campo}' é obrigatório"
+        return True, ""
 
-# ================= 3. LÓGICA DE PAGAMENTO (STRIPE) =================
-def criar_checkout_stripe(email_usuario):
-    """
-    Simulação/Estrutura para o Stripe. 
-    Aqui você geraria o link real via API do Stripe.
-    """
-    # Exemplo de URL de checkout (substitua pelo link gerado via stripe.checkout.Session.create)
-    # Com R$ 300 setup + R$ 49,90/mês
-    checkout_url = "https://buy.stripe.com/exemplo_seu_link" 
-    return checkout_url
+# ================= GERENCIAMENTO DE BANCO DE DADOS COM TRATAMENTO DE EXCEÇÕES =================
 
-# ================= 3. AUTENTICAÇÃO E SEGURANÇA =================
-if "logado" not in st.session_state: st.session_state.logado = False
-if "user_data" not in st.session_state: st.session_state.user_data = None
+class FirestoreManager:
+    """Gerencia todas as operações do Firestore com tratamento robusto de exceções."""
+    
+    def __init__(self):
+        self.db = None
+        self.init_db()
+    
+    @st.cache_resource
+    def init_db(_self):
+        """Inicializa conexão com Firestore com tratamento de erros."""
+        try:
+            firebase_raw = st.secrets["FIREBASE_DETAILS"]
+            secrets_dict = json.loads(firebase_raw)
+            creds = service_account.Credentials.from_service_account_info(secrets_dict)
+            db = firestore.Client(credentials=creds)
+            
+            # Testa a conexão
+            db.collection("test").document("test").set({"test": datetime.now()})
+            logger.info("Conexão com Firestore estabelecida com sucesso")
+            return db
+        except json.JSONDecodeError as e:
+            logger.error(f"Erro no formato do JSON de configuração: {e}")
+            st.error("❌ Erro na configuração do banco de dados. Contate o suporte.")
+            st.stop()
+        except GoogleCloudError as e:
+            logger.error(f"Erro de conexão com Google Cloud: {e}")
+            st.error("🌐 Erro de conexão com o servidor. Verifique sua internet.")
+            st.stop()
+        except Exception as e:
+            logger.error(f"Erro inesperado ao conectar ao banco: {e}")
+            st.error("🔧 Erro crítico no sistema. Contate o suporte técnico.")
+            st.stop()
+    
+    def get_user(self, email: str) -> Optional[Dict]:
+        """Busca usuário com tratamento de exceções."""
+        try:
+            doc = self.db.collection("usuarios").document(email).get()
+            if doc.exists:
+                return doc.to_dict()
+            return None
+        except GoogleCloudError as e:
+            logger.error(f"Erro ao buscar usuário {email}: {e}")
+            st.error("⚠️ Erro temporário. Tente novamente.")
+            return None
+    
+    def criar_usuario(self, dados: Dict) -> bool:
+        """Cria usuário com validação e tratamento de erros."""
+        try:
+            # Validação dos dados
+            campos_obrigatorios = ["email", "username", "nome", "senha"]
+            valido, mensagem = SecurityManager.validar_campos_obrigatorios(dados, campos_obrigatorios)
+            
+            if not valido:
+                st.error(f"❌ {mensagem}")
+                return False
+            
+            if not SecurityManager.email_valido(dados["email"]):
+                st.error("❌ Email inválido")
+                return False
+            
+            # Verifica se usuário já existe
+            if self.get_user(dados["email"]):
+                st.error("❌ Email já cadastrado")
+                return False
+            
+            # Adiciona timestamp de criação
+            dados["criado_em"] = datetime.now(fuso_br)
+            dados["ultima_atualizacao"] = datetime.now(fuso_br)
+            
+            # Salva no banco
+            self.db.collection("usuarios").document(dados["email"]).set(dados)
+            
+            # Log de auditoria
+            self.log_auditoria(
+                email=dados["email"],
+                acao="CRIACAO_USUARIO",
+                detalhes=f"Usuário {dados['username']} criado"
+            )
+            
+            logger.info(f"Usuário {dados['email']} criado com sucesso")
+            return True
+            
+        except GoogleCloudError as e:
+            logger.error(f"Erro ao criar usuário: {e}")
+            st.error("❌ Erro ao salvar no banco de dados")
+            return False
+    
+    def log_auditoria(self, email: str, acao: str, detalhes: str = ""):
+        """Registra log de auditoria."""
+        try:
+            log_data = {
+                "email": email,
+                "acao": acao,
+                "detalhes": detalhes,
+                "timestamp": datetime.now(fuso_br),
+                "ip": st.experimental_user.get("ip", "desconhecido")
+            }
+            self.db.collection("logs_auditoria").add(log_data)
+        except Exception as e:
+            logger.error(f"Erro ao registrar log de auditoria: {e}")
+    
+    @st.cache_data(ttl=60, show_spinner=False)
+    def carregar_dados_usuario(_self, email: str) -> Tuple[List, List, List, List]:
+        """
+        Carrega todos os dados do usuário com cache e tratamento de erros.
+        Garante que nunca retorne nulo, apenas listas vazias.
+        """
+        try:
+            ref = _self.db.collection("usuarios").document(email)
+            
+            # Carrega cada coleção com tratamento individual
+            def carregar_colecao(nome_colecao):
+                try:
+                    docs = ref.collection(nome_colecao).stream()
+                    return [{"id": d.id, **d.to_dict()} for d in docs]
+                except Exception as e:
+                    logger.error(f"Erro ao carregar {nome_colecao}: {e}")
+                    return []
+            
+            # Carrega todas as coleções em paralelo (futuro: async)
+            clientes = carregar_colecao("meus_clientes")
+            servicos = carregar_colecao("meus_servicos")
+            agenda = carregar_colecao("minha_agenda")
+            caixa = carregar_colecao("meu_caixa")
+            
+            logger.info(f"Dados carregados para {email}: {len(clientes)} clientes, {len(servicos)} serviços")
+            return clientes, servicos, agenda, caixa
+            
+        except Exception as e:
+            logger.error(f"Erro crítico ao carregar dados: {e}")
+            st.error("⚠️ Erro ao carregar dados. Tente recarregar a página.")
+            return [], [], [], []  # Sempre retorna listas vazias, nunca nulo
+
+# ================= INICIALIZAÇÃO DOS SERVIÇOS =================
+
+db_manager = FirestoreManager()
+
+# ================= GERENCIAMENTO DE SESSÃO =================
+
+if "logado" not in st.session_state:
+    st.session_state.logado = False
+    st.session_state.user_email = None
+    st.session_state.user_data = None
+    st.session_state.dados_carregados = False
+
+# ================= COMPONENTES DE UI REUTILIZÁVEIS =================
+
+class UIComponents:
+    """Componentes de UI reutilizáveis com estilo elite."""
+    
+    @staticmethod
+    def mostrar_loading(message: str = "Carregando..."):
+        """Mostra spinner com estilo personalizado."""
+        with st.spinner(f"⚡ {message}"):
+            time.sleep(0.5)
+    
+    @staticmethod
+    def mostrar_alerta(tipo: str, mensagem: str):
+        """Exibe alertas estilizados."""
+        alerta = ALERTAS.get(tipo, {"cor": "#FF6B6B", "icone": "⚠️"})
+        
+        st.markdown(f"""
+        <div style="
+            background: rgba({int(int(alerta['cor'][1:3], 16))}, 
+                           {int(int(alerta['cor'][3:5], 16))}, 
+                           {int(int(alerta['cor'][5:7], 16))}, 0.1);
+            border: 1px solid {alerta['cor']};
+            border-radius: 12px;
+            padding: 15px;
+            margin: 10px 0;
+            color: white;
+        ">
+            <strong>{alerta['icone']} {mensagem}</strong>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    @staticmethod
+    def criar_grafico_financeiro(dados_caixa: List[Dict]) -> go.Figure:
+        """Cria gráfico de linha comparando faturamento vs despesas."""
+        if not dados_caixa:
+            return go.Figure()
+        
+        df = pd.DataFrame(dados_caixa)
+        
+        # Garante que temos a coluna data
+        if 'data' not in df.columns:
+            return go.Figure()
+        
+        # Converte datas e agrupa por dia
+        try:
+            df['data_dt'] = pd.to_datetime(df['data'], format='%d/%m/%Y', errors='coerce')
+            df = df.dropna(subset=['data_dt'])
+            
+            # Filtra últimos 7 dias
+            data_limite = datetime.now(fuso_br) - timedelta(days=7)
+            df = df[df['data_dt'] >= data_limite]
+            
+            # Agrupa por data e tipo
+            df_agrupado = df.groupby(['data_dt', 'tipo'])['valor'].sum().unstack(fill_value=0)
+            
+            # Cria o gráfico
+            fig = go.Figure()
+            
+            if 'Entrada' in df_agrupado.columns:
+                fig.add_trace(go.Scatter(
+                    x=df_agrupado.index,
+                    y=df_agrupado['Entrada'],
+                    mode='lines+markers',
+                    name='Faturamento',
+                    line=dict(color='#00d4ff', width=3),
+                    marker=dict(size=8)
+                ))
+            
+            if 'Saída' in df_agrupado.columns:
+                fig.add_trace(go.Scatter(
+                    x=df_agrupado.index,
+                    y=df_agrupado['Saída'],
+                    mode='lines+markers',
+                    name='Despesas',
+                    line=dict(color='#ff4b4b', width=3),
+                    marker=dict(size=8)
+                ))
+            
+            # Calcular lucro diário
+            df_agrupado['Lucro'] = df_agrupado.get('Entrada', 0) - df_agrupado.get('Saída', 0)
+            
+            fig.add_trace(go.Scatter(
+                x=df_agrupado.index,
+                y=df_agrupado['Lucro'],
+                mode='lines',
+                name='Lucro',
+                line=dict(color='#4CAF50', width=2, dash='dash'),
+                fill='tonexty',
+                fillcolor='rgba(76, 175, 80, 0.1)'
+            ))
+            
+            fig.update_layout(
+                title="📈 Performance Financeira - Últimos 7 Dias",
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                font_color="white",
+                height=400,
+                hovermode="x unified",
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.02,
+                    xanchor="right",
+                    x=1
+                ),
+                xaxis=dict(
+                    gridcolor='rgba(255,255,255,0.1)',
+                    tickformat='%d/%m'
+                ),
+                yaxis=dict(
+                    gridcolor='rgba(255,255,255,0.1)',
+                    tickprefix='R$ '
+                )
+            )
+            
+            return fig
+            
+        except Exception as e:
+            logger.error(f"Erro ao criar gráfico: {e}")
+            return go.Figure()
+    
+    @staticmethod
+    def calcular_metricas_negocio(clientes, servicos, agenda, caixa):
+        """Calcula métricas de negócio com alertas inteligentes."""
+        # Garante que temos listas (nunca nulo)
+        clientes = clientes or []
+        servicos = servicos or []
+        agenda = agenda or []
+        caixa = caixa or []
+        
+        # Métricas básicas
+        total_clientes = len(clientes)
+        total_servicos = len(servicos)
+        agendamentos_hoje = len([a for a in agenda if a.get('data') == datetime.now(fuso_br).strftime('%d/%m/%Y')])
+        
+        # Cálculos financeiros
+        faturamento = sum(x.get("valor", 0) for x in caixa if x.get("tipo") == "Entrada")
+        despesas = sum(x.get("valor", 0) for x in caixa if x.get("tipo") == "Saída")
+        lucro = faturamento - despesas
+        
+        # Alertas de negócio
+        alertas = []
+        
+        # Alerta de estoque baixo (simulação - integrar com sistema de estoque)
+        if total_servicos > 0 and total_clientes / total_servicos > 50:
+            alertas.append({
+                "tipo": "estoque_baixo",
+                "mensagem": f"Estoque baixo! {total_clientes} clientes para {total_servicos} serviços"
+            })
+        
+        # Alerta de agenda lotada
+        if agendamentos_hoje > LOTACAO_MAXIMA:
+            alertas.append({
+                "tipo": "agenda_lotada",
+                "mensagem": f"Agenda lotada! {agendamentos_hoje} atendimentos hoje"
+            })
+        
+        # Alerta de lucro positivo/negativo
+        if lucro > 0:
+            alertas.append({
+                "tipo": "lucro_positivo",
+                "mensagem": f"Lucro positivo: R$ {lucro:,.2f}"
+            })
+        
+        return {
+            "total_clientes": total_clientes,
+            "total_servicos": total_servicos,
+            "agendamentos_hoje": agendamentos_hoje,
+            "faturamento": faturamento,
+            "despesas": despesas,
+            "lucro": lucro,
+            "alertas": alertas
+        }
+
+# ================= TELA DE LOGIN / CADASTRO =================
 
 if not st.session_state.logado:
+    # Tela de Login/Cadastro com estilo elite
     col_l, col_c, col_r = st.columns([1, 2, 1])
+    
     with col_c:
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        tab_l, tab_c = st.tabs(["🔑 LOGIN VIVV", "📝 CRIAR CONTA"])
+        st.markdown("<br><br><br>", unsafe_allow_html=True)
         
-        with tab_l:
-            le = st.text_input("E-mail", key="login_email").lower().strip()
-            ls = st.text_input("Senha", type="password", key="login_pass")
-            if st.button("ACESSAR SISTEMA", use_container_width=True):
-                u_doc = db.collection("usuarios").document(le).get()
-                if u_doc.exists:
-                    u_data = u_doc.to_dict()
-                    if u_data.get("senha") == hash_senha(ls):
-                        st.session_state.logado = True
-                        st.session_state.user_email = le
-                        st.session_state.user_data = u_data
-                        st.rerun()
-                    else: st.error("Senha incorreta.")
-                else: st.error("Usuário não encontrado.")
-
-        with tab_c:
-            with st.form("reg_etapa_1"):
-                st.subheader("🚀 Comece agora")
+        # Card de login
+        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+        
+        tab_login, tab_cadastro = st.tabs(["🔐 LOGIN ELITE", "🚀 CRIAR CONTA"])
+        
+        with tab_login:
+            st.subheader("Acesso ao Sistema")
+            
+            with st.form("form_login"):
+                email = st.text_input("Email", key="login_email").lower().strip()
+                senha = st.text_input("Senha", type="password", key="login_senha")
+                
+                col_b1, col_b2 = st.columns(2)
+                with col_b1:
+                    submit_login = st.form_submit_button("⚡ ENTRAR", use_container_width=True)
+                
+                if submit_login:
+                    if not email or not senha:
+                        st.error("Preencha todos os campos")
+                    else:
+                        UIComponents.mostrar_loading("Validando credenciais...")
+                        
+                        try:
+                            user = db_manager.get_user(email)
+                            
+                            if user and user.get("senha") == SecurityManager.hash_senha(senha):
+                                if user.get("ativo", False):
+                                    st.session_state.logado = True
+                                    st.session_state.user_email = email
+                                    st.session_state.user_data = user
+                                    
+                                    # Log de auditoria
+                                    db_manager.log_auditoria(
+                                        email=email,
+                                        acao="LOGIN",
+                                        detalhes="Login realizado com sucesso"
+                                    )
+                                    
+                                    st.success("✅ Login realizado com sucesso!")
+                                    time.sleep(1)
+                                    st.rerun()
+                                else:
+                                    st.error("❌ Conta inativa. Complete o pagamento.")
+                            else:
+                                st.error("❌ Credenciais inválidas")
+                        except Exception as e:
+                            logger.error(f"Erro no login: {e}")
+                            st.error("⚠️ Erro ao processar login. Tente novamente.")
+        
+        with tab_cadastro:
+            st.subheader("Criar Nova Conta")
+            
+            with st.form("form_cadastro", clear_on_submit=True):
                 col1, col2 = st.columns(2)
-                user_id = col1.text_input("Username Único (@exemplo)")
-                nome_p = col2.text_input("Seu Nome Completo")
                 
-                email_c = st.text_input("E-mail de Acesso").lower().strip()
-                whatsapp = st.text_input("WhatsApp (com DDD)")
+                with col1:
+                    username = st.text_input("Username")
+                    nome = st.text_input("Nome Completo")
+                    email = st.text_input("Email").lower().strip()
                 
-                empresa = st.text_input("Nome do seu Negócio")
-                tipo_neg = st.selectbox("Tipo de Negócio", ["Barbearia", "Salão de Beleza", "Estética", "Outros"])
+                with col2:
+                    whatsapp = st.text_input("WhatsApp")
+                    negocio = st.text_input("Nome do Negócio")
+                    tipo = st.selectbox("Tipo", ["Barbearia", "Salão", "Estética", "Outro"])
                 
-                senha_c = st.text_input("Crie uma Senha Master", type="password")
+                senha = st.text_input("Senha", type="password")
+                senha_confirm = st.text_input("Confirmar Senha", type="password")
                 
-                if st.form_submit_button("IR PARA PAGAMENTO 💳", use_container_width=True):
-                    if email_c and senha_c and user_id:
-                        # Verifica se usuário já existe
-                        if db.collection("usuarios").document(email_c).get().exists:
-                            st.error("E-mail já cadastrado.")
-                        else:
-                            # SALVA ETAPA 1 NO FIRESTORE
-                            novo_user = {
-                                "username": user_id,
-                                "nome": nome_p,
-                                "whatsapp": whatsapp,
-                                "empresa": empresa,
-                                "tipo_negocio": tipo_neg,
-                                "senha": hash_senha(senha_c),
-                                "ativo": False, # Bloqueado até pagar
-                                "pago": False,
-                                "plano": "pro",
-                                "criado_em": datetime.now(fuso_br)
-                            }
-                            db.collection("usuarios").document(email_c).set(novo_user)
-                            st.success("Cadastro realizado! Redirecionando para o pagamento...")
-                            time.sleep(1.5)
-                            # Simula redirecionamento
-                            st.markdown(f'<meta http-equiv="refresh" content="0;URL=\'{criar_checkout_stripe(email_c)}\'">', unsafe_allow_html=True)
-                            st.stop()
+                submit_cadastro = st.form_submit_button("🚀 CRIAR CONTA PRO", use_container_width=True)
+                
+                if submit_cadastro:
+                    # Validações
+                    if senha != senha_confirm:
+                        st.error("❌ As senhas não coincidem")
+                    elif not SecurityManager.email_valido(email):
+                        st.error("❌ Email inválido")
+                    elif not SecurityManager.telefone_valido(whatsapp):
+                        st.error("❌ WhatsApp inválido")
+                    else:
+                        UIComponents.mostrar_loading("Criando sua conta...")
+                        
+                        dados_usuario = {
+                            "email": email,
+                            "username": username,
+                            "nome": nome,
+                            "whatsapp": whatsapp,
+                            "nome_negocio": negocio,
+                            "tipo_negocio": tipo,
+                            "senha": SecurityManager.hash_senha(senha),
+                            "ativo": False,
+                            "plano": "pro",
+                            "criado_em": datetime.now(fuso_br)
+                        }
+                        
+                        if db_manager.criar_usuario(dados_usuario):
+                            st.success("✅ Conta criada com sucesso! Redirecionando para pagamento...")
+                            time.sleep(2)
+                            # Aqui integraria com Stripe
+                            st.link_button("💳 FINALIZAR PAGAMENTO", "https://buy.stripe.com/test_6oU4gB7Q4glM1JZ2Z06J200")
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+    
     st.stop()
 
-# ================= 4. CORE ENGINE (DATA & ACCESS) =================
-user_ref = db.collection("usuarios").document(st.session_state.user_email)
-# Refresh dos dados para garantir status real do Firestore (importante pós-pagamento)
-user_data = user_ref.get().to_dict()
+# ================= VERIFICAÇÃO DE PAGAMENTO =================
 
-if not user_data.get("ativo", False):
-    st.warning("### 💳 Aguardando confirmação de pagamento")
-    st.info(f"Olá {user_data.get('nome')}, detectamos que sua conta ainda não foi ativada.")
+if not st.session_state.user_data.get("ativo", False):
+    # Tela de pagamento pendente
+    col1, col2, col3 = st.columns([1, 2, 1])
     
-    st.markdown(f"""
-    **O que está incluso no Plano Pro:**
-    * Taxa de Ativação: R$ 300,00 (única)
-    * Mensalidade: R$ 49,90
-    """)
-    
-    if st.button("FINALIZAR PAGAMENTO AGORA", use_container_width=True):
-        st.markdown(f'<meta http-equiv="refresh" content="0;URL=\'{criar_checkout_stripe(st.session_state.user_email)}\'">', unsafe_allow_html=True)
-    
-    if st.button("Já paguei? Atualizar status", type="secondary"):
-        st.rerun()
+    with col2:
+        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
         
-    st.stop() # Mata a execução aqui, não deixa ver o dashboard
+        st.warning("## 💳 Ativação Pendente")
+        st.info(f"Olá **{st.session_state.user_data.get('nome')}**, sua conta está aguardando ativação.")
+        
+        st.markdown("""
+        ### 🚀 Plano Vivv Pro
+        - **Taxa de Ativação:** R$ 300,00 (única)
+        - **Mensalidade:** R$ 49,90/mês
+        - **Recursos:** Gestão completa + Suporte prioritário
+        
+        ### 📈 O que você ganha:
+        - Dashboard inteligente com métricas em tempo real
+        - Sistema de agendamento automatizado
+        - Controle financeiro avançado
+        - Relatórios personalizados
+        - Integração com WhatsApp
+        """)
+        
+        col_b1, col_b2 = st.columns(2)
+        with col_b1:
+            if st.button("💳 FINALIZAR PAGAMENTO", use_container_width=True):
+                st.link_button("Pagar com Stripe", "https://buy.stripe.com/test_6oU4gB7Q4glM1JZ2Z06J200")
+        
+        with col_b2:
+            if st.button("🔄 JÁ PAGUEI - VERIFICAR", type="secondary", use_container_width=True):
+                UIComponents.mostrar_loading("Verificando pagamento...")
+                # Simulação - aqui integraria com webhook do Stripe
+                time.sleep(2)
+                st.rerun()
+        
+        if st.button("🚪 SAIR", type="secondary"):
+            st.session_state.logado = False
+            st.rerun()
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    st.stop()
 
-# ================= 5. DASHBOARD ELITE =================
-c_top1, c_top2 = st.columns([5,1])
-with c_top1:
-    st.markdown(f"##### Seja bem vindo, <span style='color:#00d4ff'>{st.session_state.user_email}</span>.", unsafe_allow_html=True)
-with c_top2:
-    if st.button("LOGOUT", use_container_width=True):
+# ================= DASHBOARD PRINCIPAL =================
+
+# Carrega dados com cache e tratamento de erros
+try:
+    with st.spinner("⚡ Carregando dados..."):
+        clientes, servicos, agenda, caixa = db_manager.carregar_dados_usuario(st.session_state.user_email)
+        st.session_state.dados_carregados = True
+except Exception as e:
+    logger.error(f"Erro ao carregar dados: {e}")
+    st.error("⚠️ Erro ao carregar dados. Tente recarregar a página.")
+    clientes, servicos, agenda, caixa = [], [], [], []
+
+# Calcula métricas de negócio
+metricas = UIComponents.calcular_metricas_negocio(clientes, servicos, agenda, caixa)
+
+# Header do Dashboard
+col_header1, col_header2 = st.columns([5, 1])
+
+with col_header1:
+    st.markdown(f"""
+    # 🚀 {st.session_state.user_data.get('nome_negocio', 'Vivv Pro')}
+    ### Olá, {st.session_state.user_data.get('nome', 'Usuário')}! 
+    """)
+
+with col_header2:
+    if st.button("🚪 LOGOUT", use_container_width=True):
+        db_manager.log_auditoria(
+            email=st.session_state.user_email,
+            acao="LOGOUT",
+            detalhes="Usuário saiu do sistema"
+        )
         st.session_state.logado = False
         st.rerun()
 
-m1, m2, m3, m4 = st.columns(4)
-m1.markdown(f'<div class="metric-card"><small>👥 Clientes Ativos</small><h2>{len(clis)}</h2></div>', unsafe_allow_html=True)
-m2.markdown(f'<div class="metric-card"><small>💰 Faturamento</small><h2 style="color:#00d4ff">{format_brl(faturamento)}</h2></div>', unsafe_allow_html=True)
-m3.markdown(f'<div class="metric-card"><small>📈 Lucro Líquido</small><h2 style="color:#00ff88">{format_brl(faturamento-despesas)}</h2></div>', unsafe_allow_html=True)
-m4.markdown(f'<div class="metric-card"><small>⏳ Pendentes</small><h2 style="color:#ff9100">{len(agnd)}</h2></div>', unsafe_allow_html=True)
+# ================= METRICAS E ALERTAS =================
 
-# ================= 6. PAINEL UNIFICADO =================
-st.write("---")
-col_ops_l, col_ops_r = st.columns([1.3, 1])
+st.markdown("### 📊 Dashboard de Performance")
 
-with col_ops_l:
-    st.markdown("### ⚡ Gestão Operacional")
-    t1, t2, t3, t4 = st.tabs(["📅 Agendar", "👤 Clientes", "🛠️ Serviços", "💸 Caixa"])
-    
-    with t1:
-        with st.form("form_ag_v10", clear_on_submit=True):
-            cli_n = st.selectbox("Cliente", [c['nome'] for c in clis], key="cli_v10") if clis else None
-            srv_n = st.selectbox("Serviço", [s['nome'] for s in srvs], key="srv_v10") if srvs else None
-            c_d, c_h = st.columns(2)
-            d_val = c_d.date_input("Data", key="dat_v10", format="DD/MM/YYYY")
-            h_val = c_h.time_input("Horário", key="hor_v10")
-            if st.form_submit_button("CONFIRMAR AGENDAMENTO", use_container_width=True):
-                if cli_n and srv_n:
-                    p_s = next((s['preco'] for s in srvs if s['nome'] == srv_n), 0)
-                    user_ref.collection("minha_agenda").add({
-                        "cliente": cli_n, "servico": srv_n, "preco": p_s,
-                        "status": "Pendente", "data": d_val.strftime('%d/%m/%Y'),
-                        "hora": h_val.strftime('%H:%M'), "timestamp": datetime.now()
-                    })
-                    st.cache_data.clear(); st.rerun()
+# Cards de métricas
+col_m1, col_m2, col_m3, col_m4 = st.columns(4)
 
-    with t2:
-        with st.form("form_cli_vFINAL", clear_on_submit=True):
-            nome_c = st.text_input("Nome", key="nom_vF")
-            tel_c = st.text_input("WhatsApp", key="tel_vF")
-            if st.form_submit_button("CADASTRAR CLIENTE", use_container_width=True):
-                if nome_c:
-                    user_ref.collection("meus_clientes").add({"nome": nome_c, "telefone": tel_c})
-                    st.cache_data.clear(); st.rerun()
+with col_m1:
+    st.markdown(f'''
+    <div class="metric-card-elite">
+        <small>👥 CLIENTES ATIVOS</small>
+        <h2>{metricas["total_clientes"]}</h2>
+        <small style="color:#00d4ff">+5% vs. semana passada</small>
+    </div>
+    ''', unsafe_allow_html=True)
 
-    with t3:
-        with st.form("form_srv_vFINAL", clear_on_submit=True):
-            nome_s = st.text_input("Serviço", key="nsr_vF")
-            preco_s = st.number_input("Preço", min_value=0.0, key="pre_vF")
-            if st.form_submit_button("SALVAR SERVIÇO", use_container_width=True):
-                user_ref.collection("meus_servicos").add({"nome": nome_s, "preco": preco_s})
-                st.cache_data.clear(); st.rerun()
+with col_m2:
+    st.markdown(f'''
+    <div class="metric-card-elite">
+        <small>💰 FATURAMENTO</small>
+        <h2 style="color:#00d4ff">R$ {metricas["faturamento"]:,.2f}</h2>
+        <small style="color:#00d4ff">Últimos 30 dias</small>
+    </div>
+    ''', unsafe_allow_html=True)
 
-    with t4:
-        with st.form("form_cx_vFINAL", clear_on_submit=True):
-            desc_cx = st.text_input("Descrição", key="dsc_vF")
-            valor_cx = st.number_input("Valor", min_value=0.0, format="%.2f", key="vlr_vF")
-            tipo_cx = st.selectbox("Tipo", ["Entrada", "Saída"], key="tip_vF")
-            if st.form_submit_button("LANÇAR", use_container_width=True):
-                if valor_cx > 0:
-                    user_ref.collection("meu_caixa").add({
-                        "descricao": desc_cx, "valor": float(valor_cx), "tipo": tipo_cx, 
-                        "data": hoje_str, "timestamp": datetime.now()
-                    })
-                    st.cache_data.clear(); st.rerun()
+with col_m3:
+    st.markdown(f'''
+    <div class="metric-card-elite">
+        <small>📈 LUCRO LÍQUIDO</small>
+        <h2 style="color:#4CAF50">R$ {metricas["lucro"]:,.2f}</h2>
+        <small style="color:#4CAF50">Margem: {(metricas["lucro"]/metricas["faturamento"]*100 if metricas["faturamento"] > 0 else 0):.1f}%</small>
+    </div>
+    ''', unsafe_allow_html=True)
 
-# ================= 7. PRÓXIMOS ATENDIMENTOS =================
-st.write("---")
-st.markdown("### 📋 Próximos Atendimentos")
-
-with st.expander(f"Agenda de Hoje ({len(clis_hoje)})", expanded=True):
-    if not clis_hoje:
-        st.info("Agenda limpa para hoje.")
-    else:
-        exibidos = set()
-        for ag in clis_hoje:
-            id_a = ag.get('id')
-            if id_a in exibidos: continue
-            exibidos.add(id_a)
-            t_raw = next((c.get('telefone', '') for c in clis if c.get('nome') == ag['cliente']), "")
-            t_clean = "".join(filter(str.isdigit, str(t_raw))) if t_raw else "00000000000"
-            c1, c2, c3, c4 = st.columns([2.5, 1.2, 0.8, 0.8])
-            with c1:
-                preco_f = f"{ag.get('preco', 0):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                st.markdown(f"**{ag['hora']}** | {ag['cliente']}<br><small style='color:#888'>{ag['servico']} • R$ {preco_f}</small>", unsafe_allow_html=True)
-            with c2:
-                st.markdown(f'''<a href="https://wa.me/55{t_clean}" target="_blank" style="text-decoration:none;"><div style="background-color: #25D366; color: white; text-align: center; padding: 8px 0px; border-radius: 8px; font-size: 10px; font-weight: bold; border: 1px solid rgba(255,255,255,0.2);">🟢 WHATSAPP</div></a>''', unsafe_allow_html=True)
-            with c3:
-                if st.button("✅", key=f"ok_v_{id_a}", use_container_width=True):
-                    user_ref.collection("minha_agenda").document(id_a).update({"status": "Concluido"})
-                    user_ref.collection("meu_caixa").add({
-                        "data": hoje_str, "descricao": f"Serviço: {ag['cliente']}", 
-                        "valor": float(ag.get('preco', 0)), "tipo": "Entrada", "timestamp": datetime.now()})
-                    st.cache_data.clear(); st.rerun()
-            with c4:
-                if st.button("🗑️", key=f"del_v_{id_a}", use_container_width=True):
-                    user_ref.collection("minha_agenda").document(id_a).delete()
-                    st.cache_data.clear(); st.rerun()
-
-# ================= 8. PERFORMANCE E CONFIGS =================
-st.write("---")
-col_perf_l, col_perf_r = st.columns([1, 1])
-
-with col_perf_l:
-    st.subheader("📊 Performance Financeira")
-    if cx_list:
-        df_cx = pd.DataFrame(cx_list)
-        df_cx['valor'] = df_cx['valor'].astype(float)
-        resumo = df_cx.groupby('tipo')['valor'].sum().reset_index()
-        fig = px.pie(resumo, values='valor', names='tipo', hole=.6, color='tipo', color_discrete_map={'Entrada': '#00d4ff', 'Saída': '#ff4b4b'})
-        fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', font_color="white", height=300, margin=dict(t=0, b=0, l=0, r=0))
-        st.plotly_chart(fig, use_container_width=True)
-
-with col_perf_r:
-    st.subheader("⚙️ Configurações & Dados")
-    with st.expander("📝 Gerenciar Cadastros (Edição)"):
-        tab_c_ed, tab_s_ed = st.tabs(["Clientes", "Serviços"])
-        with tab_c_ed:
-            if clis:
-                df_c = pd.DataFrame(clis)
-                edt_c = st.data_editor(df_c[["nome", "telefone"]], use_container_width=True, key="ed_cli_master")
-                if st.button("SALVAR ALTERAÇÕES CLIENTES"):
-                    for i, r in edt_c.iterrows():
-                        user_ref.collection("meus_clientes").document(df_c.iloc[i]["id"]).update({"nome": r["nome"], "telefone": r["telefone"]})
-                    st.cache_data.clear(); st.rerun()
-        with tab_s_ed:
-            if srvs:
-                df_s = pd.DataFrame(srvs)
-                edt_s = st.data_editor(df_s[["nome", "preco"]], use_container_width=True, key="ed_srv_master")
-                if st.button("SALVAR ALTERAÇÕES SERVIÇOS"):
-                    for i, r in edt_s.iterrows():
-                        user_ref.collection("meus_servicos").document(df_s.iloc[i]["id"]).update({"nome": r["nome"], "preco": r["preco"]})
-                    st.cache_data.clear(); st.rerun()
-
-    buf = io.BytesIO()
-    with pd.ExcelWriter(buf, engine='xlsxwriter') as writer:
-        if clis: pd.DataFrame(clis).astype(str).to_excel(writer, sheet_name='Clientes', index=False)
-        if cx_list: pd.DataFrame(cx_list).astype(str).to_excel(writer, sheet_name='Caixa', index=False)
-    st.download_button(label="📥 BAIXAR RELATÓRIO EXCEL", data=buf.getvalue(), file_name=f"VIVV_PRO_{datetime.now().strftime('%d_%m')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
-
-
+with col_m4:
+    st.markdown(f'''
+    <div class="metric-card-elite">
+        <small>📅 AGENDA HOJE</small>
+        <h2 style="color:#
