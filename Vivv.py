@@ -287,9 +287,6 @@ st.markdown("""
         font-size: 36px !important;
         margin-top: 5px !important;
     }
-
-        
-    }
 </style>
 
 <div class="vivv-logo">VIVV<span style="color:#00d4ff">.</span>PRO</div>
@@ -585,6 +582,7 @@ st.markdown("""
     <small>Versão 3.0 | Sistema de gestão premium para profissionais de beleza</small>
 </div>
 """, unsafe_allow_html=True)
+
 
 
 
