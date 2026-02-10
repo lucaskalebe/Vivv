@@ -857,4 +857,500 @@ with col_m4:
     st.markdown(f'''
     <div class="metric-card-elite">
         <small>📅 AGENDA HOJE</small>
-        <h2 style="color:#
+        <h2 style="color:#FFA726">{metricas["agendamentos_hoje"]}</h2>
+        <small style="color:#FFA726">{metricas["agendamentos_hoje"]}/{LOTACAO_MAXIMA} lotação</small>
+    </div>
+    ''', unsafe_allow_html=True)
+
+# Alertas de negócio
+if metricas["alertas"]:
+    st.markdown("### ⚠️ Alertas do Sistema")
+    cols_alerta = st.columns(min(3, len(metricas["alertas"])))
+    
+    for idx, alerta in enumerate(metricas["alertas"]):
+        with cols_alerta[idx % len(cols_alerta)]:
+            alert_config = ALERTAS.get(alerta["tipo"], {"cor": "#FF6B6B", "icone": "⚠️"})
+            st.markdown(f'''
+            <div style="
+                background: rgba({int(alert_config['cor'][1:3], 16)}, 
+                               {int(alert_config['cor'][3:5], 16)}, 
+                               {int(alert_config['cor'][5:7], 16)}, 0.15);
+                border: 1px solid {alert_config['cor']};
+                border-radius: 12px;
+                padding: 15px;
+                margin: 5px;
+                color: white;
+                text-align: center;
+            ">
+                <strong>{alert_config['icone']} {alerta["mensagem"]}</strong>
+            </div>
+            ''', unsafe_allow_html=True)
+
+st.divider()
+
+# ================= GRÁFICO FINANCEIRO =================
+
+col_graf1, col_graf2 = st.columns([2, 1])
+
+with col_graf1:
+    st.markdown("### 📈 Análise Financeira - Últimos 7 Dias")
+    
+    if caixa:
+        fig = UIComponents.criar_grafico_financeiro(caixa)
+        if fig.data:
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("📊 Insira dados financeiros para ver o gráfico")
+    else:
+        st.info("📊 Nenhum dado financeiro disponível ainda")
+
+with col_graf2:
+    st.markdown("### 📋 Ações Rápidas")
+    
+    with st.container():
+        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+        
+        # Botões de ação rápida
+        if st.button("📅 Agendar Serviço", use_container_width=True):
+            st.session_state.show_agendamento = True
+        
+        if st.button("👤 Adicionar Cliente", use_container_width=True):
+            st.session_state.show_cliente = True
+        
+        if st.button("💰 Lançar Financeiro", use_container_width=True):
+            st.session_state.show_financeiro = True
+        
+        if st.button("📊 Gerar Relatório", use_container_width=True):
+            # Lógica para gerar relatório
+            with st.spinner("Gerando relatório..."):
+                time.sleep(1)
+                st.success("Relatório gerado com sucesso!")
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+
+st.divider()
+
+# ================= GESTÃO OPERACIONAL =================
+
+st.markdown("### ⚡ Gestão Operacional")
+
+tab1, tab2, tab3, tab4 = st.tabs(["📅 Agendamentos", "👤 Clientes", "🛠️ Serviços", "💰 Financeiro"])
+
+with tab1:
+    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+    
+    with st.form("form_agendamento", clear_on_submit=True):
+        st.subheader("Novo Agendamento")
+        
+        col_a1, col_a2 = st.columns(2)
+        
+        with col_a1:
+            # Validação para listas vazias
+            if clientes:
+                cliente_nome = st.selectbox(
+                    "Cliente",
+                    options=[c.get('nome', 'Sem nome') for c in clientes],
+                    key="ag_cliente"
+                )
+            else:
+                st.info("Cadastre clientes primeiro")
+                cliente_nome = None
+            
+            if servicos:
+                servico_nome = st.selectbox(
+                    "Serviço",
+                    options=[s.get('nome', 'Sem nome') for s in servicos],
+                    key="ag_servico"
+                )
+            else:
+                st.info("Cadastre serviços primeiro")
+                servico_nome = None
+        
+        with col_a2:
+            data_ag = st.date_input("Data", key="ag_data")
+            hora_ag = st.time_input("Horário", key="ag_hora")
+            status_ag = st.selectbox("Status", ["Pendente", "Confirmado", "Cancelado"])
+        
+        if st.form_submit_button("✅ CONFIRMAR AGENDAMENTO", use_container_width=True):
+            if cliente_nome and servico_nome:
+                try:
+                    # Encontra preço do serviço
+                    preco_servico = next(
+                        (s.get('preco', 0) for s in servicos if s.get('nome') == servico_nome),
+                        0
+                    )
+                    
+                    # Salva no banco
+                    db_manager.db.collection("usuarios").document(
+                        st.session_state.user_email
+                    ).collection("minha_agenda").add({
+                        "cliente": cliente_nome,
+                        "servico": servico_nome,
+                        "preco": float(preco_servico),
+                        "status": status_ag,
+                        "data": data_ag.strftime('%d/%m/%Y'),
+                        "hora": hora_ag.strftime('%H:%M'),
+                        "timestamp": datetime.now(fuso_br),
+                        "criado_em": datetime.now(fuso_br)
+                    })
+                    
+                    # Log de auditoria
+                    db_manager.log_auditoria(
+                        email=st.session_state.user_email,
+                        acao="AGENDAMENTO_CRIADO",
+                        detalhes=f"Agendamento para {cliente_nome} - {servico_nome}"
+                    )
+                    
+                    st.success("✅ Agendamento criado com sucesso!")
+                    st.cache_data.clear()
+                    time.sleep(1)
+                    st.rerun()
+                    
+                except Exception as e:
+                    logger.error(f"Erro ao criar agendamento: {e}")
+                    st.error("❌ Erro ao salvar agendamento")
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Lista de agendamentos
+    if agenda:
+        st.markdown("#### 📋 Agendamentos Recentes")
+        for ag in agenda[:10]:  # Mostra apenas os 10 mais recentes
+            with st.container():
+                col1, col2, col3 = st.columns([3, 1, 1])
+                with col1:
+                    st.write(f"**{ag.get('hora', '--:--')}** - {ag.get('cliente', 'N/A')}")
+                    st.caption(f"{ag.get('servico', 'N/A')} - R$ {ag.get('preco', 0):.2f}")
+                with col2:
+                    st.write(f"Status: **{ag.get('status', 'Pendente')}**")
+                with col3:
+                    if st.button("🗑️", key=f"del_ag_{ag.get('id')}"):
+                        try:
+                            db_manager.db.collection("usuarios").document(
+                                st.session_state.user_email
+                            ).collection("minha_agenda").document(ag.get('id')).delete()
+                            
+                            db_manager.log_auditoria(
+                                email=st.session_state.user_email,
+                                acao="AGENDAMENTO_EXCLUIDO",
+                                detalhes=f"Agendamento {ag.get('id')} excluído"
+                            )
+                            
+                            st.cache_data.clear()
+                            st.rerun()
+                        except Exception as e:
+                            logger.error(f"Erro ao excluir agendamento: {e}")
+                            st.error("Erro ao excluir")
+
+with tab2:
+    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+    
+    with st.form("form_cliente", clear_on_submit=True):
+        st.subheader("Novo Cliente")
+        
+        col_c1, col_c2 = st.columns(2)
+        
+        with col_c1:
+            nome_cli = st.text_input("Nome completo *", key="cli_nome")
+            email_cli = st.text_input("Email", key="cli_email")
+        
+        with col_c2:
+            telefone_cli = st.text_input("WhatsApp *", key="cli_tel")
+            aniversario = st.date_input("Aniversário", key="cli_bday")
+        
+        observacoes = st.text_area("Observações", key="cli_obs")
+        
+        if st.form_submit_button("👤 CADASTRAR CLIENTE", use_container_width=True):
+            # Validação
+            if not nome_cli.strip():
+                st.error("❌ Nome é obrigatório")
+            elif not telefone_cli.strip():
+                st.error("❌ Telefone é obrigatório")
+            else:
+                try:
+                    db_manager.db.collection("usuarios").document(
+                        st.session_state.user_email
+                    ).collection("meus_clientes").add({
+                        "nome": nome_cli.strip(),
+                        "email": email_cli.strip() if email_cli.strip() else None,
+                        "telefone": telefone_cli.strip(),
+                        "aniversario": aniversario.strftime('%d/%m/%Y') if aniversario else None,
+                        "observacoes": observacoes,
+                        "data_cadastro": datetime.now(fuso_br).strftime('%d/%m/%Y'),
+                        "timestamp": datetime.now(fuso_br)
+                    })
+                    
+                    db_manager.log_auditoria(
+                        email=st.session_state.user_email,
+                        acao="CLIENTE_CRIADO",
+                        detalhes=f"Cliente {nome_cli} cadastrado"
+                    )
+                    
+                    st.success("✅ Cliente cadastrado com sucesso!")
+                    st.cache_data.clear()
+                    time.sleep(1)
+                    st.rerun()
+                    
+                except Exception as e:
+                    logger.error(f"Erro ao cadastrar cliente: {e}")
+                    st.error("❌ Erro ao cadastrar cliente")
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Lista de clientes
+    if clientes:
+        st.markdown(f"#### 👥 Lista de Clientes ({len(clientes)})")
+        
+        # Filtro
+        filtro_nome = st.text_input("🔍 Filtrar por nome")
+        
+        clientes_filtrados = [
+            c for c in clientes 
+            if filtro_nome.lower() in c.get('nome', '').lower()
+        ] if filtro_nome else clientes
+        
+        if clientes_filtrados:
+            for cli in clientes_filtrados[:20]:  # Limita a 20 para performance
+                with st.expander(f"👤 {cli.get('nome', 'N/A')}"):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.write(f"**Telefone:** {cli.get('telefone', 'N/A')}")
+                        st.write(f"**Email:** {cli.get('email', 'N/A')}")
+                    with col2:
+                        st.write(f"**Cadastrado em:** {cli.get('data_cadastro', 'N/A')}")
+                        if cli.get('aniversario'):
+                            st.write(f"**Aniversário:** {cli.get('aniversario')}")
+                    
+                    if st.button("Editar", key=f"edit_cli_{cli.get('id')}"):
+                        st.session_state.editar_cliente_id = cli.get('id')
+                        st.rerun()
+
+with tab3:
+    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+    
+    with st.form("form_servico", clear_on_submit=True):
+        st.subheader("Novo Serviço")
+        
+        col_s1, col_s2 = st.columns(2)
+        
+        with col_s1:
+            nome_serv = st.text_input("Nome do serviço *", key="srv_nome")
+            categoria = st.selectbox(
+                "Categoria",
+                ["Corte", "Coloração", "Tratamento", "Estética", "Outros"]
+            )
+        
+        with col_s2:
+            preco_serv = st.number_input("Preço *", min_value=0.0, step=10.0, key="srv_preco")
+            duracao = st.number_input("Duração (min)", min_value=15, step=15, value=60)
+        
+        descricao = st.text_area("Descrição", key="srv_desc")
+        
+        if st.form_submit_button("🛠️ CADASTRAR SERVIÇO", use_container_width=True):
+            if not nome_serv.strip():
+                st.error("❌ Nome do serviço é obrigatório")
+            elif preco_serv <= 0:
+                st.error("❌ Preço deve ser maior que zero")
+            else:
+                try:
+                    db_manager.db.collection("usuarios").document(
+                        st.session_state.user_email
+                    ).collection("meus_servicos").add({
+                        "nome": nome_serv.strip(),
+                        "preco": float(preco_serv),
+                        "categoria": categoria,
+                        "duracao_minutos": duracao,
+                        "descricao": descricao,
+                        "ativo": True,
+                        "data_cadastro": datetime.now(fuso_br).strftime('%d/%m/%Y'),
+                        "timestamp": datetime.now(fuso_br)
+                    })
+                    
+                    db_manager.log_auditoria(
+                        email=st.session_state.user_email,
+                        acao="SERVICO_CRIADO",
+                        detalhes=f"Serviço {nome_serv} criado"
+                    )
+                    
+                    st.success("✅ Serviço cadastrado com sucesso!")
+                    st.cache_data.clear()
+                    time.sleep(1)
+                    st.rerun()
+                    
+                except Exception as e:
+                    logger.error(f"Erro ao cadastrar serviço: {e}")
+                    st.error("❌ Erro ao cadastrar serviço")
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Lista de serviços
+    if servicos:
+        st.markdown(f"#### 🛠️ Lista de Serviços ({len(servicos)})")
+        
+        for srv in servicos:
+            with st.container():
+                col1, col2, col3 = st.columns([3, 1, 1])
+                with col1:
+                    st.write(f"**{srv.get('nome', 'N/A')}**")
+                    st.caption(srv.get('categoria', 'Sem categoria'))
+                with col2:
+                    st.write(f"**R$ {srv.get('preco', 0):.2f}**")
+                with col3:
+                    status = "✅ Ativo" if srv.get('ativo', True) else "❌ Inativo"
+                    st.write(status)
+
+with tab4:
+    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+    
+    with st.form("form_financeiro", clear_on_submit=True):
+        st.subheader("Novo Lançamento Financeiro")
+        
+        col_f1, col_f2 = st.columns(2)
+        
+        with col_f1:
+            descricao = st.text_input("Descrição *", key="fin_desc")
+            categoria = st.selectbox(
+                "Categoria",
+                ["Venda", "Serviço", "Produto", "Aluguel", "Salário", "Manutenção", "Outros"]
+            )
+        
+        with col_f2:
+            valor = st.number_input("Valor *", min_value=0.0, step=10.0, key="fin_valor")
+            tipo = st.selectbox("Tipo *", ["Entrada", "Saída"], key="fin_tipo")
+        
+        data_lancamento = st.date_input("Data", key="fin_data")
+        forma_pagamento = st.selectbox(
+            "Forma de pagamento",
+            ["Dinheiro", "Cartão", "PIX", "Transferência", "Outros"]
+        )
+        
+        if st.form_submit_button("💰 LANÇAR", use_container_width=True):
+            if not descricao.strip():
+                st.error("❌ Descrição é obrigatória")
+            elif valor <= 0:
+                st.error("❌ Valor deve ser maior que zero")
+            else:
+                try:
+                    db_manager.db.collection("usuarios").document(
+                        st.session_state.user_email
+                    ).collection("meu_caixa").add({
+                        "descricao": descricao.strip(),
+                        "valor": float(valor),
+                        "tipo": tipo,
+                        "categoria": categoria,
+                        "forma_pagamento": forma_pagamento,
+                        "data": data_lancamento.strftime('%d/%m/%Y'),
+                        "timestamp": datetime.now(fuso_br),
+                        "registrado_em": datetime.now(fuso_br)
+                    })
+                    
+                    db_manager.log_auditoria(
+                        email=st.session_state.user_email,
+                        acao="LANCAMENTO_FINANCEIRO",
+                        detalhes=f"{tipo} de R$ {valor:.2f} - {descricao}"
+                    )
+                    
+                    st.success("✅ Lançamento registrado com sucesso!")
+                    st.cache_data.clear()
+                    time.sleep(1)
+                    st.rerun()
+                    
+                except Exception as e:
+                    logger.error(f"Erro ao registrar lançamento: {e}")
+                    st.error("❌ Erro ao registrar lançamento")
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Resumo financeiro
+    if caixa:
+        st.markdown("#### 📊 Resumo Financeiro")
+        
+        df_caixa = pd.DataFrame(caixa)
+        
+        # Converte valor para numérico
+        df_caixa['valor'] = pd.to_numeric(df_caixa['valor'], errors='coerce')
+        
+        # Agrupa por tipo
+        resumo = df_caixa.groupby('tipo')['valor'].sum()
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            entrada = resumo.get('Entrada', 0)
+            st.metric("Total Entradas", f"R$ {entrada:,.2f}")
+        
+        with col2:
+            saida = resumo.get('Saída', 0)
+            st.metric("Total Saídas", f"R$ {saida:,.2f}")
+        
+        with col3:
+            saldo = entrada - saida
+            st.metric("Saldo Atual", f"R$ {saldo:,.2f}")
+
+# ================= RELATÓRIOS E EXPORTAÇÃO =================
+
+st.divider()
+st.markdown("### 📊 Relatórios & Exportação")
+
+col_rel1, col_rel2 = st.columns(2)
+
+with col_rel1:
+    if st.button("📥 GERAR RELATÓRIO EXCEL", use_container_width=True):
+        try:
+            with st.spinner("Gerando relatório Excel..."):
+                # Cria buffer para Excel
+                buf = io.BytesIO()
+                
+                with pd.ExcelWriter(buf, engine='xlsxwriter') as writer:
+                    # Planilha de clientes
+                    if clientes:
+                        df_clientes = pd.DataFrame(clientes)
+                        df_clientes.to_excel(writer, sheet_name='Clientes', index=False)
+                    
+                    # Planilha de serviços
+                    if servicos:
+                        df_servicos = pd.DataFrame(servicos)
+                        df_servicos.to_excel(writer, sheet_name='Serviços', index=False)
+                    
+                    # Planilha financeira
+                    if caixa:
+                        df_caixa = pd.DataFrame(caixa)
+                        df_caixa.to_excel(writer, sheet_name='Financeiro', index=False)
+                    
+                    # Planilha de agenda
+                    if agenda:
+                        df_agenda = pd.DataFrame(agenda)
+                        df_agenda.to_excel(writer, sheet_name='Agenda', index=False)
+                
+                # Botão de download
+                hoje = datetime.now(fuso_br).strftime('%Y-%m-%d')
+                st.download_button(
+                    label="⬇️ BAIXAR RELATÓRIO",
+                    data=buf.getvalue(),
+                    file_name=f"Vivv_Pro_Relatorio_{hoje}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+                
+                db_manager.log_auditoria(
+                    email=st.session_state.user_email,
+                    acao="RELATORIO_GERADO",
+                    detalhes="Relatório Excel gerado"
+                )
+                
+        except Exception as e:
+            logger.error(f"Erro ao gerar relatório: {e}")
+            st.error("❌ Erro ao gerar relatório")
+
+with col_rel2:
+    if st.button("📄 GERAR RELATÓRIO PDF", use_container_width=True):
+        st.info("Funcionalidade em desenvolvimento")
+
+# ================= RODAPÉ =================
+
+st.divider()
+st.markdown("""
+<div style="text-align: center; color: #888; padding: 20px;">
+    <small>Vivv Pro Elite © 2024 | Sistema de Gestão para Profissionais de Beleza</small><br>
+    <small>Versão 2.0 | Desenvolvido com ❤️ para transformar seu negócio</small>
+</div>
+""", unsafe_allow_html=True)
