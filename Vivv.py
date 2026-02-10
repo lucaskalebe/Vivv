@@ -1,1166 +1,508 @@
+
+
 import streamlit as st
 import pandas as pd
-import numpy as np
 import plotly.graph_objects as go
-import plotly.express as px
-from plotly.subplots import make_subplots
 import io
 import json
 import hashlib
 import re
 import time
-import traceback
-import logging
 from datetime import datetime, timezone, timedelta
-from typing import Optional, Dict, List, Any, Tuple
 from google.cloud import firestore
 from google.oauth2 import service_account
-from google.cloud.exceptions import GoogleCloudError
 
-# ================= CONFIGURAÇÃO DE LOGGING =================
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("VivvPro")
-
-# ================= CONFIGURAÇÕES DO APP =================
-st.set_page_config(
-    page_title="Vivv Pro Elite",
-    layout="wide",
-    page_icon="⚡",
-    initial_sidebar_state="collapsed"
-)
+# ================= CONFIGURAÇÃO =================
+st.set_page_config(page_title="Vivv Pro Elite", layout="wide", page_icon="⚡", initial_sidebar_state="collapsed")
 fuso_br = timezone(timedelta(hours=-3))
 
-# ================= CONSTANTES DE NEGÓCIO =================
-ESTOQUE_MINIMO = 5
-LOTACAO_MAXIMA = 15
-ALERTAS = {
-    "estoque_baixo": {"cor": "#FF6B6B", "icone": "⚠️"},
-    "agenda_lotada": {"cor": "#FFA726", "icone": "📅"},
-    "lucro_positivo": {"cor": "#4CAF50", "icone": "📈"},
-    "pagamento_pendente": {"cor": "#F44336", "icone": "💳"}
-}
-
-# ================= ESTILO ELITE - DARK GLASSMORPHISM =================
+# ================= ESTILO PREMIUM ULTRA AVANÇADO =================
 st.markdown("""
 <style>
-    /* Reset e configurações gerais */
-    header, [data-testid="stHeader"], .stAppDeployButton { 
-        display: none !important; 
-    }
+    /* Reset */
+    header, [data-testid="stHeader"], .stAppDeployButton { display: none !important; }
     
+    /* Fundo Gradiente Dinâmico */
     .stApp { 
-        background: linear-gradient(135deg, #0a0a0f 0%, #13151f 50%, #0a0a0f 100%) !important;
+        background: linear-gradient(135deg, #0a0a0f 0%, #0d1b2a 25%, #1b263b 50%, #0d1b2a 75%, #0a0a0f 100%) !important;
+        background-size: 400% 400% !important;
+        animation: gradientBG 15s ease infinite !important;
         min-height: 100vh;
-        background-attachment: fixed;
+    }
+    @keyframes gradientBG {
+        0% { background-position: 0% 50% }
+        50% { background-position: 100% 50% }
+        100% { background-position: 0% 50% }
     }
     
-    .block-container { 
-        padding-top: 30px !important; 
-        max-width: 98% !important;
-    }
-    
-    /* Glassmorphism Container */
+    /* Container Glass */
     .glass-card {
-        background: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(15px);
-        -webkit-backdrop-filter: blur(15px);
-        border-radius: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        padding: 20px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
-    
-    .glass-card:hover {
-        border: 1px solid rgba(0, 212, 255, 0.3);
-        box-shadow: 0 15px 40px rgba(0, 212, 255, 0.15);
-        transform: translateY(-5px);
-    }
-    
-    /* Metric Cards Elite */
-    .metric-card-elite {
-        background: linear-gradient(145deg, 
-            rgba(0, 8, 20, 0.7) 0%, 
-            rgba(0, 26, 44, 0.7) 100%);
-        border: 1px solid rgba(0, 150, 255, 0.2);
-        border-radius: 16px;
-        padding: 20px;
+        background: rgba(255, 255, 255, 0.07);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 25px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         position: relative;
         overflow: hidden;
-        transition: all 0.4s ease;
     }
-    
-    .metric-card-elite::before {
+    .glass-card::before {
         content: '';
         position: absolute;
         top: 0;
         left: -100%;
         width: 100%;
         height: 100%;
-        background: linear-gradient(90deg, 
-            transparent, 
-            rgba(0, 212, 255, 0.1), 
-            transparent);
-        transition: 0.6s;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+        transition: 0.7s;
+    }
+    .glass-card:hover::before { left: 100%; }
+    .glass-card:hover {
+        border: 1px solid rgba(0, 212, 255, 0.4);
+        box-shadow: 0 30px 80px rgba(0, 212, 255, 0.2);
+        transform: translateY(-8px);
     }
     
-    .metric-card-elite:hover::before {
-        left: 100%;
-    }
-    
-    .metric-card-elite:hover {
-        border-color: #00d4ff;
-        box-shadow: 0 0 25px rgba(0, 212, 255, 0.25);
-        transform: translateY(-5px);
-    }
-    
-    /* Botões com animação */
-    .stButton > button {
-        background: linear-gradient(135deg, #0066cc 0%, #00d4ff 100%);
-        color: white;
-        border: none;
-        border-radius: 12px;
-        padding: 12px 24px;
-        font-weight: 600;
-        font-size: 14px;
-        transition: all 0.3s ease;
+    /* Cards de Métrica Holográficos */
+    .hologram-card {
+        background: linear-gradient(145deg, rgba(0, 40, 85, 0.8), rgba(0, 20, 40, 0.9));
+        border: 2px solid;
+        border-image: linear-gradient(45deg, #00d4ff, #0066cc, #00d4ff) 1;
+        border-radius: 20px;
+        padding: 25px;
         position: relative;
         overflow: hidden;
+        transition: all 0.5s ease;
+    }
+    .hologram-card::after {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(45deg, transparent, rgba(0, 212, 255, 0.1), transparent);
+        transform: rotate(30deg);
+        animation: shine 3s infinite linear;
+    }
+    @keyframes shine {
+        0% { transform: rotate(30deg) translateX(-100%); }
+        100% { transform: rotate(30deg) translateX(100%); }
+    }
+    .hologram-card:hover {
+        transform: translateY(-10px) scale(1.03);
+        box-shadow: 0 25px 50px rgba(0, 212, 255, 0.3);
     }
     
+    /* Botões Neomórficos com Efeito de Partículas */
+    .stButton > button {
+        background: linear-gradient(135deg, #0066cc 0%, #0099ff 50%, #00d4ff 100%);
+        color: white !important;
+        border: none;
+        border-radius: 15px;
+        padding: 14px 28px;
+        font-weight: 700;
+        font-size: 15px;
+        letter-spacing: 0.5px;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.4s ease;
+        box-shadow: 0 10px 30px rgba(0, 212, 255, 0.3);
+    }
     .stButton > button::before {
         content: '';
         position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 0;
-        height: 0;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.2);
-        transform: translate(-50%, -50%);
-        transition: width 0.6s, height 0.6s;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        transition: 0.7s;
     }
-    
-    .stButton > button:hover::before {
-        width: 300px;
-        height: 300px;
-    }
-    
+    .stButton > button:hover::before { left: 100%; }
     .stButton > button:hover {
-        transform: scale(1.05);
-        box-shadow: 0 10px 20px rgba(0, 212, 255, 0.3);
+        transform: translateY(-5px);
+        box-shadow: 0 20px 40px rgba(0, 212, 255, 0.5);
     }
     
-    /* Formulários */
-    [data-testid="stForm"] {
-        background: rgba(255, 255, 255, 0.02) !important;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(0, 212, 255, 0.1) !important;
-        border-radius: 18px !important;
-        padding: 25px !important;
-    }
-    
-    /* Inputs */
+    /* Inputs Futuristas */
     .stTextInput > div > div > input,
     .stNumberInput > div > div > input,
     .stSelectbox > div > div > select {
-        background: rgba(255, 255, 255, 0.05) !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        border-radius: 10px !important;
+        background: rgba(255, 255, 255, 0.08) !important;
+        border: 2px solid rgba(0, 212, 255, 0.2) !important;
+        border-radius: 12px !important;
         color: white !important;
-        padding: 12px !important;
+        padding: 14px !important;
+        font-size: 15px;
         transition: all 0.3s ease !important;
+        backdrop-filter: blur(10px);
     }
-    
     .stTextInput > div > div > input:focus,
-    .stNumberInput > div > div > input:focus,
-    .stSelectbox > div > div > select:focus {
-        border-color: #00d4ff !important;
-        box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.2) !important;
+    .stNumberInput > div > div > input:focus {
+        border: 2px solid #00d4ff !important;
+        box-shadow: 0 0 20px rgba(0, 212, 255, 0.4) !important;
+        background: rgba(255, 255, 255, 0.12) !important;
     }
     
-    /* Tabs */
+    /* Tabs Holográficas */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        background: rgba(255, 255, 255, 0.02);
-        border-radius: 12px;
-        padding: 4px;
+        gap: 5px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 15px;
+        padding: 5px;
+        backdrop-filter: blur(10px);
     }
-    
     .stTabs [data-baseweb="tab"] {
-        border-radius: 8px !important;
-        padding: 10px 20px !important;
+        border-radius: 12px !important;
+        padding: 12px 24px !important;
         background: transparent !important;
+        font-weight: 600;
         transition: all 0.3s ease !important;
     }
-    
     .stTabs [aria-selected="true"] {
         background: linear-gradient(135deg, #0066cc 0%, #00d4ff 100%) !important;
+        box-shadow: 0 5px 20px rgba(0, 212, 255, 0.3);
     }
     
-    /* Loading skeletons */
-    .skeleton {
-        background: linear-gradient(90deg, 
-            rgba(255, 255, 255, 0.05) 25%, 
-            rgba(255, 255, 255, 0.1) 50%, 
-            rgba(255, 255, 255, 0.05) 75%);
-        background-size: 200% 100%;
-        animation: loading 1.5s infinite;
-        border-radius: 8px;
-    }
-    
-    @keyframes loading {
-        0% { background-position: 200% 0; }
-        100% { background-position: -200% 0; }
-    }
-    
-    /* Alertas */
-    .alert-badge {
-        display: inline-flex;
-        align-items: center;
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 600;
-        margin: 2px;
-        animation: pulse 2s infinite;
-    }
-    
-    @keyframes pulse {
-        0% { opacity: 1; }
-        50% { opacity: 0.7; }
-        100% { opacity: 1; }
-    }
-    
-    /* Logo Elite */
-    .vivv-logo-elite {
+    /* Logo Holográfica */
+    .vivv-logo {
         position: fixed;
         top: 20px;
         left: 30px;
-        color: #ffffff;
-        font-size: 36px;
+        font-size: 42px;
         font-weight: 900;
         z-index: 999999;
-        letter-spacing: -1px;
-        text-shadow: 0 0 20px rgba(0, 212, 255, 0.7);
-        background: linear-gradient(135deg, #00d4ff 0%, #0066cc 100%);
+        letter-spacing: -2px;
+        background: linear-gradient(135deg, #00d4ff, #0066cc, #00d4ff);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
+        text-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
+        animation: glow 2s ease-in-out infinite alternate;
+    }
+    @keyframes glow {
+        from { text-shadow: 0 0 20px rgba(0, 212, 255, 0.5); }
+        to { text-shadow: 0 0 40px rgba(0, 212, 255, 0.8), 0 0 60px rgba(0, 212, 255, 0.6); }
     }
     
-    /* Scrollbar personalizada */
-    ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-    }
-    
-    ::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 4px;
-    }
-    
+    /* Scrollbar Neon */
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); border-radius: 5px; }
     ::-webkit-scrollbar-thumb {
-        background: linear-gradient(135deg, #00d4ff 0%, #0066cc 100%);
-        border-radius: 4px;
+        background: linear-gradient(180deg, #00d4ff, #0066cc);
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
     }
     
-    ::-webkit-scrollbar-thumb:hover {
-        background: linear-gradient(135deg, #00a8cc 0%, #004c99 100%);
+    /* Alertas Animados */
+    .alert-pulse {
+        animation: pulse 2s infinite;
+        border: 2px solid;
+        border-image: linear-gradient(45deg, #ff6b6b, #ffa726, #ff6b6b) 1;
+        padding: 15px;
+        border-radius: 12px;
+        background: rgba(255, 107, 107, 0.1);
+    }
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.02); }
+        100% { transform: scale(1); }
     }
 </style>
+
+<div class="vivv-logo">VIVV<span style="color:#00d4ff">.</span>PRO</div>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="vivv-logo-elite">VIVV<span style="color:#00d4ff">.</span>PRO</div>', unsafe_allow_html=True)
-
-# ================= FUNÇÕES DE SEGURANÇA E VALIDAÇÃO =================
-
-class SecurityManager:
+# ================= SEGURANÇA =================
+class Security:
     SALT = "vivv_secure_2026_elite"
     
     @staticmethod
-    def hash_senha(senha: str) -> str:
-        """Hash seguro da senha com salt."""
-        senha = SecurityManager.SALT + senha
-        return hashlib.sha256(senha.encode()).hexdigest()
-    
+    def hash_senha(senha): return hashlib.sha256((Security.SALT + senha).encode()).hexdigest()
     @staticmethod
-    def email_valido(email: str) -> bool:
-        """Validação rigorosa de email."""
-        padrao = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-        return bool(re.match(padrao, email))
-    
+    def email_valido(email): return bool(re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email))
     @staticmethod
-    def telefone_valido(telefone: str) -> bool:
-        """Validação de telefone brasileiro."""
-        telefone = ''.join(filter(str.isdigit, telefone))
-        return len(telefone) >= 10 and len(telefone) <= 11
-    
-    @staticmethod
-    def validar_campos_obrigatorios(dados: dict, campos: list) -> Tuple[bool, str]:
-        """Valida se todos os campos obrigatórios estão preenchidos."""
-        for campo in campos:
-            valor = dados.get(campo)
-            if not valor or (isinstance(valor, str) and valor.strip() == ""):
-                return False, f"Campo '{campo}' é obrigatório"
-        return True, ""
+    def telefone_valido(tel): return len(''.join(filter(str.isdigit, tel))) in [10, 11]
 
-# ================= GERENCIAMENTO DE BANCO DE DADOS COM TRATAMENTO DE EXCEÇÕES =================
-
+# ================= FIREBASE =================
 @st.cache_resource
-def inicializar_firebase():
-    """Inicializa e retorna conexão com Firebase Firestore."""
+def init_firebase():
     try:
-        # Verifica se existe a configuração
-        if "FIREBASE_DETAILS" not in st.secrets:
-            st.error("❌ Configuração do Firebase não encontrada.")
-            return None
-        
-        # Carrega as credenciais
-        firebase_config = st.secrets["FIREBASE_DETAILS"]
-        
-        if not firebase_config or firebase_config.strip() == "":
-            st.error("❌ Configuração do Firebase está vazia.")
-            return None
-        
-        # Converte de string JSON para dicionário
-        credenciais = json.loads(firebase_config)
-        
-        # Cria as credenciais do service account
-        creds = service_account.Credentials.from_service_account_info(credenciais)
-        
-        # Cria o cliente Firestore
-        db = firestore.Client(credentials=creds)
-        
-        # Testa a conexão (operação simples)
-        test_ref = db.collection("conexao_teste").document("ping")
-        test_ref.set({
-            "timestamp": datetime.now(fuso_br),
-            "status": "conectado"
-        })
-        
-        st.success("✅ Banco de dados conectado!")
+        if "FIREBASE_DETAILS" not in st.secrets: return None
+        creds = json.loads(st.secrets["FIREBASE_DETAILS"])
+        db = firestore.Client(credentials=service_account.Credentials.from_service_account_info(creds))
+        db.collection("test").document("test").set({"test": datetime.now(fuso_br)})
         return db
-        
-    except json.JSONDecodeError as e:
-        st.error(f"❌ Erro no formato JSON: {str(e)[:100]}")
-        return None
-    except Exception as e:
-        st.error(f"❌ Erro ao conectar ao banco: {str(e)[:100]}")
-        return None
+    except: return None
 
+db = init_firebase()
+if not db: st.error("❌ Erro ao conectar ao banco. Verifique as configurações."); st.stop()
 
-    def log_auditoria(email: str, acao: str, detalhes: str = ""):
-        """Registra log de auditoria."""
-        try:
-            log_data = {
-            "email": email,
-            "acao": acao,
-            "detalhes": detalhes,
-            "timestamp": datetime.now(fuso_br)
-            }
-            db.collection("logs_auditoria").add(log_data)
-        except Exception as e:
-            logger.error(f"Erro ao registrar log: {e}")
-    
-
-# ... (mantenha todo o código até a linha 385 igual)
-
-# ================= INICIALIZAÇÃO DOS SERVIÇOS =================
-
-# Inicializa o banco de dados
-db = inicializar_firebase()
-
-# Se não conseguiu conectar, para a aplicação
-if db is None:
-    st.error("""
-    ## 🔧 ERRO DE CONEXÃO
-    
-    Não foi possível conectar ao banco de dados Firebase.
-    
-    **Possíveis causas:**
-    1. Credenciais do Firebase incorretas
-    2. Problema de rede/conexão
-    3. Formato inválido do JSON
-    
-    **Solução:**
-    - Verifique a variável `FIREBASE_DETAILS` nas Secrets do Streamlit Cloud
-    - Certifique-se que o JSON está completo e válido
-    - Entre em contato com o suporte técnico
-    """)
-    st.stop()
-
-# ================= FUNÇÕES DO BANCO DE DADOS =================
-
-def buscar_usuario(email: str):
-    """Busca um usuário pelo email."""
+# ================= FUNÇÕES BANCO =================
+def buscar_usuario(email):
     try:
-        doc_ref = db.collection("usuarios").document(email)
-        doc = doc_ref.get()
-        
-        if doc.exists:
-            return doc.to_dict()
-        return None
-    except Exception as e:
-        st.error(f"❌ Erro ao buscar usuário: {e}")
-        return None
+        doc = db.collection("usuarios").document(email).get()
+        return doc.to_dict() if doc.exists else None
+    except: return None
 
-def criar_usuario(dados: dict):
-    """Cria um novo usuário."""
+def criar_usuario(dados):
     try:
-        # Validações básicas
-        if not dados.get("email"):
-            st.error("❌ Email é obrigatório")
-            return False
+        if not dados.get("email") or not dados.get("senha"): return False
+        if buscar_usuario(dados["email"]): st.error("❌ Email já cadastrado"); return False
         
-        if not dados.get("senha"):
-            st.error("❌ Senha é obrigatória")
-            return False
-        
-        # Verifica se usuário já existe
-        if buscar_usuario(dados["email"]):
-            st.error("❌ Usuário já cadastrado")
-            return False
-        
-        # Adiciona timestamps
-        dados["criado_em"] = datetime.now(fuso_br)
-        dados["ativo"] = False
-        dados["plano"] = "pro"
-        
-        # Salva no banco
+        dados.update({
+            "criado_em": datetime.now(fuso_br),
+            "ativo": False,
+            "plano": "pro",
+            "senha": Security.hash_senha(dados["senha"])
+        })
         db.collection("usuarios").document(dados["email"]).set(dados)
-        
-        # Log simples
-        print(f"✅ Usuário criado: {dados['email']}")
         return True
-        
-    except Exception as e:
-        st.error(f"❌ Erro ao criar usuário: {e}")
-        return False
+    except: st.error("❌ Erro ao criar conta"); return False
 
 @st.cache_data(ttl=60)
-def carregar_dados_usuario(email: str):
-    """Carrega todos os dados do usuário com cache."""
+def carregar_dados(email):
     try:
-        user_ref = db.collection("usuarios").document(email)
-        
-        # Função auxiliar para carregar coleções
-        def carregar_colecao(nome):
-            try:
-                docs = user_ref.collection(nome).stream()
-                return [{"id": doc.id, **doc.to_dict()} for doc in docs]
-            except:
-                return []
-        
-        # Carrega todas as coleções
-        clientes = carregar_colecao("meus_clientes")
-        servicos = carregar_colecao("meus_servicos")
-        agenda = carregar_colecao("minha_agenda")
-        caixa = carregar_colecao("meu_caixa")
-        
-        # Garante que nunca retorna None
-        return clientes or [], servicos or [], agenda or [], caixa or []
-        
-    except Exception as e:
-        st.error(f"⚠️ Erro ao carregar dados: {e}")
-        return [], [], [], []  # Sempre retorna listas vazias
+        ref = db.collection("usuarios").document(email)
+        def carregar(col): return [{"id": d.id, **d.to_dict()} for d in ref.collection(col).stream()]
+        return [carregar(c) for c in ["meus_clientes", "meus_servicos", "minha_agenda", "meu_caixa"]]
+    except: return [[], [], [], []]
 
-def log_auditoria(email: str, acao: str, detalhes: str = ""):
-    """Registra log de auditoria."""
-    try:
-        log_data = {
-            "email": email,
-            "acao": acao,
-            "detalhes": detalhes,
-            "timestamp": datetime.now(fuso_br)
-        }
-        db.collection("logs_auditoria").add(log_data)
-    except Exception as e:
-        logger.error(f"Erro ao registrar log: {e}")
+def log_auditoria(email, acao, detalhes=""):
+    try: db.collection("logs_auditoria").add({"email": email, "acao": acao, "detalhes": detalhes, "timestamp": datetime.now(fuso_br)})
+    except: pass
 
-# ================= GERENCIAMENTO DE SESSÃO =================
-
-# Estado inicial da sessão
+# ================= SESSÃO =================
 if "logado" not in st.session_state:
-    st.session_state.logado = False
-    st.session_state.user_email = None
-    st.session_state.user_data = None
-    st.session_state.dados_carregados = False
+    st.session_state.update({"logado": False, "user_email": None, "user_data": None})
 
-# Funções de sessão
-def fazer_login(email: str, senha: str):
-    """Realiza login do usuário."""
-    usuario = buscar_usuario(email)
-    
-    if usuario and usuario.get("senha") == SecurityManager.hash_senha(senha):
-        st.session_state.logado = True
-        st.session_state.user_email = email
-        st.session_state.user_data = usuario
-        return True
-    return False
-
-def fazer_logout():
-    """Realiza logout do usuário."""
-    st.session_state.logado = False
-    st.session_state.user_email = None
-    st.session_state.user_data = None
-    st.session_state.dados_carregados = False
-    st.cache_data.clear()
-
-# Verifica se usuário está logado para carregar dados
-if st.session_state.logado and st.session_state.user_email:
-    try:
-        clientes, servicos, agenda, caixa = carregar_dados_usuario(st.session_state.user_email)
-        st.session_state.dados_carregados = True
-    except:
-        st.error("Erro ao carregar dados do usuário")
-        clientes, servicos, agenda, caixa = [], [], [], []
-else:
-    clientes, servicos, agenda, caixa = [], [], [], []
-
-# ... (mantenha a classe UIComponents igual)
-
-# ================= TELA DE LOGIN / CADASTRO =================
-
+# ================= LOGIN/CADASTRO =================
 if not st.session_state.logado:
-    # Tela de Login/Cadastro com estilo elite
     col_l, col_c, col_r = st.columns([1, 2, 1])
-    
     with col_c:
         st.markdown("<br><br><br>", unsafe_allow_html=True)
-        
-        # Card de login
         st.markdown('<div class="glass-card">', unsafe_allow_html=True)
         
-        tab_login, tab_cadastro = st.tabs(["🔐 LOGIN ELITE", "🚀 CRIAR CONTA"])
+        login_tab, cadastro_tab = st.tabs(["🔐 LOGIN", "🚀 CADASTRO"])
         
-        with tab_login:
+        with login_tab:
             st.subheader("Acesso ao Sistema")
-            
-            with st.form("form_login"):
-                email = st.text_input("Email", key="login_email").lower().strip()
-                senha = st.text_input("Senha", type="password", key="login_senha")
-                
-                col_b1, col_b2 = st.columns(2)
-                with col_b1:
-                    submit_login = st.form_submit_button("⚡ ENTRAR", use_container_width=True)
-                
-                if submit_login:
-                    if not email or not senha:
-                        st.error("Preencha todos os campos")
-                    else:
-                        UIComponents.mostrar_loading("Validando credenciais...")
-                        
-                        try:
-                            user = buscar_usuario(email)
-                            
-                            if user and user.get("senha") == SecurityManager.hash_senha(senha):
-                                if user.get("ativo", False):
-                                    st.session_state.logado = True
-                                    st.session_state.user_email = email
-                                    st.session_state.user_data = user
-                                    
-                                    # Log de auditoria
-                                    log_auditoria(
-                                        email=email,
-                                        acao="LOGIN",
-                                        detalhes="Login realizado com sucesso"
-                                    )
-                                    
-                                    st.success("✅ Login realizado com sucesso!")
-                                    time.sleep(1)
-                                    st.rerun()
-                                else:
-                                    st.error("❌ Conta inativa. Complete o pagamento.")
-                            else:
-                                st.error("❌ Credenciais inválidas")
-                        except Exception as e:
-                            logger.error(f"Erro no login: {e}")
-                            st.error("⚠️ Erro ao processar login. Tente novamente.")
+            with st.form("login_form"):
+                email = st.text_input("Email").lower().strip()
+                senha = st.text_input("Senha", type="password")
+                if st.form_submit_button("⚡ ENTRAR", use_container_width=True):
+                    if email and senha:
+                        usuario = buscar_usuario(email)
+                        if usuario and usuario["senha"] == Security.hash_senha(senha):
+                            if usuario.get("ativo"):
+                                st.session_state.update({"logado": True, "user_email": email, "user_data": usuario})
+                                log_auditoria(email, "LOGIN")
+                                st.success("✅ Login realizado!"); time.sleep(1); st.rerun()
+                            else: st.error("❌ Conta aguardando pagamento")
+                        else: st.error("❌ Credenciais inválidas")
         
-        with tab_cadastro:
-            st.subheader("Criar Nova Conta")
-            
-            with st.form("form_cadastro", clear_on_submit=True):
+        with cadastro_tab:
+            st.subheader("Criar Conta Pro")
+            with st.form("cadastro_form", clear_on_submit=True):
                 col1, col2 = st.columns(2)
-                
                 with col1:
                     username = st.text_input("Username")
                     nome = st.text_input("Nome Completo")
                     email = st.text_input("Email").lower().strip()
-                
                 with col2:
                     whatsapp = st.text_input("WhatsApp")
                     negocio = st.text_input("Nome do Negócio")
                     tipo = st.selectbox("Tipo", ["Barbearia", "Salão", "Estética", "Outro"])
-                
                 senha = st.text_input("Senha", type="password")
                 senha_confirm = st.text_input("Confirmar Senha", type="password")
                 
-                submit_cadastro = st.form_submit_button("🚀 CRIAR CONTA PRO", use_container_width=True)
-                
-                if submit_cadastro:
-                    # Validações
-                    if senha != senha_confirm:
-                        st.error("❌ As senhas não coincidem")
-                    elif not SecurityManager.email_valido(email):
+                if st.form_submit_button("🚀 CRIAR CONTA PRO", use_container_width=True):
+                    if not all([username, nome, email, whatsapp, negocio, senha]):
+                        st.error("❌ Preencha todos os campos")
+                    elif senha != senha_confirm:
+                        st.error("❌ Senhas não coincidem")
+                    elif not Security.email_valido(email):
                         st.error("❌ Email inválido")
-                    elif not SecurityManager.telefone_valido(whatsapp):
-                        st.error("❌ WhatsApp inválido")
                     else:
-                        UIComponents.mostrar_loading("Criando sua conta...")
-                        
-                        dados_usuario = {
-                            "email": email,
-                            "username": username,
-                            "nome": nome,
-                            "whatsapp": whatsapp,
-                            "nome_negocio": negocio,
-                            "tipo_negocio": tipo,
-                            "senha": SecurityManager.hash_senha(senha),
-                            "ativo": False,
-                            "plano": "pro",
-                            "criado_em": datetime.now(fuso_br)
+                        dados = {
+                            "username": username, "nome": nome, "email": email, "whatsapp": whatsapp,
+                            "nome_negocio": negocio, "tipo_negocio": tipo, "senha": senha
                         }
-                        
-                        if criar_usuario(dados_usuario):
-                            st.success("✅ Conta criada com sucesso! Redirecionando para pagamento...")
-                            time.sleep(2)
-                            # Aqui integraria com Stripe
-                            st.link_button("💳 FINALIZAR PAGAMENTO", "https://buy.stripe.com/test_6oU4gB7Q4glM1JZ2Z06J200")
+                        if criar_usuario(dados):
+                            st.success("✅ Conta criada! Finalize o pagamento.")
+                            st.link_button("💳 PAGAR AGORA", "https://buy.stripe.com/test_6oU4gB7Q4glM1JZ2Z06J200")
         
         st.markdown('</div>', unsafe_allow_html=True)
-    
     st.stop()
 
-# ================= VERIFICAÇÃO DE PAGAMENTO =================
-
-if not st.session_state.user_data.get("ativo", False):
-    # Tela de pagamento pendente
+# ================= VERIFICAÇÃO PAGAMENTO =================
+if not st.session_state.user_data.get("ativo"):
     col1, col2, col3 = st.columns([1, 2, 1])
-    
     with col2:
         st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-        
         st.warning("## 💳 Ativação Pendente")
-        st.info(f"Olá **{st.session_state.user_data.get('nome')}**, sua conta está aguardando ativação.")
-        
+        st.info(f"Olá **{st.session_state.user_data.get('nome')}**, complete o pagamento para ativar.")
         st.markdown("""
-        ### 🚀 Plano Vivv Pro
-        - **Taxa de Ativação:** R$ 300,00 (única)
-        - **Mensalidade:** R$ 49,90/mês
-        - **Recursos:** Gestão completa + Suporte prioritário
-        
-        ### 📈 O que você ganha:
-        - Dashboard inteligente com métricas em tempo real
-        - Sistema de agendamento automatizado
-        - Controle financeiro avançado
-        - Relatórios personalizados
-        - Integração com WhatsApp
+        **🎯 Plano Vivv Pro:**
+        - Taxa de Ativação: R$ 300,00 (única)
+        - Mensalidade: R$ 49,90/mês
+        - Dashboard Inteligente
+        - Agendamento Automático
+        - Controle Financeiro
+        - Relatórios Avançados
         """)
-        
         col_b1, col_b2 = st.columns(2)
         with col_b1:
             if st.button("💳 FINALIZAR PAGAMENTO", use_container_width=True):
                 st.link_button("Pagar com Stripe", "https://buy.stripe.com/test_6oU4gB7Q4glM1JZ2Z06J200")
-        
         with col_b2:
             if st.button("🔄 JÁ PAGUEI - VERIFICAR", type="secondary", use_container_width=True):
-                UIComponents.mostrar_loading("Verificando pagamento...")
-                # Simulação - aqui integraria com webhook do Stripe
-                time.sleep(2)
-                st.rerun()
-        
-        if st.button("🚪 SAIR", type="secondary"):
-            fazer_logout()
-            st.rerun()
-        
+                time.sleep(2); st.rerun()
+        if st.button("🚪 SAIR", type="secondary"): st.session_state.logado = False; st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
-    
     st.stop()
 
-# ================= DASHBOARD PRINCIPAL =================
+# ================= DADOS DO USUÁRIO =================
+clientes, servicos, agenda, caixa = carregar_dados(st.session_state.user_email)
 
-# Calcula métricas de negócio
-metricas = UIComponents.calcular_metricas_negocio(clientes, servicos, agenda, caixa)
+# ================= DASHBOARD =================
+col_h1, col_h2 = st.columns([5, 1])
+with col_h1: st.markdown(f"# 🚀 {st.session_state.user_data.get('nome_negocio', 'Vivv Pro')}")
+with col_h2: 
+    if st.button("🚪 SAIR", use_container_width=True): 
+        st.session_state.logado = False; st.rerun()
 
-# Header do Dashboard
-col_header1, col_header2 = st.columns([5, 1])
+# Métricas
+faturamento = sum(x.get("valor", 0) for x in caixa if x.get("tipo") == "Entrada")
+despesas = sum(x.get("valor", 0) for x in caixa if x.get("tipo") == "Saída")
+lucro = faturamento - despesas
+agendamentos_hoje = len([a for a in agenda if a.get('data') == datetime.now(fuso_br).strftime('%d/%m/%Y')])
 
-with col_header1:
-    st.markdown(f"""
-    # 🚀 {st.session_state.user_data.get('nome_negocio', 'Vivv Pro')}
-    ### Olá, {st.session_state.user_data.get('nome', 'Usuário')}! 
-    """)
-
-with col_header2:
-    if st.button("🚪 LOGOUT", use_container_width=True):
-        fazer_logout()
-        st.rerun()
-
-# ================= METRICAS E ALERTAS =================
-
-st.markdown("### 📊 Dashboard de Performance")
-
-# Cards de métricas
 col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+with col_m1: st.markdown(f'<div class="hologram-card"><small>👥 CLIENTES</small><h2>{len(clientes)}</h2></div>', unsafe_allow_html=True)
+with col_m2: st.markdown(f'<div class="hologram-card"><small>💰 FATURAMENTO</small><h2 style="color:#00d4ff">R$ {faturamento:,.2f}</h2></div>', unsafe_allow_html=True)
+with col_m3: st.markdown(f'<div class="hologram-card"><small>📈 LUCRO</small><h2 style="color:#4CAF50">R$ {lucro:,.2f}</h2></div>', unsafe_allow_html=True)
+with col_m4: st.markdown(f'<div class="hologram-card"><small>📅 AGENDA HOJE</small><h2 style="color:#FFA726">{agendamentos_hoje}</h2></div>', unsafe_allow_html=True)
 
-with col_m1:
-    st.markdown(f'''
-    <div class="metric-card-elite">
-        <small>👥 CLIENTES ATIVOS</small>
-        <h2>{metricas["total_clientes"]}</h2>
-        <small style="color:#00d4ff">+5% vs. semana passada</small>
-    </div>
-    ''', unsafe_allow_html=True)
-
-with col_m2:
-    st.markdown(f'''
-    <div class="metric-card-elite">
-        <small>💰 FATURAMENTO</small>
-        <h2 style="color:#00d4ff">R$ {metricas["faturamento"]:,.2f}</h2>
-        <small style="color:#00d4ff">Últimos 30 dias</small>
-    </div>
-    ''', unsafe_allow_html=True)
-
-with col_m3:
-    st.markdown(f'''
-    <div class="metric-card-elite">
-        <small>📈 LUCRO LÍQUIDO</small>
-        <h2 style="color:#4CAF50">R$ {metricas["lucro"]:,.2f}</h2>
-        <small style="color:#4CAF50">Margem: {(metricas["lucro"]/metricas["faturamento"]*100 if metricas["faturamento"] > 0 else 0):.1f}%</small>
-    </div>
-    ''', unsafe_allow_html=True)
-
-with col_m4:
-    st.markdown(f'''
-    <div class="metric-card-elite">
-        <small>📅 AGENDA HOJE</small>
-        <h2 style="color:#FFA726">{metricas["agendamentos_hoje"]}</h2>
-        <small style="color:#FFA726">{metricas["agendamentos_hoje"]}/{LOTACAO_MAXIMA} lotação</small>
-    </div>
-    ''', unsafe_allow_html=True)
-
-# Alertas de negócio
-if metricas["alertas"]:
-    st.markdown("### ⚠️ Alertas do Sistema")
-    cols_alerta = st.columns(min(3, len(metricas["alertas"])))
-    
-    for idx, alerta in enumerate(metricas["alertas"]):
-        with cols_alerta[idx % len(cols_alerta)]:
-            alert_config = ALERTAS.get(alerta["tipo"], {"cor": "#FF6B6B", "icone": "⚠️"})
-            st.markdown(f'''
-            <div style="
-                background: rgba({int(alert_config['cor'][1:3], 16)}, 
-                               {int(alert_config['cor'][3:5], 16)}, 
-                               {int(alert_config['cor'][5:7], 16)}, 0.15);
-                border: 1px solid {alert_config['cor']};
-                border-radius: 12px;
-                padding: 15px;
-                margin: 5px;
-                color: white;
-                text-align: center;
-            ">
-                <strong>{alert_config['icone']} {alerta["mensagem"]}</strong>
-            </div>
-            ''', unsafe_allow_html=True)
+# Alertas
+if agendamentos_hoje > 15: st.markdown('<div class="alert-pulse">⚠️ AGENDA LOTADA! Mais de 15 atendimentos hoje</div>', unsafe_allow_html=True)
 
 st.divider()
 
 # ================= GRÁFICO FINANCEIRO =================
-
-col_graf1, col_graf2 = st.columns([2, 1])
-
-with col_graf1:
-    st.markdown("### 📈 Análise Financeira - Últimos 7 Dias")
-    
+col_g1, col_g2 = st.columns([2, 1])
+with col_g1:
     if caixa:
-        fig = UIComponents.criar_grafico_financeiro(caixa)
-        if fig.data:
+        try:
+            df = pd.DataFrame(caixa)
+            df['data'] = pd.to_datetime(df['data'], format='%d/%m/%Y', errors='coerce')
+            df = df.dropna().sort_values('data')
+            
+            fig = go.Figure()
+            entradas = df[df['tipo'] == 'Entrada'].groupby('data')['valor'].sum()
+            saidas = df[df['tipo'] == 'Saída'].groupby('data')['valor'].sum()
+            
+            if not entradas.empty:
+                fig.add_trace(go.Scatter(x=entradas.index, y=entradas.values, name='Faturamento',
+                                       line=dict(color='#00d4ff', width=4), fill='tozeroy',
+                                       fillcolor='rgba(0, 212, 255, 0.1)'))
+            
+            if not saidas.empty:
+                fig.add_trace(go.Scatter(x=saidas.index, y=saidas.values, name='Despesas',
+                                       line=dict(color='#ff4b4b', width=4)))
+            
+            fig.update_layout(title="📈 Performance Financeira", height=350,
+                            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+                            font_color="white", hovermode="x unified")
             st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("📊 Insira dados financeiros para ver o gráfico")
-    else:
-        st.info("📊 Nenhum dado financeiro disponível ainda")
+        except: st.info("📊 Gráfico em processamento...")
 
-with col_graf2:
-    st.markdown("### 📋 Ações Rápidas")
-    
-    with st.container():
-        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-        
-        # Botões de ação rápida
-        if st.button("📅 Agendar Serviço", use_container_width=True):
-            st.session_state.show_agendamento = True
-        
-        if st.button("👤 Adicionar Cliente", use_container_width=True):
-            st.session_state.show_cliente = True
-        
-        if st.button("💰 Lançar Financeiro", use_container_width=True):
-            st.session_state.show_financeiro = True
-        
-        if st.button("📊 Gerar Relatório", use_container_width=True):
-            # Lógica para gerar relatório
-            with st.spinner("Gerando relatório..."):
-                time.sleep(1)
-                st.success("Relatório gerado com sucesso!")
-        
-        st.markdown('</div>', unsafe_allow_html=True)
-
-st.divider()
-
-# ================= GESTÃO OPERACIONAL =================
-
+# ================= OPERAÇÕES =================
 st.markdown("### ⚡ Gestão Operacional")
-
-tab1, tab2, tab3, tab4 = st.tabs(["📅 Agendamentos", "👤 Clientes", "🛠️ Serviços", "💰 Financeiro"])
+tab1, tab2, tab3, tab4 = st.tabs(["📅 Agendar", "👤 Clientes", "🛠️ Serviços", "💰 Caixa"])
 
 with tab1:
-    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-    
-    with st.form("form_agendamento", clear_on_submit=True):
-        st.subheader("Novo Agendamento")
-        
-        col_a1, col_a2 = st.columns(2)
-        
-        with col_a1:
-            # Validação para listas vazias
-            if clientes:
-                cliente_nome = st.selectbox(
-                    "Cliente",
-                    options=[c.get('nome', 'Sem nome') for c in clientes],
-                    key="ag_cliente"
-                )
-            else:
-                st.info("Cadastre clientes primeiro")
-                cliente_nome = None
-            
-            if servicos:
-                servico_nome = st.selectbox(
-                    "Serviço",
-                    options=[s.get('nome', 'Sem nome') for s in servicos],
-                    key="ag_servico"
-                )
-            else:
-                st.info("Cadastre serviços primeiro")
-                servico_nome = None
-        
-        with col_a2:
-            data_ag = st.date_input("Data", key="ag_data")
-            hora_ag = st.time_input("Horário", key="ag_hora")
-            status_ag = st.selectbox("Status", ["Pendente", "Confirmado", "Cancelado"])
-        
-        if st.form_submit_button("✅ CONFIRMAR AGENDAMENTO", use_container_width=True):
-            if cliente_nome and servico_nome:
+    with st.form("agendar", clear_on_submit=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            cliente = st.selectbox("Cliente", [c['nome'] for c in clientes]) if clientes else st.info("Sem clientes")
+            servico = st.selectbox("Serviço", [s['nome'] for s in servicos]) if servicos else st.info("Sem serviços")
+        with col2:
+            data = st.date_input("Data")
+            hora = st.time_input("Horário")
+        if st.form_submit_button("✅ AGENDAR", use_container_width=True):
+            if cliente and servico:
                 try:
-                    # Encontra preço do serviço
-                    preco_servico = next(
-                        (s.get('preco', 0) for s in servicos if s.get('nome') == servico_nome),
-                        0
-                    )
-                    
-                    # Salva no banco
-                    db.collection("usuarios").document(
-                        st.session_state.user_email
-                    ).collection("minha_agenda").add({
-                        "cliente": cliente_nome,
-                        "servico": servico_nome,
-                        "preco": float(preco_servico),
-                        "status": status_ag,
-                        "data": data_ag.strftime('%d/%m/%Y'),
-                        "hora": hora_ag.strftime('%H:%M'),
-                        "timestamp": datetime.now(fuso_br),
-                        "criado_em": datetime.now(fuso_br)
+                    preco = next((s['preco'] for s in servicos if s['nome'] == servico), 0)
+                    db.collection("usuarios").document(st.session_state.user_email).collection("minha_agenda").add({
+                        "cliente": cliente, "servico": servico, "preco": preco, "data": data.strftime('%d/%m/%Y'),
+                        "hora": hora.strftime('%H:%M'), "status": "Pendente", "timestamp": datetime.now(fuso_br)
                     })
-                    
-                    # Log de auditoria
-                    log_auditoria(
-                        email=st.session_state.user_email,
-                        acao="AGENDAMENTO_CRIADO",
-                        detalhes=f"Agendamento para {cliente_nome} - {servico_nome}"
-                    )
-                    
-                    st.success("✅ Agendamento criado com sucesso!")
-                    st.cache_data.clear()
-                    time.sleep(1)
-                    st.rerun()
-                    
-                except Exception as e:
-                    logger.error(f"Erro ao criar agendamento: {e}")
-                    st.error("❌ Erro ao salvar agendamento")
-    
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    # Lista de agendamentos
-    if agenda:
-        st.markdown("#### 📋 Agendamentos Recentes")
-        for ag in agenda[:10]:  # Mostra apenas os 10 mais recentes
-            with st.container():
-                col1, col2, col3 = st.columns([3, 1, 1])
-                with col1:
-                    st.write(f"**{ag.get('hora', '--:--')}** - {ag.get('cliente', 'N/A')}")
-                    st.caption(f"{ag.get('servico', 'N/A')} - R$ {ag.get('preco', 0):.2f}")
-                with col2:
-                    st.write(f"Status: **{ag.get('status', 'Pendente')}**")
-                with col3:
-                    if st.button("🗑️", key=f"del_ag_{ag.get('id')}"):
-                        try:
-                            db.collection("usuarios").document(
-                                st.session_state.user_email
-                            ).collection("minha_agenda").document(ag.get('id')).delete()
-                            
-                            log_auditoria(
-                                email=st.session_state.user_email,
-                                acao="AGENDAMENTO_EXCLUIDO",
-                                detalhes=f"Agendamento {ag.get('id')} excluído"
-                            )
-                            
-                            st.cache_data.clear()
-                            st.rerun()
-                        except Exception as e:
-                            logger.error(f"Erro ao excluir agendamento: {e}")
-                            st.error("Erro ao excluir")
+                    log_auditoria(st.session_state.user_email, "AGENDAMENTO_CRIADO")
+                    st.success("✅ Agendado!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+                except: st.error("❌ Erro ao agendar")
 
 with tab2:
-    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-    
-    with st.form("form_cliente", clear_on_submit=True):
-        st.subheader("Novo Cliente")
-        
-        col_c1, col_c2 = st.columns(2)
-        
-        with col_c1:
-            nome_cli = st.text_input("Nome completo *", key="cli_nome")
-            email_cli = st.text_input("Email", key="cli_email")
-        
-        with col_c2:
-            telefone_cli = st.text_input("WhatsApp *", key="cli_tel")
-            aniversario = st.date_input("Aniversário", key="cli_bday")
-        
-        observacoes = st.text_area("Observações", key="cli_obs")
-        
+    with st.form("cliente_form", clear_on_submit=True):
+        nome = st.text_input("Nome *")
+        telefone = st.text_input("WhatsApp *")
+        email = st.text_input("Email")
         if st.form_submit_button("👤 CADASTRAR CLIENTE", use_container_width=True):
-            # Validação
-            if not nome_cli.strip():
-                st.error("❌ Nome é obrigatório")
-            elif not telefone_cli.strip():
-                st.error("❌ Telefone é obrigatório")
-            else:
-                try:
-                    db.collection("usuarios").document(
-                        st.session_state.user_email
-                    ).collection("meus_clientes").add({
-                        "nome": nome_cli.strip(),
-                        "email": email_cli.strip() if email_cli.strip() else None,
-                        "telefone": telefone_cli.strip(),
-                        "aniversario": aniversario.strftime('%d/%m/%Y') if aniversario else None,
-                        "observacoes": observacoes,
-                        "data_cadastro": datetime.now(fuso_br).strftime('%d/%m/%Y'),
-                        "timestamp": datetime.now(fuso_br)
-                    })
-                    
-                    log_auditoria(
-                        email=st.session_state.user_email,
-                        acao="CLIENTE_CRIADO",
-                        detalhes=f"Cliente {nome_cli} cadastrado"
-                    )
-                    
-                    st.success("✅ Cliente cadastrado com sucesso!")
-                    st.cache_data.clear()
-                    time.sleep(1)
-                    st.rerun()
-                    
-                except Exception as e:
-                    logger.error(f"Erro ao cadastrar cliente: {e}")
-                    st.error("❌ Erro ao cadastrar cliente")
-    
-    st.markdown('</div>', unsafe_allow_html=True)
+            if nome and telefone:
+                db.collection("usuarios").document(st.session_state.user_email).collection("meus_clientes").add({
+                    "nome": nome, "telefone": telefone, "email": email if email else None,
+                    "data_cadastro": datetime.now(fuso_br).strftime('%d/%m/%Y'), "timestamp": datetime.now(fuso_br)
+                })
+                st.success("✅ Cliente cadastrado!"); st.cache_data.clear(); time.sleep(1); st.rerun()
 
 with tab3:
-    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-    
-    with st.form("form_servico", clear_on_submit=True):
-        st.subheader("Novo Serviço")
-        
-        col_s1, col_s2 = st.columns(2)
-        
-        with col_s1:
-            nome_serv = st.text_input("Nome do serviço *", key="srv_nome")
-            categoria = st.selectbox(
-                "Categoria",
-                ["Corte", "Coloração", "Tratamento", "Estética", "Outros"]
-            )
-        
-        with col_s2:
-            preco_serv = st.number_input("Preço *", min_value=0.0, step=10.0, key="srv_preco")
-            duracao = st.number_input("Duração (min)", min_value=15, step=15, value=60)
-        
-        descricao = st.text_area("Descrição", key="srv_desc")
-        
+    with st.form("servico_form", clear_on_submit=True):
+        nome = st.text_input("Nome do Serviço *")
+        preco = st.number_input("Preço *", min_value=0.0, step=10.0)
+        categoria = st.selectbox("Categoria", ["Corte", "Coloração", "Tratamento", "Estética", "Outros"])
         if st.form_submit_button("🛠️ CADASTRAR SERVIÇO", use_container_width=True):
-            if not nome_serv.strip():
-                st.error("❌ Nome do serviço é obrigatório")
-            elif preco_serv <= 0:
-                st.error("❌ Preço deve ser maior que zero")
-            else:
-                try:
-                    db.collection("usuarios").document(
-                        st.session_state.user_email
-                    ).collection("meus_servicos").add({
-                        "nome": nome_serv.strip(),
-                        "preco": float(preco_serv),
-                        "categoria": categoria,
-                        "duracao_minutos": duracao,
-                        "descricao": descricao,
-                        "ativo": True,
-                        "data_cadastro": datetime.now(fuso_br).strftime('%d/%m/%Y'),
-                        "timestamp": datetime.now(fuso_br)
-                    })
-                    
-                    log_auditoria(
-                        email=st.session_state.user_email,
-                        acao="SERVICO_CRIADO",
-                        detalhes=f"Serviço {nome_serv} criado"
-                    )
-                    
-                    st.success("✅ Serviço cadastrado com sucesso!")
-                    st.cache_data.clear()
-                    time.sleep(1)
-                    st.rerun()
-                    
-                except Exception as e:
-                    logger.error(f"Erro ao cadastrar serviço: {e}")
-                    st.error("❌ Erro ao cadastrar serviço")
-    
-    st.markdown('</div>', unsafe_allow_html=True)
+            if nome and preco > 0:
+                db.collection("usuarios").document(st.session_state.user_email).collection("meus_servicos").add({
+                    "nome": nome, "preco": preco, "categoria": categoria, "ativo": True,
+                    "data_cadastro": datetime.now(fuso_br).strftime('%d/%m/%Y'), "timestamp": datetime.now(fuso_br)
+                })
+                st.success("✅ Serviço cadastrado!"); st.cache_data.clear(); time.sleep(1); st.rerun()
 
 with tab4:
-    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-    
-    with st.form("form_financeiro", clear_on_submit=True):
-        st.subheader("Novo Lançamento Financeiro")
-        
-        col_f1, col_f2 = st.columns(2)
-        
-        with col_f1:
-            descricao = st.text_input("Descrição *", key="fin_desc")
-            categoria = st.selectbox(
-                "Categoria",
-                ["Venda", "Serviço", "Produto", "Aluguel", "Salário", "Manutenção", "Outros"]
-            )
-        
-        with col_f2:
-            valor = st.number_input("Valor *", min_value=0.0, step=10.0, key="fin_valor")
-            tipo = st.selectbox("Tipo *", ["Entrada", "Saída"], key="fin_tipo")
-        
-        data_lancamento = st.date_input("Data", key="fin_data")
-        forma_pagamento = st.selectbox(
-            "Forma de pagamento",
-            ["Dinheiro", "Cartão", "PIX", "Transferência", "Outros"]
-        )
-        
+    with st.form("caixa_form", clear_on_submit=True):
+        desc = st.text_input("Descrição *")
+        valor = st.number_input("Valor *", min_value=0.0, step=10.0)
+        tipo = st.selectbox("Tipo *", ["Entrada", "Saída"])
+        categoria = st.selectbox("Categoria", ["Serviço", "Produto", "Salário", "Manutenção", "Outros"])
         if st.form_submit_button("💰 LANÇAR", use_container_width=True):
-            if not descricao.strip():
-                st.error("❌ Descrição é obrigatória")
-            elif valor <= 0:
-                st.error("❌ Valor deve ser maior que zero")
-            else:
-                try:
-                    db.collection("usuarios").document(
-                        st.session_state.user_email
-                    ).collection("meu_caixa").add({
-                        "descricao": descricao.strip(),
-                        "valor": float(valor),
-                        "tipo": tipo,
-                        "categoria": categoria,
-                        "forma_pagamento": forma_pagamento,
-                        "data": data_lancamento.strftime('%d/%m/%Y'),
-                        "timestamp": datetime.now(fuso_br),
-                        "registrado_em": datetime.now(fuso_br)
-                    })
-                    
-                    log_auditoria(
-                        email=st.session_state.user_email,
-                        acao="LANCAMENTO_FINANCEIRO",
-                        detalhes=f"{tipo} de R$ {valor:.2f} - {descricao}"
-                    )
-                    
-                    st.success("✅ Lançamento registrado com sucesso!")
-                    st.cache_data.clear()
-                    time.sleep(1)
-                    st.rerun()
-                    
-                except Exception as e:
-                    logger.error(f"Erro ao registrar lançamento: {e}")
-                    st.error("❌ Erro ao registrar lançamento")
-    
-    st.markdown('</div>', unsafe_allow_html=True)
+            if desc and valor > 0:
+                db.collection("usuarios").document(st.session_state.user_email).collection("meu_caixa").add({
+                    "descricao": desc, "valor": valor, "tipo": tipo, "categoria": categoria,
+                    "data": datetime.now(fuso_br).strftime('%d/%m/%Y'), "timestamp": datetime.now(fuso_br)
+                })
+                st.success("✅ Lançado!"); st.cache_data.clear(); time.sleep(1); st.rerun()
 
-# ================= RELATÓRIOS E EXPORTAÇÃO =================
-
+# ================= RELATÓRIO =================
 st.divider()
-st.markdown("### 📊 Relatórios & Exportação")
-
-col_rel1, col_rel2 = st.columns(2)
-
-with col_rel1:
-    if st.button("📥 GERAR RELATÓRIO EXCEL", use_container_width=True):
-        try:
-            with st.spinner("Gerando relatório Excel..."):
-                # Cria buffer para Excel
-                buf = io.BytesIO()
-                
-                with pd.ExcelWriter(buf, engine='xlsxwriter') as writer:
-                    # Planilha de clientes
-                    if clientes:
-                        df_clientes = pd.DataFrame(clientes)
-                        df_clientes.to_excel(writer, sheet_name='Clientes', index=False)
-                    
-                    # Planilha de serviços
-                    if servicos:
-                        df_servicos = pd.DataFrame(servicos)
-                        df_servicos.to_excel(writer, sheet_name='Serviços', index=False)
-                    
-                    # Planilha financeira
-                    if caixa:
-                        df_caixa = pd.DataFrame(caixa)
-                        df_caixa.to_excel(writer, sheet_name='Financeiro', index=False)
-                    
-                    # Planilha de agenda
-                    if agenda:
-                        df_agenda = pd.DataFrame(agenda)
-                        df_agenda.to_excel(writer, sheet_name='Agenda', index=False)
-                
-                # Botão de download
-                hoje = datetime.now(fuso_br).strftime('%Y-%m-%d')
-                st.download_button(
-                    label="⬇️ BAIXAR RELATÓRIO",
-                    data=buf.getvalue(),
-                    file_name=f"Vivv_Pro_Relatorio_{hoje}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
-                
-                log_auditoria(
-                    email=st.session_state.user_email,
-                    acao="RELATORIO_GERADO",
-                    detalhes="Relatório Excel gerado"
-                )
-                
-        except Exception as e:
-            logger.error(f"Erro ao gerar relatório: {e}")
-            st.error("❌ Erro ao gerar relatório")
-
-with col_rel2:
-    if st.button("📄 GERAR RELATÓRIO PDF", use_container_width=True):
-        st.info("Funcionalidade em desenvolvimento")
+if st.button("📊 GERAR RELATÓRIO EXCEL", use_container_width=True):
+    try:
+        buf = io.BytesIO()
+        with pd.ExcelWriter(buf, engine='xlsxwriter') as writer:
+            if clientes: pd.DataFrame(clientes).to_excel(writer, sheet_name='Clientes', index=False)
+            if caixa: pd.DataFrame(caixa).to_excel(writer, sheet_name='Financeiro', index=False)
+        hoje = datetime.now(fuso_br).strftime('%Y-%m-%d')
+        st.download_button("⬇️ BAIXAR EXCEL", buf.getvalue(), f"Vivv_Report_{hoje}.xlsx",
+                          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    except: st.error("❌ Erro ao gerar relatório")
 
 # ================= RODAPÉ =================
-
 st.divider()
 st.markdown("""
 <div style="text-align: center; color: #888; padding: 20px;">
-    <small>Vivv Pro Elite © 2024 | Sistema de Gestão para Profissionais de Beleza</small><br>
-    <small>Versão 2.0 | Desenvolvido com ❤️ para transformar seu negócio</small>
+    <small>Vivv Pro Elite © 2024 | Transformando negócios com tecnologia de ponta</small><br>
+    <small>Versão 3.0 | Sistema de gestão premium para profissionais de beleza</small>
 </div>
 """, unsafe_allow_html=True)
-
