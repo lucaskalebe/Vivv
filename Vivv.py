@@ -243,6 +243,52 @@ st.markdown("""
         0% { transform: scale(1); }
         50% { transform: scale(1.02); }
         100% { transform: scale(1); }
+
+    /* Mais espaço entre os cards */
+    div[data-testid="column"] {
+        padding: 8px !important;
+    }
+    
+    /* Cards mais altos e com melhor respiro */
+    .hologram-card {
+        padding: 30px 25px !important;
+        min-height: 140px !important;
+    }
+    
+    /* Hover mais dramático */
+    .hologram-card:hover {
+        transform: translateY(-12px) scale(1.05) !important;
+        box-shadow: 0 35px 70px rgba(0, 212, 255, 0.5) !important;
+        border-image: linear-gradient(45deg, #00d4ff, #0099ff, #00d4ff) 1 !important;
+    }
+    
+    /* Título da empresa mais impactante */
+    h1 {
+        font-size: 3rem !important;
+        margin-bottom: 2rem !important;
+        background: linear-gradient(135deg, #00d4ff, #0099ff, #0066cc, #0099ff, #00d4ff) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        background-clip: text !important;
+        text-shadow: 0 0 40px rgba(0, 212, 255, 0.3) !important;
+        letter-spacing: -0.5px !important;
+    }
+    
+    /* Subtítulos dos cards mais legíveis */
+    .hologram-card small {
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        letter-spacing: 1.2px !important;
+        margin-bottom: 12px !important;
+    }
+    
+    /* Valores maiores */
+    .hologram-card h2 {
+        font-size: 36px !important;
+        margin-top: 5px !important;
+    }
+
+        
     }
 </style>
 
@@ -539,6 +585,7 @@ st.markdown("""
     <small>Versão 3.0 | Sistema de gestão premium para profissionais de beleza</small>
 </div>
 """, unsafe_allow_html=True)
+
 
 
 
