@@ -468,7 +468,7 @@ if agendamentos_hoje > 15: st.markdown('<div class="alert-pulse">⚠️ AGENDA L
 
 st.divider()
 
-# ================= GRÁFICO FINANCEIRO =================
+# ================= GRÁFICO FINANCEIRO - COLUNAS =================
 col_g1, col_g2 = st.columns([2, 1])
 with col_g1:
     if caixa:
@@ -477,24 +477,75 @@ with col_g1:
             df['data'] = pd.to_datetime(df['data'], format='%d/%m/%Y', errors='coerce')
             df = df.dropna().sort_values('data')
             
+            # Agrupar por data
+            df_grouped = df.groupby(['data', 'tipo'])['valor'].sum().unstack(fill_value=0)
+            
+            # Garantir as colunas necessárias
+            for col in ['Entrada', 'Saída']:
+                if col not in df_grouped.columns:
+                    df_grouped[col] = 0
+            
+            # Pegar últimos 14 dias
+            df_grouped = df_grouped.tail(14)
+            
             fig = go.Figure()
-            entradas = df[df['tipo'] == 'Entrada'].groupby('data')['valor'].sum()
-            saidas = df[df['tipo'] == 'Saída'].groupby('data')['valor'].sum()
             
-            if not entradas.empty:
-                fig.add_trace(go.Scatter(x=entradas.index, y=entradas.values, name='Faturamento',
-                                       line=dict(color='#00d4ff', width=4), fill='tozeroy',
-                                       fillcolor='rgba(0, 212, 255, 0.1)'))
+            # Barras de FATURAMENTO (Entradas)
+            fig.add_trace(go.Bar(
+                x=df_grouped.index,
+                y=df_grouped['Entrada'],
+                name='💰 FATURAMENTO',
+                marker_color='#00d4ff',
+                opacity=0.9,
+                hovertemplate='R$ %{y:,.2f}<extra></extra>'
+            ))
             
-            if not saidas.empty:
-                fig.add_trace(go.Scatter(x=saidas.index, y=saidas.values, name='Despesas',
-                                       line=dict(color='#ff4b4b', width=4)))
+            # Barras de DESPESAS (Saídas)
+            fig.add_trace(go.Bar(
+                x=df_grouped.index,
+                y=df_grouped['Saída'],
+                name='📉 DESPESAS',
+                marker_color='#ff4b4b',
+                opacity=0.9,
+                hovertemplate='R$ %{y:,.2f}<extra></extra>'
+            ))
             
-            fig.update_layout(title="📈 Performance Financeira", height=350,
-                            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-                            font_color="white", hovermode="x unified")
+            # Layout premium
+            fig.update_layout(
+                title="📊 PERFORMANCE FINANCEIRA",
+                barmode='group',
+                height=400,
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                font_color="white",
+                hovermode="x unified",
+                showlegend=True,
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.02,
+                    xanchor="right",
+                    x=1,
+                    font=dict(size=14)
+                ),
+                xaxis=dict(
+                    tickformat="%d/%m",
+                    gridcolor='rgba(255,255,255,0.1)',
+                    title="DATA"
+                ),
+                yaxis=dict(
+                    gridcolor='rgba(255,255,255,0.1)',
+                    title="VALOR (R$)",
+                    tickprefix="R$ "
+                ),
+                margin=dict(l=20, r=20, t=60, b=40)
+            )
+            
             st.plotly_chart(fig, use_container_width=True)
-        except: st.info("📊 Gráfico em processamento...")
+            
+        except Exception as e:
+            st.info("📊 Processando dados para gráfico...")
+            # st.error(f"Erro: {e}")  # Remova o comentário para debug
 
 # ================= OPERAÇÕES =================
 st.markdown("### ⚡ Gestão Operacional")
@@ -582,6 +633,7 @@ st.markdown("""
     <small>Versão 3.0 | Sistema de gestão premium para profissionais de beleza</small>
 </div>
 """, unsafe_allow_html=True)
+
 
 
 
