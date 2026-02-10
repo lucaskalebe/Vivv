@@ -505,8 +505,11 @@ with col_g1:
                 x=df_grouped.index,
                 y=df_grouped['Saída'],
                 name='📉 DESPESAS',
-                marker_color='#00C853'
-                opacity=0.9,
+                marker=dict(
+                    color='#00C853',  # Verde
+                    opacity=0.9,
+                    line=dict(color='#00E676', width=1)
+                ),
                 hovertemplate='R$ %{y:,.2f}<extra></extra>'
             ))
             
@@ -633,6 +636,7 @@ st.markdown("""
     <small>Versão 3.0 | Sistema de gestão premium para profissionais de beleza</small>
 </div>
 """, unsafe_allow_html=True)
+
 
 
 
