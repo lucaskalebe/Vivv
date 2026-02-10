@@ -364,6 +364,8 @@ def inicializar_firebase():
             logger.error(f"Erro ao registrar log: {e}")
     
 
+# ... (mantenha todo o código até a linha 385 igual)
+
 # ================= INICIALIZAÇÃO DOS SERVIÇOS =================
 
 # Inicializa o banco de dados
@@ -388,7 +390,8 @@ if db is None:
     """)
     st.stop()
 
-# Funções do banco de dados com tratamento de erro
+# ================= FUNÇÕES DO BANCO DE DADOS =================
+
 def buscar_usuario(email: str):
     """Busca um usuário pelo email."""
     try:
@@ -462,6 +465,19 @@ def carregar_dados_usuario(email: str):
         st.error(f"⚠️ Erro ao carregar dados: {e}")
         return [], [], [], []  # Sempre retorna listas vazias
 
+def log_auditoria(email: str, acao: str, detalhes: str = ""):
+    """Registra log de auditoria."""
+    try:
+        log_data = {
+            "email": email,
+            "acao": acao,
+            "detalhes": detalhes,
+            "timestamp": datetime.now(fuso_br)
+        }
+        db.collection("logs_auditoria").add(log_data)
+    except Exception as e:
+        logger.error(f"Erro ao registrar log: {e}")
+
 # ================= GERENCIAMENTO DE SESSÃO =================
 
 # Estado inicial da sessão
@@ -502,177 +518,7 @@ if st.session_state.logado and st.session_state.user_email:
 else:
     clientes, servicos, agenda, caixa = [], [], [], []
 
-class UIComponents:
-    """Componentes de UI reutilizáveis com estilo elite."""
-    
-    @staticmethod
-    def mostrar_loading(message: str = "Carregando..."):
-        """Mostra spinner com estilo personalizado."""
-        with st.spinner(f"⚡ {message}"):
-            time.sleep(0.5)
-    
-    @staticmethod
-    def mostrar_alerta(tipo: str, mensagem: str):
-        """Exibe alertas estilizados."""
-        alerta = ALERTAS.get(tipo, {"cor": "#FF6B6B", "icone": "⚠️"})
-        
-        st.markdown(f"""
-        <div style="
-            background: rgba({int(int(alerta['cor'][1:3], 16))}, 
-                           {int(int(alerta['cor'][3:5], 16))}, 
-                           {int(int(alerta['cor'][5:7], 16))}, 0.1);
-            border: 1px solid {alerta['cor']};
-            border-radius: 12px;
-            padding: 15px;
-            margin: 10px 0;
-            color: white;
-        ">
-            <strong>{alerta['icone']} {mensagem}</strong>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    @staticmethod
-    def criar_grafico_financeiro(dados_caixa: List[Dict]) -> go.Figure:
-        """Cria gráfico de linha comparando faturamento vs despesas."""
-        if not dados_caixa:
-            return go.Figure()
-        
-        df = pd.DataFrame(dados_caixa)
-        
-        # Garante que temos a coluna data
-        if 'data' not in df.columns:
-            return go.Figure()
-        
-        # Converte datas e agrupa por dia
-        try:
-            df['data_dt'] = pd.to_datetime(df['data'], format='%d/%m/%Y', errors='coerce')
-            df = df.dropna(subset=['data_dt'])
-            
-            # Filtra últimos 7 dias
-            data_limite = datetime.now(fuso_br) - timedelta(days=7)
-            df = df[df['data_dt'] >= data_limite]
-            
-            # Agrupa por data e tipo
-            df_agrupado = df.groupby(['data_dt', 'tipo'])['valor'].sum().unstack(fill_value=0)
-            
-            # Cria o gráfico
-            fig = go.Figure()
-            
-            if 'Entrada' in df_agrupado.columns:
-                fig.add_trace(go.Scatter(
-                    x=df_agrupado.index,
-                    y=df_agrupado['Entrada'],
-                    mode='lines+markers',
-                    name='Faturamento',
-                    line=dict(color='#00d4ff', width=3),
-                    marker=dict(size=8)
-                ))
-            
-            if 'Saída' in df_agrupado.columns:
-                fig.add_trace(go.Scatter(
-                    x=df_agrupado.index,
-                    y=df_agrupado['Saída'],
-                    mode='lines+markers',
-                    name='Despesas',
-                    line=dict(color='#ff4b4b', width=3),
-                    marker=dict(size=8)
-                ))
-            
-            # Calcular lucro diário
-            df_agrupado['Lucro'] = df_agrupado.get('Entrada', 0) - df_agrupado.get('Saída', 0)
-            
-            fig.add_trace(go.Scatter(
-                x=df_agrupado.index,
-                y=df_agrupado['Lucro'],
-                mode='lines',
-                name='Lucro',
-                line=dict(color='#4CAF50', width=2, dash='dash'),
-                fill='tonexty',
-                fillcolor='rgba(76, 175, 80, 0.1)'
-            ))
-            
-            fig.update_layout(
-                title="📈 Performance Financeira - Últimos 7 Dias",
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)',
-                font_color="white",
-                height=400,
-                hovermode="x unified",
-                legend=dict(
-                    orientation="h",
-                    yanchor="bottom",
-                    y=1.02,
-                    xanchor="right",
-                    x=1
-                ),
-                xaxis=dict(
-                    gridcolor='rgba(255,255,255,0.1)',
-                    tickformat='%d/%m'
-                ),
-                yaxis=dict(
-                    gridcolor='rgba(255,255,255,0.1)',
-                    tickprefix='R$ '
-                )
-            )
-            
-            return fig
-            
-        except Exception as e:
-            logger.error(f"Erro ao criar gráfico: {e}")
-            return go.Figure()
-    
-    @staticmethod
-    def calcular_metricas_negocio(clientes, servicos, agenda, caixa):
-        """Calcula métricas de negócio com alertas inteligentes."""
-        # Garante que temos listas (nunca nulo)
-        clientes = clientes or []
-        servicos = servicos or []
-        agenda = agenda or []
-        caixa = caixa or []
-        
-        # Métricas básicas
-        total_clientes = len(clientes)
-        total_servicos = len(servicos)
-        agendamentos_hoje = len([a for a in agenda if a.get('data') == datetime.now(fuso_br).strftime('%d/%m/%Y')])
-        
-        # Cálculos financeiros
-        faturamento = sum(x.get("valor", 0) for x in caixa if x.get("tipo") == "Entrada")
-        despesas = sum(x.get("valor", 0) for x in caixa if x.get("tipo") == "Saída")
-        lucro = faturamento - despesas
-        
-        # Alertas de negócio
-        alertas = []
-        
-        # Alerta de estoque baixo (simulação - integrar com sistema de estoque)
-        if total_servicos > 0 and total_clientes / total_servicos > 50:
-            alertas.append({
-                "tipo": "estoque_baixo",
-                "mensagem": f"Estoque baixo! {total_clientes} clientes para {total_servicos} serviços"
-            })
-        
-        # Alerta de agenda lotada
-        if agendamentos_hoje > LOTACAO_MAXIMA:
-            alertas.append({
-                "tipo": "agenda_lotada",
-                "mensagem": f"Agenda lotada! {agendamentos_hoje} atendimentos hoje"
-            })
-        
-        # Alerta de lucro positivo/negativo
-        if lucro > 0:
-            alertas.append({
-                "tipo": "lucro_positivo",
-                "mensagem": f"Lucro positivo: R$ {lucro:,.2f}"
-            })
-        
-        return {
-            "total_clientes": total_clientes,
-            "total_servicos": total_servicos,
-            "agendamentos_hoje": agendamentos_hoje,
-            "faturamento": faturamento,
-            "despesas": despesas,
-            "lucro": lucro,
-            "alertas": alertas
-        }
+# ... (mantenha a classe UIComponents igual)
 
 # ================= TELA DE LOGIN / CADASTRO =================
 
@@ -707,7 +553,6 @@ if not st.session_state.logado:
                         
                         try:
                             user = buscar_usuario(email)
-
                             
                             if user and user.get("senha") == SecurityManager.hash_senha(senha):
                                 if user.get("ativo", False):
@@ -716,7 +561,7 @@ if not st.session_state.logado:
                                     st.session_state.user_data = user
                                     
                                     # Log de auditoria
-                                    db_manager.log_auditoria(
+                                    log_auditoria(
                                         email=email,
                                         acao="LOGIN",
                                         detalhes="Login realizado com sucesso"
@@ -827,7 +672,7 @@ if not st.session_state.user_data.get("ativo", False):
                 st.rerun()
         
         if st.button("🚪 SAIR", type="secondary"):
-            st.session_state.logado = False
+            fazer_logout()
             st.rerun()
         
         st.markdown('</div>', unsafe_allow_html=True)
@@ -852,75 +697,6 @@ with col_header2:
     if st.button("🚪 LOGOUT", use_container_width=True):
         fazer_logout()
         st.rerun()
-
-# ================= METRICAS E ALERTAS =================
-
-st.markdown("### 📊 Dashboard de Performance")
-
-# Cards de métricas
-col_m1, col_m2, col_m3, col_m4 = st.columns(4)
-
-with col_m1:
-    st.markdown(f'''
-    <div class="metric-card-elite">
-        <small>👥 CLIENTES ATIVOS</small>
-        <h2>{metricas["total_clientes"]}</h2>
-        <small style="color:#00d4ff">+5% vs. semana passada</small>
-    </div>
-    ''', unsafe_allow_html=True)
-
-with col_m2:
-    st.markdown(f'''
-    <div class="metric-card-elite">
-        <small>💰 FATURAMENTO</small>
-        <h2 style="color:#00d4ff">R$ {metricas["faturamento"]:,.2f}</h2>
-        <small style="color:#00d4ff">Últimos 30 dias</small>
-    </div>
-    ''', unsafe_allow_html=True)
-
-with col_m3:
-    st.markdown(f'''
-    <div class="metric-card-elite">
-        <small>📈 LUCRO LÍQUIDO</small>
-        <h2 style="color:#4CAF50">R$ {metricas["lucro"]:,.2f}</h2>
-        <small style="color:#4CAF50">Margem: {(metricas["lucro"]/metricas["faturamento"]*100 if metricas["faturamento"] > 0 else 0):.1f}%</small>
-    </div>
-    ''', unsafe_allow_html=True)
-
-with col_m4:
-    st.markdown(f'''
-    <div class="metric-card-elite">
-        <small>📅 AGENDA HOJE</small>
-        <h2 style="color:#FFA726">{metricas["agendamentos_hoje"]}</h2>
-        <small style="color:#FFA726">{metricas["agendamentos_hoje"]}/{LOTACAO_MAXIMA} lotação</small>
-    </div>
-    ''', unsafe_allow_html=True)
-
-# Alertas de negócio
-if metricas["alertas"]:
-    st.markdown("### ⚠️ Alertas do Sistema")
-    cols_alerta = st.columns(min(3, len(metricas["alertas"])))
-    
-    for idx, alerta in enumerate(metricas["alertas"]):
-        with cols_alerta[idx % len(cols_alerta)]:
-            alert_config = ALERTAS.get(alerta["tipo"], {"cor": "#FF6B6B", "icone": "⚠️"})
-            st.markdown(f'''
-            <div style="
-                background: rgba({int(alert_config['cor'][1:3], 16)}, 
-                               {int(alert_config['cor'][3:5], 16)}, 
-                               {int(alert_config['cor'][5:7], 16)}, 0.15);
-                border: 1px solid {alert_config['cor']};
-                border-radius: 12px;
-                padding: 15px;
-                margin: 5px;
-                color: white;
-                text-align: center;
-            ">
-                <strong>{alert_config['icone']} {alerta["mensagem"]}</strong>
-            </div>
-            ''', unsafe_allow_html=True)
-
-st.divider()
 
 # ================= METRICAS E ALERTAS =================
 
@@ -1086,7 +862,7 @@ with tab1:
                     # Salva no banco
                     db.collection("usuarios").document(
                         st.session_state.user_email
-                    ).collection("minha_agenda").add({...})
+                    ).collection("minha_agenda").add({
                         "cliente": cliente_nome,
                         "servico": servico_nome,
                         "preco": float(preco_servico),
@@ -1098,7 +874,7 @@ with tab1:
                     })
                     
                     # Log de auditoria
-                    log_auditoria(...)
+                    log_auditoria(
                         email=st.session_state.user_email,
                         acao="AGENDAMENTO_CRIADO",
                         detalhes=f"Agendamento para {cliente_nome} - {servico_nome}"
@@ -1129,11 +905,11 @@ with tab1:
                 with col3:
                     if st.button("🗑️", key=f"del_ag_{ag.get('id')}"):
                         try:
-                            db_manager.db.collection("usuarios").document(
+                            db.collection("usuarios").document(
                                 st.session_state.user_email
                             ).collection("minha_agenda").document(ag.get('id')).delete()
                             
-                            db_manager.log_auditoria(
+                            log_auditoria(
                                 email=st.session_state.user_email,
                                 acao="AGENDAMENTO_EXCLUIDO",
                                 detalhes=f"Agendamento {ag.get('id')} excluído"
@@ -1171,7 +947,7 @@ with tab2:
                 st.error("❌ Telefone é obrigatório")
             else:
                 try:
-                    db_manager.db.collection("usuarios").document(
+                    db.collection("usuarios").document(
                         st.session_state.user_email
                     ).collection("meus_clientes").add({
                         "nome": nome_cli.strip(),
@@ -1183,7 +959,7 @@ with tab2:
                         "timestamp": datetime.now(fuso_br)
                     })
                     
-                    db_manager.log_auditoria(
+                    log_auditoria(
                         email=st.session_state.user_email,
                         acao="CLIENTE_CRIADO",
                         detalhes=f"Cliente {nome_cli} cadastrado"
@@ -1199,34 +975,6 @@ with tab2:
                     st.error("❌ Erro ao cadastrar cliente")
     
     st.markdown('</div>', unsafe_allow_html=True)
-    
-    # Lista de clientes
-    if clientes:
-        st.markdown(f"#### 👥 Lista de Clientes ({len(clientes)})")
-        
-        # Filtro
-        filtro_nome = st.text_input("🔍 Filtrar por nome")
-        
-        clientes_filtrados = [
-            c for c in clientes 
-            if filtro_nome.lower() in c.get('nome', '').lower()
-        ] if filtro_nome else clientes
-        
-        if clientes_filtrados:
-            for cli in clientes_filtrados[:20]:  # Limita a 20 para performance
-                with st.expander(f"👤 {cli.get('nome', 'N/A')}"):
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.write(f"**Telefone:** {cli.get('telefone', 'N/A')}")
-                        st.write(f"**Email:** {cli.get('email', 'N/A')}")
-                    with col2:
-                        st.write(f"**Cadastrado em:** {cli.get('data_cadastro', 'N/A')}")
-                        if cli.get('aniversario'):
-                            st.write(f"**Aniversário:** {cli.get('aniversario')}")
-                    
-                    if st.button("Editar", key=f"edit_cli_{cli.get('id')}"):
-                        st.session_state.editar_cliente_id = cli.get('id')
-                        st.rerun()
 
 with tab3:
     st.markdown('<div class="glass-card">', unsafe_allow_html=True)
@@ -1256,7 +1004,7 @@ with tab3:
                 st.error("❌ Preço deve ser maior que zero")
             else:
                 try:
-                    db_manager.db.collection("usuarios").document(
+                    db.collection("usuarios").document(
                         st.session_state.user_email
                     ).collection("meus_servicos").add({
                         "nome": nome_serv.strip(),
@@ -1269,7 +1017,7 @@ with tab3:
                         "timestamp": datetime.now(fuso_br)
                     })
                     
-                    db_manager.log_auditoria(
+                    log_auditoria(
                         email=st.session_state.user_email,
                         acao="SERVICO_CRIADO",
                         detalhes=f"Serviço {nome_serv} criado"
@@ -1285,22 +1033,6 @@ with tab3:
                     st.error("❌ Erro ao cadastrar serviço")
     
     st.markdown('</div>', unsafe_allow_html=True)
-    
-    # Lista de serviços
-    if servicos:
-        st.markdown(f"#### 🛠️ Lista de Serviços ({len(servicos)})")
-        
-        for srv in servicos:
-            with st.container():
-                col1, col2, col3 = st.columns([3, 1, 1])
-                with col1:
-                    st.write(f"**{srv.get('nome', 'N/A')}**")
-                    st.caption(srv.get('categoria', 'Sem categoria'))
-                with col2:
-                    st.write(f"**R$ {srv.get('preco', 0):.2f}**")
-                with col3:
-                    status = "✅ Ativo" if srv.get('ativo', True) else "❌ Inativo"
-                    st.write(status)
 
 with tab4:
     st.markdown('<div class="glass-card">', unsafe_allow_html=True)
@@ -1334,7 +1066,7 @@ with tab4:
                 st.error("❌ Valor deve ser maior que zero")
             else:
                 try:
-                    db_manager.db.collection("usuarios").document(
+                    db.collection("usuarios").document(
                         st.session_state.user_email
                     ).collection("meu_caixa").add({
                         "descricao": descricao.strip(),
@@ -1347,7 +1079,7 @@ with tab4:
                         "registrado_em": datetime.now(fuso_br)
                     })
                     
-                    db_manager.log_auditoria(
+                    log_auditoria(
                         email=st.session_state.user_email,
                         acao="LANCAMENTO_FINANCEIRO",
                         detalhes=f"{tipo} de R$ {valor:.2f} - {descricao}"
@@ -1363,32 +1095,6 @@ with tab4:
                     st.error("❌ Erro ao registrar lançamento")
     
     st.markdown('</div>', unsafe_allow_html=True)
-    
-    # Resumo financeiro
-    if caixa:
-        st.markdown("#### 📊 Resumo Financeiro")
-        
-        df_caixa = pd.DataFrame(caixa)
-        
-        # Converte valor para numérico
-        df_caixa['valor'] = pd.to_numeric(df_caixa['valor'], errors='coerce')
-        
-        # Agrupa por tipo
-        resumo = df_caixa.groupby('tipo')['valor'].sum()
-        
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            entrada = resumo.get('Entrada', 0)
-            st.metric("Total Entradas", f"R$ {entrada:,.2f}")
-        
-        with col2:
-            saida = resumo.get('Saída', 0)
-            st.metric("Total Saídas", f"R$ {saida:,.2f}")
-        
-        with col3:
-            saldo = entrada - saida
-            st.metric("Saldo Atual", f"R$ {saldo:,.2f}")
 
 # ================= RELATÓRIOS E EXPORTAÇÃO =================
 
@@ -1434,7 +1140,7 @@ with col_rel1:
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
                 
-                db_manager.log_auditoria(
+                log_auditoria(
                     email=st.session_state.user_email,
                     acao="RELATORIO_GERADO",
                     detalhes="Relatório Excel gerado"
