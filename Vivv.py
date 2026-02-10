@@ -287,40 +287,29 @@ st.markdown("""
         font-size: 36px !important;
         margin-top: 5px !important;
 
-
-        /* ========== COR DOS INPUTS AO PASSAR MOUSE ========== */
+        /* SOLUÇÃO NUCLEAR - Remove todo vermelho */
+    * {
+        --border-color-hover: #00d4ff !important;
+        --border-color-focus: #00d4ff !important;
+    }
     
-    /* Remove vermelho padrão do Streamlit */
-    .stTextInput > div > div > input:hover,
-    .stNumberInput > div > div > input:hover,
-    .stSelectbox > div > div > select:hover,
-    .stDateInput > div > div > input:hover,
-    .stTimeInput > div > div > input:hover {
+    /* Sobrescreve variáveis CSS do Streamlit */
+    :root {
+        --primary-color: #00d4ff !important;
+        --hover-color: #00d4ff !important;
+    }
+    
+    /* Remove estilo vermelho de inputs específicos */
+    [data-baseweb="input"] {
+        border-color: rgba(0, 212, 255, 0.3) !important;
+    }
+    
+    [data-baseweb="input"]:hover,
+    [data-baseweb="input"]:focus {
         border-color: #00d4ff !important;
-        box-shadow: 0 0 15px rgba(0, 212, 255, 0.3) !important;
+        box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.3) !important;
     }
     
-    /* Foco branco ou verde */
-    .stTextInput > div > div > input:focus,
-    .stNumberInput > div > div > input:focus,
-    .stSelectbox > div > div > select:focus,
-    .stDateInput > div > div > input:focus,
-    .stTimeInput > div > div > input:focus {
-        border-color: #00d4ff !important;
-        box-shadow: 0 0 20px rgba(0, 212, 255, 0.4) !important;
-    }
-    
-    /* Para verde ao invés de azul */
-    .stTextInput > div > div > input:hover,
-    .stNumberInput > div > div > input:hover {
-        border-color: #4CAF50 !important; /* VERDE */
-    }
-    
-    .stTextInput > div > div > input:focus,
-    .stNumberInput > div > div > input:focus {
-        border-color: #4CAF50 !important; /* VERDE */
-        box-shadow: 0 0 20px rgba(76, 175, 80, 0.4) !important;
-    }
 </style>
 
 <div class="vivv-logo">VIVV<span style="color:#00d4ff">.</span>PRO</div>
@@ -670,6 +659,7 @@ st.markdown("""
     <small>Versão 3.0 | Sistema de gestão premium para profissionais de beleza</small>
 </div>
 """, unsafe_allow_html=True)
+
 
 
 
