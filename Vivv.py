@@ -77,26 +77,33 @@ st.markdown("""
 st.markdown('<div class="vivv-logo">Vivv<span style="color:#00d4ff">.</span></div>', unsafe_allow_html=True)
 
 # ================= 2. BANCO DE DADOS (FIRESTORE) =================
-
 @st.cache_resource
 def init_db():
     try:
-        if "FIREBASE_DETAILS" not in st.secrets:
-            st.error("Erro: FIREBASE_DETAILS não configurado.")
-            return None
         firebase_raw = st.secrets["FIREBASE_DETAILS"]
         secrets_dict = json.loads(firebase_raw)
         creds = service_account.Credentials.from_service_account_info(secrets_dict)
         return firestore.Client(credentials=creds)
     except Exception as e:
-        st.error(f"Erro Crítico: {e}")
+        st.error(f"Erro na conexão: {e}")
         return None
 
 db = init_db()
-if not db: st.stop()
+
+# ================= 3. LÓGICA DE PAGAMENTO (STRIPE) =================
+def criar_checkout_stripe(email_usuario):
+    """
+    Simulação/Estrutura para o Stripe. 
+    Aqui você geraria o link real via API do Stripe.
+    """
+    # Exemplo de URL de checkout (substitua pelo link gerado via stripe.checkout.Session.create)
+    # Com R$ 300 setup + R$ 49,90/mês
+    checkout_url = "https://buy.stripe.com/exemplo_seu_link" 
+    return checkout_url
 
 # ================= 3. AUTENTICAÇÃO E SEGURANÇA =================
 if "logado" not in st.session_state: st.session_state.logado = False
+if "user_data" not in st.session_state: st.session_state.user_data = None
 
 if not st.session_state.logado:
     col_l, col_c, col_r = st.columns([1, 2, 1])
@@ -108,55 +115,81 @@ if not st.session_state.logado:
             le = st.text_input("E-mail", key="login_email").lower().strip()
             ls = st.text_input("Senha", type="password", key="login_pass")
             if st.button("ACESSAR SISTEMA", use_container_width=True):
-                if le and ls:
-                    u = db.collection("usuarios").document(le).get()
-                    if u.exists:
-                        if u.to_dict().get("senha") == hash_senha(ls):
-                            st.session_state.logado = True
-                            st.session_state.user_email = le
-                            st.success("Acesso autorizado!")
-                            time.sleep(0.5)
-                            st.rerun()
-                        else: st.error("Senha incorreta.")
-                    else: st.error("Usuário não encontrado.")
+                u_doc = db.collection("usuarios").document(le).get()
+                if u_doc.exists:
+                    u_data = u_doc.to_dict()
+                    if u_data.get("senha") == hash_senha(ls):
+                        st.session_state.logado = True
+                        st.session_state.user_email = le
+                        st.session_state.user_data = u_data
+                        st.rerun()
+                    else: st.error("Senha incorreta.")
+                else: st.error("Usuário não encontrado.")
 
         with tab_c:
-            with st.form("reg_master"):
-                n = st.text_input("Nome da Empresa/Profissional")
-                e = st.text_input("E-mail de Acesso").lower().strip()
-                s = st.text_input("Senha Master", type="password")
-                if st.form_submit_button("FINALIZAR CADASTRO", use_container_width=True):
-                    if e and s:
-                        if db.collection("usuarios").document(e).get().exists: st.error("E-mail já em uso.")
+            with st.form("reg_etapa_1"):
+                st.subheader("🚀 Comece agora")
+                col1, col2 = st.columns(2)
+                user_id = col1.text_input("Username Único (@exemplo)")
+                nome_p = col2.text_input("Seu Nome Completo")
+                
+                email_c = st.text_input("E-mail de Acesso").lower().strip()
+                whatsapp = st.text_input("WhatsApp (com DDD)")
+                
+                empresa = st.text_input("Nome do seu Negócio")
+                tipo_neg = st.selectbox("Tipo de Negócio", ["Barbearia", "Salão de Beleza", "Estética", "Outros"])
+                
+                senha_c = st.text_input("Crie uma Senha Master", type="password")
+                
+                if st.form_submit_button("IR PARA PAGAMENTO 💳", use_container_width=True):
+                    if email_c and senha_c and user_id:
+                        # Verifica se usuário já existe
+                        if db.collection("usuarios").document(email_c).get().exists:
+                            st.error("E-mail já cadastrado.")
                         else:
-                            val = datetime.now(fuso_br) + timedelta(days=7)
-                            db.collection("usuarios").document(e).set({
-                                "nome": n, "senha": hash_senha(s), 
-                                "pago": False, "validade": val, "criado_em": datetime.now()
-                            })
-                            st.success("Conta criada! Vá para aba Login.")
+                            # SALVA ETAPA 1 NO FIRESTORE
+                            novo_user = {
+                                "username": user_id,
+                                "nome": nome_p,
+                                "whatsapp": whatsapp,
+                                "empresa": empresa,
+                                "tipo_negocio": tipo_neg,
+                                "senha": hash_senha(senha_c),
+                                "ativo": False, # Bloqueado até pagar
+                                "pago": False,
+                                "plano": "pro",
+                                "criado_em": datetime.now(fuso_br)
+                            }
+                            db.collection("usuarios").document(email_c).set(novo_user)
+                            st.success("Cadastro realizado! Redirecionando para o pagamento...")
+                            time.sleep(1.5)
+                            # Simula redirecionamento
+                            st.markdown(f'<meta http-equiv="refresh" content="0;URL=\'{criar_checkout_stripe(email_c)}\'">', unsafe_allow_html=True)
+                            st.stop()
     st.stop()
 
 # ================= 4. CORE ENGINE (DATA & ACCESS) =================
 user_ref = db.collection("usuarios").document(st.session_state.user_email)
+# Refresh dos dados para garantir status real do Firestore (importante pós-pagamento)
+user_data = user_ref.get().to_dict()
 
-@st.cache_data(ttl=60)
-def load_vivv_data(email):
-    u = db.collection("usuarios").document(email)
-    c = [{"id": d.id, **d.to_dict()} for d in u.collection("meus_clientes").stream()]
-    s = [{"id": d.id, **d.to_dict()} for d in u.collection("meus_servicos").stream()]
-    a = [{"id": d.id, **d.to_dict()} for d in u.collection("minha_agenda").where("status", "==", "Pendente").stream()]
-    a = sorted(a, key=lambda x: x.get('hora', '00:00'))
-    cx = [d.to_dict() for d in u.collection("meu_caixa").stream()]
-    return c, s, a, cx
-
-clis, srvs, agnd, cx_list = load_vivv_data(st.session_state.user_email)
-
-hoje_str = datetime.now(fuso_br).strftime('%d/%m/%Y')
-clis_hoje = [a for a in agnd if a.get('data') == hoje_str]
-
-faturamento = sum([float(x.get('valor', 0)) for x in cx_list if x.get('tipo') == 'Entrada'])
-despesas = sum([float(x.get('valor', 0)) for x in cx_list if x.get('tipo') == 'Saída'])
+if not user_data.get("ativo", False):
+    st.warning("### 💳 Aguardando confirmação de pagamento")
+    st.info(f"Olá {user_data.get('nome')}, detectamos que sua conta ainda não foi ativada.")
+    
+    st.markdown(f"""
+    **O que está incluso no Plano Pro:**
+    * Taxa de Ativação: R$ 300,00 (única)
+    * Mensalidade: R$ 49,90
+    """)
+    
+    if st.button("FINALIZAR PAGAMENTO AGORA", use_container_width=True):
+        st.markdown(f'<meta http-equiv="refresh" content="0;URL=\'{criar_checkout_stripe(st.session_state.user_email)}\'">', unsafe_allow_html=True)
+    
+    if st.button("Já paguei? Atualizar status", type="secondary"):
+        st.rerun()
+        
+    st.stop() # Mata a execução aqui, não deixa ver o dashboard
 
 # ================= 5. DASHBOARD ELITE =================
 c_top1, c_top2 = st.columns([5,1])
@@ -302,30 +335,4 @@ with col_perf_r:
         if cx_list: pd.DataFrame(cx_list).astype(str).to_excel(writer, sheet_name='Caixa', index=False)
     st.download_button(label="📥 BAIXAR RELATÓRIO EXCEL", data=buf.getvalue(), file_name=f"VIVV_PRO_{datetime.now().strftime('%d_%m')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
 
-# ================= 9. VIVV AI: UPGRADE PARA GEMINI 2.0 =================
-st.write("---")
-if "GOOGLE_API_KEY" in st.secrets:
-    genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-    st.subheader("💬 Vivv AI: Consultoria Estratégica")
-    
-    prompt_ia = st.text_input("Analise seu negócio ou peça dicas:", placeholder="Ex: Como atrair clientes?", key="ia_input_master")
-    
-    if st.button("SOLICITAR ANÁLISE IA", use_container_width=True) and prompt_ia:
-        with st.spinner("Vivv AI gerando insights com Gemini 2.0..."):
-            try:
-                # Atualizado para a versão 2.0 Flash, que é mais rápida e precisa
-                model = genai.GenerativeModel('gemini-2.0-flash')
-                
-                contexto = f"""Você é o consultor estratégico do Vivv Pro.
-                Dados do usuário: {len(clis)} clientes, Faturamento R$ {faturamento:.2f}.
-                Pergunta: {prompt_ia}
-                Dê conselhos práticos para escalar o negócio."""
-                
-                response = model.generate_content(contexto)
-                st.markdown(f'<div class="ia-box"><b>Vivv AI Insights (v2.0):</b><br><br>{response.text}</div>', unsafe_allow_html=True)
-                
-            except Exception as e:
-                if "429" in str(e):
-                    st.error("🚀 A Vivv AI está processando muitas consultas no momento. Por favor, aguarde 1 minutinho e tente novamente!")
-                else:
-                    st.error("Ops! Tivemos um pequeno soluço técnico. Tente novamente em instantes.")
+
