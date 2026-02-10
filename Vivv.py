@@ -29,15 +29,83 @@ def email_valido(email):
 def format_brl(valor):
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-# ================= ESTILO =================
+# ================= ESTILO PREMIUM =================
 
 st.markdown("""
 <style>
-header, [data-testid="stHeader"], .stAppDeployButton { display: none !important; }
-.stApp { background-color: #000205 !important; }
-.block-container { padding-top: 50px !important; max-width: 95% !important; }
+header, [data-testid="stHeader"], .stAppDeployButton {
+    display: none !important;
+}
+
+.stApp {
+    background: linear-gradient(180deg, #000205 0%, #000814 100%);
+}
+
+.block-container {
+    padding-top: 60px !important;
+    max-width: 95% !important;
+}
+
+.vivv-logo {
+    position: fixed;
+    top: 15px;
+    left: 25px;
+    color: #ffffff;
+    font-size: 30px;
+    font-weight: 900;
+    z-index: 999999;
+    letter-spacing: -1px;
+    text-shadow: 0 0 12px rgba(0, 212, 255, 0.6);
+}
+
+.metric-card {
+    background: linear-gradient(145deg, #000814, #001a2c);
+    border: 1px solid rgba(0, 86, 179, 0.4);
+    border-radius: 16px;
+    padding: 20px;
+    transition: all 0.3s ease;
+}
+
+.metric-card:hover {
+    border: 1px solid #00d4ff;
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
+    transform: translateY(-3px);
+}
+
+.metric-card small {
+    color: #8899A6;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.metric-card h2 {
+    margin: 0;
+    font-size: 2rem !important;
+    font-weight: 800;
+}
+
+div.stButton > button {
+    border-radius: 10px !important;
+    font-weight: 700 !important;
+    background: linear-gradient(90deg, #00d4ff, #0099ff) !important;
+    color: white !important;
+    border: none !important;
+}
+
+[data-testid="stForm"] {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(0, 212, 255, 0.15) !important;
+    border-radius: 15px !important;
+    padding: 15px !important;
+}
 </style>
 """, unsafe_allow_html=True)
+
+st.markdown(
+    '<div class="vivv-logo">Vivv<span style="color:#00d4ff">.</span></div>',
+    unsafe_allow_html=True
+)
+
 
 # ================= BANCO DE DADOS =================
 
@@ -249,3 +317,4 @@ if st.button("Baixar relatório Excel"):
         if caixa:
             pd.DataFrame(caixa).to_excel(writer, sheet_name='Financeiro')
     st.download_button("Clique para baixar", buf.getvalue(), f"Vivv_{hoje_str}.xlsx")
+
