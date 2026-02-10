@@ -307,152 +307,200 @@ class SecurityManager:
 
 # ================= GERENCIAMENTO DE BANCO DE DADOS COM TRATAMENTO DE EXCEÇÕES =================
 
-class FirestoreManager:
-    """Gerencia todas as operações do Firestore com tratamento robusto de exceções."""
-    
-    def __init__(self):
-        self.db = None
-        self.init_db()
-    
-    @st.cache_resource
-    def init_db(_self):
-        """Inicializa conexão com Firestore com tratamento de erros."""
-        try:
-            firebase_raw = st.secrets["FIREBASE_DETAILS"]
-            secrets_dict = json.loads(firebase_raw)
-            creds = service_account.Credentials.from_service_account_info(secrets_dict)
-            db = firestore.Client(credentials=creds)
-            
-            # Testa a conexão
-            db.collection("test").document("test").set({"test": datetime.now()})
-            logger.info("Conexão com Firestore estabelecida com sucesso")
-            return db
-        except json.JSONDecodeError as e:
-            logger.error(f"Erro no formato do JSON de configuração: {e}")
-            st.error("❌ Erro na configuração do banco de dados. Contate o suporte.")
-            st.stop()
-        except GoogleCloudError as e:
-            logger.error(f"Erro de conexão com Google Cloud: {e}")
-            st.error("🌐 Erro de conexão com o servidor. Verifique sua internet.")
-            st.stop()
-        except Exception as e:
-            logger.error(f"Erro inesperado ao conectar ao banco: {e}")
-            st.error("🔧 Erro crítico no sistema. Contate o suporte técnico.")
-            st.stop()
-    
-    def get_user(self, email: str) -> Optional[Dict]:
-        """Busca usuário com tratamento de exceções."""
-        try:
-            doc = self.db.collection("usuarios").document(email).get()
-            if doc.exists:
-                return doc.to_dict()
+@st.cache_resource
+def inicializar_firebase():
+    """Inicializa e retorna conexão com Firebase Firestore."""
+    try:
+        # Verifica se existe a configuração
+        if "FIREBASE_DETAILS" not in st.secrets:
+            st.error("❌ Configuração do Firebase não encontrada.")
             return None
-        except GoogleCloudError as e:
-            logger.error(f"Erro ao buscar usuário {email}: {e}")
-            st.error("⚠️ Erro temporário. Tente novamente.")
+        
+        # Carrega as credenciais
+        firebase_config = st.secrets["FIREBASE_DETAILS"]
+        
+        if not firebase_config or firebase_config.strip() == "":
+            st.error("❌ Configuração do Firebase está vazia.")
             return None
-    
-    def criar_usuario(self, dados: Dict) -> bool:
-        """Cria usuário com validação e tratamento de erros."""
-        try:
-            # Validação dos dados
-            campos_obrigatorios = ["email", "username", "nome", "senha"]
-            valido, mensagem = SecurityManager.validar_campos_obrigatorios(dados, campos_obrigatorios)
-            
-            if not valido:
-                st.error(f"❌ {mensagem}")
-                return False
-            
-            if not SecurityManager.email_valido(dados["email"]):
-                st.error("❌ Email inválido")
-                return False
-            
-            # Verifica se usuário já existe
-            if self.get_user(dados["email"]):
-                st.error("❌ Email já cadastrado")
-                return False
-            
-            # Adiciona timestamp de criação
-            dados["criado_em"] = datetime.now(fuso_br)
-            dados["ultima_atualizacao"] = datetime.now(fuso_br)
-            
-            # Salva no banco
-            self.db.collection("usuarios").document(dados["email"]).set(dados)
-            
-            # Log de auditoria
-            self.log_auditoria(
-                email=dados["email"],
-                acao="CRIACAO_USUARIO",
-                detalhes=f"Usuário {dados['username']} criado"
-            )
-            
-            logger.info(f"Usuário {dados['email']} criado com sucesso")
-            return True
-            
-        except GoogleCloudError as e:
-            logger.error(f"Erro ao criar usuário: {e}")
-            st.error("❌ Erro ao salvar no banco de dados")
-            return False
-    
-    def log_auditoria(self, email: str, acao: str, detalhes: str = ""):
+        
+        # Converte de string JSON para dicionário
+        credenciais = json.loads(firebase_config)
+        
+        # Cria as credenciais do service account
+        creds = service_account.Credentials.from_service_account_info(credenciais)
+        
+        # Cria o cliente Firestore
+        db = firestore.Client(credentials=creds)
+        
+        # Testa a conexão (operação simples)
+        test_ref = db.collection("conexao_teste").document("ping")
+        test_ref.set({
+            "timestamp": datetime.now(fuso_br),
+            "status": "conectado"
+        })
+        
+        st.success("✅ Banco de dados conectado!")
+        return db
+        
+    except json.JSONDecodeError as e:
+        st.error(f"❌ Erro no formato JSON: {str(e)[:100]}")
+        return None
+    except Exception as e:
+        st.error(f"❌ Erro ao conectar ao banco: {str(e)[:100]}")
+        return None
+
+
+    def log_auditoria(email: str, acao: str, detalhes: str = ""):
         """Registra log de auditoria."""
         try:
             log_data = {
-                "email": email,
-                "acao": acao,
-                "detalhes": detalhes,
-                "timestamp": datetime.now(fuso_br),
-                "ip": st.experimental_user.get("ip", "desconhecido")
+            "email": email,
+            "acao": acao,
+            "detalhes": detalhes,
+            "timestamp": datetime.now(fuso_br)
             }
-            self.db.collection("logs_auditoria").add(log_data)
+            db.collection("logs_auditoria").add(log_data)
         except Exception as e:
-            logger.error(f"Erro ao registrar log de auditoria: {e}")
+            logger.error(f"Erro ao registrar log: {e}")
     
-    @st.cache_data(ttl=60, show_spinner=False)
-    def carregar_dados_usuario(_self, email: str) -> Tuple[List, List, List, List]:
-        """
-        Carrega todos os dados do usuário com cache e tratamento de erros.
-        Garante que nunca retorne nulo, apenas listas vazias.
-        """
-        try:
-            ref = _self.db.collection("usuarios").document(email)
-            
-            # Carrega cada coleção com tratamento individual
-            def carregar_colecao(nome_colecao):
-                try:
-                    docs = ref.collection(nome_colecao).stream()
-                    return [{"id": d.id, **d.to_dict()} for d in docs]
-                except Exception as e:
-                    logger.error(f"Erro ao carregar {nome_colecao}: {e}")
-                    return []
-            
-            # Carrega todas as coleções em paralelo (futuro: async)
-            clientes = carregar_colecao("meus_clientes")
-            servicos = carregar_colecao("meus_servicos")
-            agenda = carregar_colecao("minha_agenda")
-            caixa = carregar_colecao("meu_caixa")
-            
-            logger.info(f"Dados carregados para {email}: {len(clientes)} clientes, {len(servicos)} serviços")
-            return clientes, servicos, agenda, caixa
-            
-        except Exception as e:
-            logger.error(f"Erro crítico ao carregar dados: {e}")
-            st.error("⚠️ Erro ao carregar dados. Tente recarregar a página.")
-            return [], [], [], []  # Sempre retorna listas vazias, nunca nulo
 
 # ================= INICIALIZAÇÃO DOS SERVIÇOS =================
 
-db_manager = FirestoreManager()
+# Inicializa o banco de dados
+db = inicializar_firebase()
+
+# Se não conseguiu conectar, para a aplicação
+if db is None:
+    st.error("""
+    ## 🔧 ERRO DE CONEXÃO
+    
+    Não foi possível conectar ao banco de dados Firebase.
+    
+    **Possíveis causas:**
+    1. Credenciais do Firebase incorretas
+    2. Problema de rede/conexão
+    3. Formato inválido do JSON
+    
+    **Solução:**
+    - Verifique a variável `FIREBASE_DETAILS` nas Secrets do Streamlit Cloud
+    - Certifique-se que o JSON está completo e válido
+    - Entre em contato com o suporte técnico
+    """)
+    st.stop()
+
+# Funções do banco de dados com tratamento de erro
+def buscar_usuario(email: str):
+    """Busca um usuário pelo email."""
+    try:
+        doc_ref = db.collection("usuarios").document(email)
+        doc = doc_ref.get()
+        
+        if doc.exists:
+            return doc.to_dict()
+        return None
+    except Exception as e:
+        st.error(f"❌ Erro ao buscar usuário: {e}")
+        return None
+
+def criar_usuario(dados: dict):
+    """Cria um novo usuário."""
+    try:
+        # Validações básicas
+        if not dados.get("email"):
+            st.error("❌ Email é obrigatório")
+            return False
+        
+        if not dados.get("senha"):
+            st.error("❌ Senha é obrigatória")
+            return False
+        
+        # Verifica se usuário já existe
+        if buscar_usuario(dados["email"]):
+            st.error("❌ Usuário já cadastrado")
+            return False
+        
+        # Adiciona timestamps
+        dados["criado_em"] = datetime.now(fuso_br)
+        dados["ativo"] = False
+        dados["plano"] = "pro"
+        
+        # Salva no banco
+        db.collection("usuarios").document(dados["email"]).set(dados)
+        
+        # Log simples
+        print(f"✅ Usuário criado: {dados['email']}")
+        return True
+        
+    except Exception as e:
+        st.error(f"❌ Erro ao criar usuário: {e}")
+        return False
+
+@st.cache_data(ttl=60)
+def carregar_dados_usuario(email: str):
+    """Carrega todos os dados do usuário com cache."""
+    try:
+        user_ref = db.collection("usuarios").document(email)
+        
+        # Função auxiliar para carregar coleções
+        def carregar_colecao(nome):
+            try:
+                docs = user_ref.collection(nome).stream()
+                return [{"id": doc.id, **doc.to_dict()} for doc in docs]
+            except:
+                return []
+        
+        # Carrega todas as coleções
+        clientes = carregar_colecao("meus_clientes")
+        servicos = carregar_colecao("meus_servicos")
+        agenda = carregar_colecao("minha_agenda")
+        caixa = carregar_colecao("meu_caixa")
+        
+        # Garante que nunca retorna None
+        return clientes or [], servicos or [], agenda or [], caixa or []
+        
+    except Exception as e:
+        st.error(f"⚠️ Erro ao carregar dados: {e}")
+        return [], [], [], []  # Sempre retorna listas vazias
 
 # ================= GERENCIAMENTO DE SESSÃO =================
 
+# Estado inicial da sessão
 if "logado" not in st.session_state:
     st.session_state.logado = False
     st.session_state.user_email = None
     st.session_state.user_data = None
     st.session_state.dados_carregados = False
 
-# ================= COMPONENTES DE UI REUTILIZÁVEIS =================
+# Funções de sessão
+def fazer_login(email: str, senha: str):
+    """Realiza login do usuário."""
+    usuario = buscar_usuario(email)
+    
+    if usuario and usuario.get("senha") == SecurityManager.hash_senha(senha):
+        st.session_state.logado = True
+        st.session_state.user_email = email
+        st.session_state.user_data = usuario
+        return True
+    return False
+
+def fazer_logout():
+    """Realiza logout do usuário."""
+    st.session_state.logado = False
+    st.session_state.user_email = None
+    st.session_state.user_data = None
+    st.session_state.dados_carregados = False
+    st.cache_data.clear()
+
+# Verifica se usuário está logado para carregar dados
+if st.session_state.logado and st.session_state.user_email:
+    try:
+        clientes, servicos, agenda, caixa = carregar_dados_usuario(st.session_state.user_email)
+        st.session_state.dados_carregados = True
+    except:
+        st.error("Erro ao carregar dados do usuário")
+        clientes, servicos, agenda, caixa = [], [], [], []
+else:
+    clientes, servicos, agenda, caixa = [], [], [], []
 
 class UIComponents:
     """Componentes de UI reutilizáveis com estilo elite."""
@@ -658,7 +706,8 @@ if not st.session_state.logado:
                         UIComponents.mostrar_loading("Validando credenciais...")
                         
                         try:
-                            user = db_manager.get_user(email)
+                            user = buscar_usuario(email)
+
                             
                             if user and user.get("senha") == SecurityManager.hash_senha(senha):
                                 if user.get("ativo", False):
@@ -729,7 +778,7 @@ if not st.session_state.logado:
                             "criado_em": datetime.now(fuso_br)
                         }
                         
-                        if db_manager.criar_usuario(dados_usuario):
+                        if criar_usuario(dados_usuario):
                             st.success("✅ Conta criada com sucesso! Redirecionando para pagamento...")
                             time.sleep(2)
                             # Aqui integraria com Stripe
@@ -787,16 +836,6 @@ if not st.session_state.user_data.get("ativo", False):
 
 # ================= DASHBOARD PRINCIPAL =================
 
-# Carrega dados com cache e tratamento de erros
-try:
-    with st.spinner("⚡ Carregando dados..."):
-        clientes, servicos, agenda, caixa = db_manager.carregar_dados_usuario(st.session_state.user_email)
-        st.session_state.dados_carregados = True
-except Exception as e:
-    logger.error(f"Erro ao carregar dados: {e}")
-    st.error("⚠️ Erro ao carregar dados. Tente recarregar a página.")
-    clientes, servicos, agenda, caixa = [], [], [], []
-
 # Calcula métricas de negócio
 metricas = UIComponents.calcular_metricas_negocio(clientes, servicos, agenda, caixa)
 
@@ -811,13 +850,77 @@ with col_header1:
 
 with col_header2:
     if st.button("🚪 LOGOUT", use_container_width=True):
-        db_manager.log_auditoria(
-            email=st.session_state.user_email,
-            acao="LOGOUT",
-            detalhes="Usuário saiu do sistema"
-        )
-        st.session_state.logado = False
+        fazer_logout()
         st.rerun()
+
+# ================= METRICAS E ALERTAS =================
+
+st.markdown("### 📊 Dashboard de Performance")
+
+# Cards de métricas
+col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+
+with col_m1:
+    st.markdown(f'''
+    <div class="metric-card-elite">
+        <small>👥 CLIENTES ATIVOS</small>
+        <h2>{metricas["total_clientes"]}</h2>
+        <small style="color:#00d4ff">+5% vs. semana passada</small>
+    </div>
+    ''', unsafe_allow_html=True)
+
+with col_m2:
+    st.markdown(f'''
+    <div class="metric-card-elite">
+        <small>💰 FATURAMENTO</small>
+        <h2 style="color:#00d4ff">R$ {metricas["faturamento"]:,.2f}</h2>
+        <small style="color:#00d4ff">Últimos 30 dias</small>
+    </div>
+    ''', unsafe_allow_html=True)
+
+with col_m3:
+    st.markdown(f'''
+    <div class="metric-card-elite">
+        <small>📈 LUCRO LÍQUIDO</small>
+        <h2 style="color:#4CAF50">R$ {metricas["lucro"]:,.2f}</h2>
+        <small style="color:#4CAF50">Margem: {(metricas["lucro"]/metricas["faturamento"]*100 if metricas["faturamento"] > 0 else 0):.1f}%</small>
+    </div>
+    ''', unsafe_allow_html=True)
+
+with col_m4:
+    st.markdown(f'''
+    <div class="metric-card-elite">
+        <small>📅 AGENDA HOJE</small>
+        <h2 style="color:#FFA726">{metricas["agendamentos_hoje"]}</h2>
+        <small style="color:#FFA726">{metricas["agendamentos_hoje"]}/{LOTACAO_MAXIMA} lotação</small>
+    </div>
+    ''', unsafe_allow_html=True)
+
+# Alertas de negócio
+if metricas["alertas"]:
+    st.markdown("### ⚠️ Alertas do Sistema")
+    cols_alerta = st.columns(min(3, len(metricas["alertas"])))
+    
+    for idx, alerta in enumerate(metricas["alertas"]):
+        with cols_alerta[idx % len(cols_alerta)]:
+            alert_config = ALERTAS.get(alerta["tipo"], {"cor": "#FF6B6B", "icone": "⚠️"})
+            st.markdown(f'''
+            <div style="
+                background: rgba({int(alert_config['cor'][1:3], 16)}, 
+                               {int(alert_config['cor'][3:5], 16)}, 
+                               {int(alert_config['cor'][5:7], 16)}, 0.15);
+                border: 1px solid {alert_config['cor']};
+                border-radius: 12px;
+                padding: 15px;
+                margin: 5px;
+                color: white;
+                text-align: center;
+            ">
+                <strong>{alert_config['icone']} {alerta["mensagem"]}</strong>
+            </div>
+            ''', unsafe_allow_html=True)
+
+st.divider()
 
 # ================= METRICAS E ALERTAS =================
 
@@ -981,9 +1084,9 @@ with tab1:
                     )
                     
                     # Salva no banco
-                    db_manager.db.collection("usuarios").document(
+                    db.collection("usuarios").document(
                         st.session_state.user_email
-                    ).collection("minha_agenda").add({
+                    ).collection("minha_agenda").add({...})
                         "cliente": cliente_nome,
                         "servico": servico_nome,
                         "preco": float(preco_servico),
@@ -995,7 +1098,7 @@ with tab1:
                     })
                     
                     # Log de auditoria
-                    db_manager.log_auditoria(
+                    log_auditoria(...)
                         email=st.session_state.user_email,
                         acao="AGENDAMENTO_CRIADO",
                         detalhes=f"Agendamento para {cliente_nome} - {servico_nome}"
@@ -1354,3 +1457,4 @@ st.markdown("""
     <small>Versão 2.0 | Desenvolvido com ❤️ para transformar seu negócio</small>
 </div>
 """, unsafe_allow_html=True)
+
