@@ -500,16 +500,16 @@ with col_g1:
                 hovertemplate='R$ %{y:,.2f}<extra></extra>'
             ))
             
-            # Barras de DESPESAS (Saídas)
+            # Barras de DESPESAS (Saídas) - VERMELHO
             fig.add_trace(go.Bar(
                 x=df_grouped.index,
                 y=df_grouped['Saída'],
                 name='📉 DESPESAS',
                 marker=dict(
-                    marker_color='#ff4b4b',
-                    opacity=0.9,
-                    line=dict(color='#00E676', width=1)
-                ),
+                    color='#ff5252',
+                    line=dict(color='#ff8a80', width=2)
+                    ),  # MANTÉM VERMELHO
+                opacity=0.9,
                 hovertemplate='R$ %{y:,.2f}<extra></extra>'
             ))
             
@@ -636,6 +636,7 @@ st.markdown("""
     <small>Versão 3.0 | Sistema de gestão premium para profissionais de beleza</small>
 </div>
 """, unsafe_allow_html=True)
+
 
 
 
