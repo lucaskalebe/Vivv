@@ -68,68 +68,64 @@ st.markdown("""
     }
     
     /* Cards de Métrica Holográficos */
-    .hologram-card {
-        background: rgba(10, 25, 47, 0.85);
-        border: 1px solid;
-        border-image: linear-gradient(45deg, #00d4ff, #0066cc, #00d4ff) 1;
-        border-radius: 12px !important; /* Bordas mais suaves */
-        padding: 20px;
-        position: relative;
-        overflow: hidden;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        min-height: 120px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        
-    }
-    
-    /* Efeito de brilho sutil */
-    .hologram-card::after {
-        content: '';
-        position: absolute;
-        top: -2px;
-        left: -2px;
-        right: -2px;
-        bottom: -2px;
-        background: linear-gradient(45deg, transparent, rgba(0, 212, 255, 0.1), transparent);
-        z-index: -1;
-        border-radius: 14px;
-        animation: shine 6s infinite linear;
-    }
-
-    .hologram-card small {
-        font-size: 12px;
-        color: #aaa;
-        letter-spacing: 1px;
-        text-transform: uppercase;
-        margin-bottom: 8px;
-        display: block;
+   /* Cards de Métrica Retangulares Elegantes - COM BRILHO */
+.hologram-card {
+    background: linear-gradient(145deg, rgba(0, 40, 85, 0.8), rgba(0, 20, 40, 0.9));
+    border: 2px solid;
+    border-image: linear-gradient(45deg, #00d4ff, #0066cc, #00d4ff) 1;
+    border-radius: 0 !important; /* TOTALMENTE RETANGULAR */
+    padding: 25px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.5s ease;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
-    .hologram-card h2 {
-        font-size: 32px;
-        margin: 0;
-        font-weight: 700;
-        background: linear-gradient(135deg, #ffffff, #00d4ff);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-
+/* BRILHO ORIGINAL COMPLETO */
+.hologram-card::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(0, 212, 255, 0.1), transparent);
+    transform: rotate(30deg);
+    animation: shine 3s infinite linear;
 }
-    
-    @keyframes shine {
-        0% { transform: rotate(30deg) translateX(-100%); }
-        100% { transform: rotate(30deg) translateX(100%); }
-        
-    }
-    
-    .hologram-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 
-        0 15px 35px rgba(0, 212, 255, 0.15),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    border-image: linear-gradient(45deg, #00d4ff, #0099ff, #00d4ff) 1;
+
+@keyframes shine {
+    0% { transform: rotate(30deg) translateX(-100%); }
+    100% { transform: rotate(30deg) translateX(100%); }
+}
+
+/* Textos */
+.hologram-card small {
+    font-size: 12px;
+    color: #aaa;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.hologram-card h2 {
+    font-size: 32px;
+    margin: 0;
+    font-weight: 700;
+    background: linear-gradient(135deg, #ffffff, #00d4ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Hover */
+.hologram-card:hover {
+    transform: translateY(-10px) scale(1.03);
+    box-shadow: 0 25px 50px rgba(0, 212, 255, 0.3);
 }
     
     /* Botões Neomórficos com Efeito de Partículas */
@@ -543,5 +539,6 @@ st.markdown("""
     <small>Versão 3.0 | Sistema de gestão premium para profissionais de beleza</small>
 </div>
 """, unsafe_allow_html=True)
+
 
 
