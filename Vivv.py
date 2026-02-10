@@ -505,7 +505,7 @@ with col_g1:
                 x=df_grouped.index,
                 y=df_grouped['Saída'],
                 name='📉 DESPESAS',
-                marker_color='#ff4b4b',
+                marker_color='#00C853'
                 opacity=0.9,
                 hovertemplate='R$ %{y:,.2f}<extra></extra>'
             ))
@@ -633,6 +633,7 @@ st.markdown("""
     <small>Versão 3.0 | Sistema de gestão premium para profissionais de beleza</small>
 </div>
 """, unsafe_allow_html=True)
+
 
 
 
