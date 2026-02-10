@@ -12,6 +12,8 @@ from datetime import datetime, timezone, timedelta
 from google.cloud import firestore
 from google.oauth2 import service_account
 
+
+
 # ================= CONFIGURAÇÃO =================
 st.set_page_config(page_title="Vivv Pro Elite", layout="wide", page_icon="⚡", initial_sidebar_state="collapsed")
 fuso_br = timezone(timedelta(hours=-3))
@@ -165,6 +167,7 @@ st.markdown("""
     .stTabs [aria-selected="true"] {
         background: linear-gradient(135deg, #0066cc 0%, #00d4ff 100%) !important;
         box-shadow: 0 5px 20px rgba(0, 212, 255, 0.3);
+        color: white !important; 
     }
     
     /* Logo Holográfica */
@@ -506,3 +509,4 @@ st.markdown("""
     <small>Versão 3.0 | Sistema de gestão premium para profissionais de beleza</small>
 </div>
 """, unsafe_allow_html=True)
+
